@@ -833,7 +833,7 @@ function toggleCmd(src, cmd) {
 
 // Push commande manu vers Supabase (table consignes)
 async function pushManuCmd(side) {
-  if(SUPABASE_KEY==='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcXhnbHdzZmZybGZ6aXltcGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODQwMjksImV4cCI6MjA5NDE2MDAyOX0.7sOo_xhhtISH9tQyJ7pg2Z3eXlDZfKZA5Xp6D7-Gs2w') return;
+  if(SUPABASE_KEY==='VOTRE_ANON_KEY') return;
   const m = MANU[side];
   const patch = side==='hab'
     ? { mode_manu_hab:true,  manu_pac_hab:m.pac,   manu_vc1:m.vc1, manu_vc2:m.vc2 }
@@ -897,8 +897,7 @@ function saveModal() {
 
 // ── Push consignes vers Supabase ─────────────────────────────
 async function pushConsignes() {
-  if(SUPABASE_KEY==='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcXhnbHdzZmZybGZ6aXltcGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODQwMjksImV4cCI6MjA5NDE2MDAyOX0.7sOo_xhhtISH9tQyJ7pg2Z3eXlDZfKZA5Xp6D7-Gs2w
-     ') return;
+  if(SUPABASE_KEY==='VOTRE_ANON_KEY') return;
   try {
     // Stockage
     await fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.stockage`, {
