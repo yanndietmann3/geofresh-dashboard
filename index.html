@@ -769,21 +769,23 @@ let CYCLE_S = 30; // intervalle polling en secondes
 let _speedFast = false;
 let _pollInterval = null;
 
+// Vitesses : 0=réel(30s) 1=×5(6s) 2=×50(600ms) 3=×100(300ms)
+const SPEEDS = [
+  { label:'▶ Temps réel', ms:30000, cls:'normal' },
+  { label:'⚡ ×5',        ms:6000,  cls:'fast' },
+  { label:'⚡ ×50',       ms:600,   cls:'fast' },
+  { label:'⚡ ×100',      ms:300,   cls:'fast' },
+];
+let _speedIdx = 0;
+
 function toggleSpeed() {
-  _speedFast = !_speedFast;
+  _speedIdx = (_speedIdx + 1) % SPEEDS.length;
+  const s = SPEEDS[_speedIdx];
   const btn = document.getElementById('speed-btn');
-  if(_speedFast) {
-    btn.className = 'speed-btn fast';
-    btn.textContent = '⚡ Accéléré ×5';
-    // Polling toutes les 2s au lieu de 30s
-    if(_pollInterval) clearInterval(_pollInterval);
-    _pollInterval = setInterval(fetchLatest, 2000);
-  } else {
-    btn.className = 'speed-btn normal';
-    btn.textContent = '▶ Temps réel';
-    if(_pollInterval) clearInterval(_pollInterval);
-    _pollInterval = setInterval(fetchLatest, 30000);
-  }
+  btn.className = 'speed-btn ' + s.cls;
+  btn.textContent = s.label;
+  if(_pollInterval) clearInterval(_pollInterval);
+  _pollInterval = setInterval(fetchLatest, s.ms);
 }
 
 // Fonction de polling manuel (complément au WebSocket)
