@@ -40,6 +40,11 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .exl{font-size:7px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
 .sep{width:1px;height:22px;background:var(--bdr);}
 .hdr-r{display:flex;align-items:center;gap:12px;}
+.speed-btn{display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:14px;
+  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
+  border:1px solid;font-family:'DM Mono',monospace;transition:all .2s;}
+.speed-btn.normal{background:rgba(91,184,160,.08);border-color:rgba(91,184,160,.3);color:var(--ha);}
+.speed-btn.fast{background:rgba(232,196,74,.15);border-color:rgba(232,196,74,.5);color:#E8C44A;animation:pu 1s infinite;}
 .live{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:16px;
   font-size:9px;letter-spacing:2px;text-transform:uppercase;
   background:rgba(168,216,92,.09);border:1px solid rgba(168,216,92,.3);color:var(--sa);}
@@ -351,6 +356,9 @@ canvas.hc{width:100%!important;height:180px!important;}
 
   <div class="hdr-r">
     <div class="live"><div class="ldot"></div>Temps reel</div>
+    <button class="speed-btn normal" id="speed-btn" onclick="toggleSpeed()" title="Accélérer le rafraîchissement">
+      ▶ Temps réel
+    </button>
     <div id="clk">--:--:--</div>
   </div>
 </header>
@@ -757,7 +765,42 @@ const CSG = {
 const MANU = { hab:{ on:false, pac:false, vc1:false, vc2:false },
                sto:{ on:false, pac:false, volet:false, vent:false } };
 const CUMUL = { hab:{ h:0, ecs:0 }, sto:{ h:0, fc:0 } };
-const CYCLE_S = 30; // intervalle Supabase en secondes (doit correspondre au simulateur)
+let CYCLE_S = 30; // intervalle polling en secondes
+let _speedFast = false;
+let _pollInterval = null;
+
+function toggleSpeed() {
+  _speedFast = !_speedFast;
+  const btn = document.getElementById('speed-btn');
+  if(_speedFast) {
+    btn.className = 'speed-btn fast';
+    btn.textContent = '⚡ Accéléré ×5';
+    // Polling toutes les 2s au lieu de 30s
+    if(_pollInterval) clearInterval(_pollInterval);
+    _pollInterval = setInterval(fetchLatest, 2000);
+  } else {
+    btn.className = 'speed-btn normal';
+    btn.textContent = '▶ Temps réel';
+    if(_pollInterval) clearInterval(_pollInterval);
+    _pollInterval = setInterval(fetchLatest, 30000);
+  }
+}
+
+// Fonction de polling manuel (complément au WebSocket)
+async function fetchLatest() {
+  if(SUPABASE_KEY==='VOTRE_ANON_KEY') return;
+  try {
+    const [hR,sR,eR] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/conditions_externes?order=ts.desc&limit=1`,{headers:HDRS})
+    ]);
+    const [hD,sD,eD] = await Promise.all([hR.json(),sR.json(),eR.json()]);
+    if(eD?.[0]){lastExt=eD[0];updateExt(lastExt);}
+    if(hD?.[0]) updHab({...hD[0],...lastExt});
+    if(sD?.[0]) updSto({...sD[0],...lastExt});
+  } catch(e){}
+}
 
 // ════════════════════════════════════════
 //  ONGLETS
