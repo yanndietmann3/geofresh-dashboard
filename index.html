@@ -256,6 +256,22 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .log-lvl-2 .lm{color:#D4A832;}
 .log-lvl-3 .lm{color:#FF8A6A;}
 
+/* ── CO2 ── */
+.co2-wrap{margin-top:10px;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(0,0,0,.16);transition:all .4s;}
+.co2-wrap.co2-ok    {border-color:rgba(107,175,94,.4); background:rgba(107,175,94,.07);}
+.co2-wrap.co2-info  {border-color:rgba(232,196,74,.45);background:rgba(232,196,74,.07);}
+.co2-wrap.co2-alerte{border-color:rgba(212,148,58,.6); background:rgba(212,148,58,.09);animation:apx 2s infinite;}
+.co2-wrap.co2-crit  {border-color:rgba(196,82,42,.7);  background:rgba(196,82,42,.12); animation:apx .7s infinite;}
+.co2-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+.co2-lbl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.co2-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;}
+.co2-unit{font-size:10px;color:var(--muted);margin-left:3px;}
+.co2-badge{font-size:8px;padding:2px 8px;border-radius:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+.co2-bar-track{height:8px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden;position:relative;}
+.co2-bar-fill{height:100%;border-radius:4px;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+.co2-ticks{display:flex;justify-content:space-between;margin-top:3px;}
+.co2-tick{font-size:7px;color:var(--muted);}
+
 /* ── SPANS ── */
 .s2{grid-column:span 2;}.s3{grid-column:span 3;}.s4{grid-column:span 4;}
 
@@ -587,6 +603,34 @@ canvas.hc{width:100%!important;height:180px!important;}
     </div>
   </div>
 
+  <!-- CO2 STOCKAGE -->
+  <div class="card">
+    <div class="ct">CO&#x2082; &mdash; Capteur Stockage</div>
+    <div class="co2-wrap co2-ok" id="s-co2-wrap">
+      <div class="co2-header">
+        <div>
+          <div class="co2-lbl">Concentration CO&#x2082;</div>
+          <div style="display:flex;align-items:baseline;gap:4px;margin-top:3px;">
+            <span class="co2-val" id="s-co2-val">--</span>
+            <span class="co2-unit">ppm</span>
+          </div>
+        </div>
+        <div class="co2-badge" id="s-co2-badge" style="background:rgba(107,175,94,.18);color:#6BAF5E">NORMAL</div>
+      </div>
+      <div class="co2-bar-track">
+        <div class="co2-bar-fill" id="s-co2-fill" style="width:12%;background:linear-gradient(90deg,#6BAF5E,#A8D85C)"></div>
+      </div>
+      <div class="co2-ticks">
+        <span class="co2-tick">400</span>
+        <span class="co2-tick" style="color:rgba(232,196,74,.7)">2000</span>
+        <span class="co2-tick" style="color:rgba(212,148,58,.8)">3500</span>
+        <span class="co2-tick" style="color:rgba(196,82,42,.9)">5000</span>
+        <span class="co2-tick">6000</span>
+      </div>
+      <div style="margin-top:7px;font-size:8px;color:var(--muted)" id="s-co2-action">Respiration PDT normale</div>
+    </div>
+  </div>
+
   <!-- Conditions ext + consignes -->
   <div class="card">
     <div class="ct">Conditions exterieures</div>
@@ -713,6 +757,7 @@ const CSG = {
 const MANU = { hab:{ on:false, pac:false, vc1:false, vc2:false },
                sto:{ on:false, pac:false, volet:false, vent:false } };
 const CUMUL = { hab:{ h:0, ecs:0 }, sto:{ h:0, fc:0 } };
+const CYCLE_S = 30; // intervalle Supabase en secondes (doit correspondre au simulateur)
 
 // ════════════════════════════════════════
 //  ONGLETS
@@ -740,10 +785,66 @@ function toggleManu(src) {
 }
 
 function toggleCmd(src, cmd) {
-  const m = MANU[src==='hab'?'hab':'sto'];
+  const side = src==='hab' ? 'hab' : 'sto';
+  const m = MANU[side];
   m[cmd] = !m[cmd];
   const id = src==='hab' ? `h-cmd-${cmd}` : `s-cmd-${cmd}`;
-  document.getElementById(id).classList.toggle('active', m[cmd]);
+  const el = document.getElementById(id);
+  if(el) el.classList.toggle('active', m[cmd]);
+
+  // Mettre à jour l'affichage immédiatement sans attendre Supabase
+  if(side==='hab'){
+    // PAC
+    const pOn = m.pac;
+    const ps=document.getElementById('h-pac');
+    if(ps){ ps.className='pacs '+(pOn?'pac-on':'pac-off'); }
+    const pt=document.getElementById('h-pact');
+    if(pt) pt.textContent = pOn?'PAC EN MARCHE':'PAC ARRETEE';
+    const pd=document.getElementById('h-pacd');
+    if(pd) pd.textContent = '⚙ Mode Manuel';
+    // VC
+    setFcb('h-fc1-b', m.vc1);
+    setFcb('h-fc2-b', m.vc2);
+    setPm('h-p1','h-p1-s',m.vc1);
+    setPm('h-p2','h-p2-s',m.vc2);
+    setPm('h-ps','h-ps-s',m.pac);
+    setPm('h-pc','h-pc-s',m.pac);
+  } else {
+    // PAC stockage
+    const pacEl = document.getElementById('s-pac');
+    if(pacEl){ pacEl.className='ai-item'+(m.pac?' on-f':''); }
+    const pacS = document.getElementById('s-pac-s');
+    if(pacS) pacS.textContent = m.pac?'ON':'OFF';
+    // Volet
+    const vEl = document.getElementById('s-reg');
+    const vSt = document.getElementById('s-reg-s');
+    if(vEl){ 
+      vEl.style.borderColor = m.volet?'rgba(122,184,212,.6)':'';
+      vEl.style.background  = m.volet?'rgba(122,184,212,.1)':'';
+    }
+    if(vSt){ vSt.textContent = m.volet?'OUVERT':'FERME'; vSt.style.color=m.volet?'#7AB8D4':'var(--muted)'; }
+    // Ventil
+    setVentil(m.vent && !m.vent_half, m.vent_half||false);
+  }
+
+  // Envoyer la commande manu à Supabase → simulateur la lit
+  pushManuCmd(side);
+}
+
+// Push commande manu vers Supabase (table consignes)
+async function pushManuCmd(side) {
+  if(SUPABASE_KEY==='VOTRE_ANON_KEY') return;
+  const m = MANU[side];
+  const patch = side==='hab'
+    ? { mode_manu_hab:true,  manu_pac_hab:m.pac,   manu_vc1:m.vc1, manu_vc2:m.vc2 }
+    : { mode_manu_sto:true,  manu_pac_sto:m.pac,   manu_volet:m.volet, manu_ventil:m.vent };
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.${side==='hab'?'habitation':'stockage'}`, {
+      method:'PATCH',
+      headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({...patch, updated_at: new Date().toISOString()})
+    });
+  } catch(e) { console.warn('pushManuCmd err:', e); }
 }
 
 // ════════════════════════════════════════
@@ -780,17 +881,91 @@ function gv(id){ const el=document.getElementById('mf-'+id); return el?parseFloa
 
 function saveModal() {
   const {src,key,k}=mCtx;
-  if(k==='hab-z1')  { CSG.hab.z1=gv('hz1')??CSG.hab.z1; }
-  if(k==='hab-z2')  { CSG.hab.z2=gv('hz2')??CSG.hab.z2; }
-  if(k==='hab-ecs') { CSG.hab.ecs=gv('hecs')??CSG.hab.ecs; CSG.hab.hyst_ecs=gv('hhyst')??CSG.hab.hyst_ecs; }
-  if(k==='hab-clim1'){CSG.hab.clim1=gv('hc1')??CSG.hab.clim1; }
-  if(k==='hab-clim2'){CSG.hab.clim2=gv('hc2')??CSG.hab.clim2; }
-  if(k==='sto-t')   { CSG.sto.t=gv('st')??CSG.sto.t; CSG.sto.hyst_t=gv('shyst')??CSG.sto.hyst_t; }
-  if(k==='sto-hr')  { CSG.sto.hr=gv('shr')??CSG.sto.hr; CSG.sto.hyst_hr=gv('shrh')??CSG.sto.hyst_hr; }
-  if(k==='sto-all') { CSG.sto.t=gv('sta')??CSG.sto.t; CSG.sto.hyst_t=gv('stb')??CSG.sto.hyst_t;
-                      CSG.sto.hr=gv('src')??CSG.sto.hr; CSG.sto.hyst_hr=gv('srd')??CSG.sto.hyst_hr; }
+  if(k==='hab-z1')   { CSG.hab.z1=gv('hz1')??CSG.hab.z1; }
+  if(k==='hab-z2')   { CSG.hab.z2=gv('hz2')??CSG.hab.z2; }
+  if(k==='hab-ecs')  { CSG.hab.ecs=gv('hecs')??CSG.hab.ecs; CSG.hab.hyst_ecs=gv('hhyst')??CSG.hab.hyst_ecs; }
+  if(k==='hab-clim1'){ CSG.hab.clim1=gv('hc1')??CSG.hab.clim1; }
+  if(k==='hab-clim2'){ CSG.hab.clim2=gv('hc2')??CSG.hab.clim2; }
+  if(k==='sto-t')    { CSG.sto.t=gv('st')??CSG.sto.t; CSG.sto.hyst_t=gv('shyst')??CSG.sto.hyst_t; }
+  if(k==='sto-hr')   { CSG.sto.hr=gv('shr')??CSG.sto.hr; CSG.sto.hyst_hr=gv('shrh')??CSG.sto.hyst_hr; }
+  if(k==='sto-all')  { CSG.sto.t=gv('sta')??CSG.sto.t; CSG.sto.hyst_t=gv('stb')??CSG.sto.hyst_t;
+                       CSG.sto.hr=gv('src')??CSG.sto.hr; CSG.sto.hyst_hr=gv('srd')??CSG.sto.hyst_hr; }
   refreshCsg();
+  pushConsignes();   // ← envoie vers Supabase → simulateur les lit
   closeModal();
+}
+
+// ── Push consignes vers Supabase ─────────────────────────────
+async function pushConsignes() {
+  if(SUPABASE_KEY==='VOTRE_ANON_KEY') return;
+  try {
+    // Stockage
+    await fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.stockage`, {
+      method: 'PATCH',
+      headers: { ...HDRS, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      body: JSON.stringify({
+        csg_t:    CSG.sto.t,
+        hyst_t:   CSG.sto.hyst_t,
+        csg_hr:   CSG.sto.hr,
+        hyst_hr:  CSG.sto.hyst_hr,
+        updated_at: new Date().toISOString()
+      })
+    });
+    // Habitation
+    await fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.habitation`, {
+      method: 'PATCH',
+      headers: { ...HDRS, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      body: JSON.stringify({
+        csg_z1:      CSG.hab.z1,
+        csg_z2:      CSG.hab.z2,
+        csg_ecs:     CSG.hab.ecs,
+        hyst_ecs:    CSG.hab.hyst_ecs,
+        csg_clim_z1: CSG.hab.clim1,
+        csg_clim_z2: CSG.hab.clim2,
+        updated_at:  new Date().toISOString()
+      })
+    });
+    console.log('[GeoFresh] Consignes envoyées à Supabase ✓');
+  } catch(e) { console.error('[GeoFresh] Erreur push consignes:', e); }
+}
+
+// ── Charger les consignes depuis Supabase au démarrage ────────
+async function loadConsignes() {
+  if(SUPABASE_KEY==='VOTRE_ANON_KEY') return;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/consignes?select=*`, { headers: HDRS });
+    const rows = await r.json();
+    for(const row of rows) {
+      if(row.id === 'stockage') {
+        CSG.sto.t      = parseFloat(row.csg_t   || CSG.sto.t);
+        CSG.sto.hyst_t = parseFloat(row.hyst_t  || CSG.sto.hyst_t);
+        CSG.sto.hr     = parseFloat(row.csg_hr  || CSG.sto.hr);
+        CSG.sto.hyst_hr= parseFloat(row.hyst_hr || CSG.sto.hyst_hr);
+        // Restaurer le cumul PAC depuis Supabase
+        if(row.cumul_pac_sto_h) {
+          CUMUL.sto.h = parseFloat(row.cumul_pac_sto_h);
+          document.getElementById('s-cumul-h').textContent  = CUMUL.sto.h.toFixed(1)+' h';
+          document.getElementById('s-cumul-h2').textContent = CUMUL.sto.h.toFixed(1)+' h';
+        }
+      }
+      if(row.id === 'habitation') {
+        CSG.hab.z1    = parseFloat(row.csg_z1      || CSG.hab.z1);
+        CSG.hab.z2    = parseFloat(row.csg_z2      || CSG.hab.z2);
+        CSG.hab.ecs   = parseFloat(row.csg_ecs     || CSG.hab.ecs);
+        CSG.hab.hyst_ecs = parseFloat(row.hyst_ecs || CSG.hab.hyst_ecs);
+        CSG.hab.clim1 = parseFloat(row.csg_clim_z1 || CSG.hab.clim1);
+        CSG.hab.clim2 = parseFloat(row.csg_clim_z2 || CSG.hab.clim2);
+        if(row.saison) CSG.hab.saison = row.saison;
+        // Restaurer le cumul PAC habitation
+        if(row.cumul_pac_hab_h) {
+          CUMUL.hab.h = parseFloat(row.cumul_pac_hab_h);
+          document.getElementById('h-cumul-h').textContent = CUMUL.hab.h.toFixed(1)+' h';
+        }
+      }
+    }
+    refreshCsg();
+    console.log('[GeoFresh] Consignes + cumuls chargés ✓');
+  } catch(e) { console.error('[GeoFresh] Erreur load consignes:', e); }
 }
 
 function refreshCsg() {
@@ -848,10 +1023,15 @@ function updateHab(d){
   refreshCsg();
 
   const saison=d.saison||'CHAUD', vc1=!!d.fancoil_z1_on, vc2=!!d.fancoil_z2_on;
-  const fcC=saison==='FROID'?'var(--hsky)':'var(--hamb)';
-  document.getElementById('h-vc1-fill').style.cssText=`width:${vc1?85:12}%;background:${fcC}`;
-  document.getElementById('h-vc2-fill').style.cssText=`width:${vc2?85:12}%;background:${fcC}`;
-  setFcb('h-vc1-b',vc1); setFcb('h-vc2-b',vc2);
+  // FROID=chauffage→ambre | CHAUD=climatisation→bleu ciel
+  const fcC=saison==='FROID'?'var(--hamb)':'var(--hsky)';
+  // En MANU : commandes clavier | En AUTO : données simulateur
+  const isManuH = MANU.hab.on;
+  const vc1m = isManuH ? MANU.hab.vc1 : vc1;
+  const vc2m = isManuH ? MANU.hab.vc2 : vc2;
+  document.getElementById('h-vc1-fill').style.cssText=`width:${vc1m?85:12}%;background:${fcC}`;
+  document.getElementById('h-vc2-fill').style.cssText=`width:${vc2m?85:12}%;background:${fcC}`;
+  setFcb('h-vc1-b',vc1m); setFcb('h-vc2-b',vc2m);
 
   const tecs=parseFloat(d.t_ecs||52);
   document.getElementById('h-ecs-v').textContent=tecs.toFixed(1);
@@ -861,7 +1041,15 @@ function updateHab(d){
   const vb=document.getElementById('h-vanne-b'); vb.textContent=von?'Ouverte':'Fermee'; vb.className='fcb '+(von?'fcon':'fcoff');
 
   // Cumul
-  if(!!d.pac_on){ CUMUL.hab.h+=2/3600; if(von)CUMUL.hab.ecs+=2/3600; }
+  // Cumul habitation : MAX local vs Supabase pour survivre aux redémarrages
+  const newHabH = parseFloat(d.cumul_pac_h || 0);
+  if(newHabH > CUMUL.hab.h) {
+    CUMUL.hab.h   = newHabH;
+    CUMUL.hab.ecs = parseFloat(d.cumul_ecs_h || 0);
+  } else if(!!d.pac_on) {
+    CUMUL.hab.h   += CYCLE_S/3600;
+    if(von) CUMUL.hab.ecs += CYCLE_S/3600;
+  }
   document.getElementById('h-cumul-h').textContent=CUMUL.hab.h.toFixed(1)+' h';
   document.getElementById('h-cumul-ecs').textContent=CUMUL.hab.ecs.toFixed(1)+' h';
 
@@ -878,10 +1066,11 @@ function updateHab(d){
   const st=document.getElementById('h-saison'); st.className='stag '+(saison==='FROID'?'sf':'sc');
   st.textContent=(saison==='FROID'?'❄ ':'☀ ')+saison;
 
-  const pOn=!!d.pac_on;
+  // En mode MANU : commandes opérateur | En AUTO : données simulateur
+  const pOn  = isManu ? MANU.hab.pac : !!d.pac_on;
   const ps=document.getElementById('h-pac'); ps.className='pacs '+(pOn?'pac-on':'pac-off');
   document.getElementById('h-pact').textContent=pOn?'PAC EN MARCHE':'PAC ARRETEE';
-  document.getElementById('h-pacd').textContent=pOn?'Sol→eau | OK':'Standby';
+  document.getElementById('h-pacd').textContent=isManu?'⚙ Mode Manuel':(pOn?'Sol→eau | OK':'Standby');
 
   document.getElementById('h-acc').textContent=parseFloat(d.temps_depuis_arret_pac_min||0).toFixed(0)+' min';
   document.getElementById('h-dep').textContent=parseFloat(d.t_eau_dep||40).toFixed(1)+' °C';
@@ -890,9 +1079,9 @@ function updateHab(d){
   document.getElementById('h-dep-f').style.width=Math.max(0,Math.min(100,(parseFloat(d.t_eau_dep||40)-5)/50*100))+'%';
   document.getElementById('h-ret-f').style.width=Math.max(0,Math.min(100,(parseFloat(d.t_eau_ret||35)-5)/50*100))+'%';
 
-  setPm('h-ps','h-ps-s',!!d.pompe_sol_on);
-  setPm('h-pc','h-pc-s',!!d.pompe_circuit_on);
-  setPm('h-p1','h-p1-s',vc1); setPm('h-p2','h-p2-s',vc2); setPm('h-pe','h-pe-s',von);
+  setPm('h-ps','h-ps-s', pOn);
+  setPm('h-pc','h-pc-s', pOn || !!d.pompe_circuit_on);
+  setPm('h-p1','h-p1-s', vc1m); setPm('h-p2','h-p2-s', vc2m); setPm('h-pe','h-pe-s',von);
 
   const ap=document.getElementById('h-ap'),am=document.getElementById('h-am');
   ap.className='apa';
@@ -962,9 +1151,12 @@ function updateSto(d){
   document.getElementById('s-batt').style.color = batt<2?'var(--serr)':batt<5?'var(--samb)':'var(--sa)';
 
   // Cumul PAC
-  if(!!d.pac_on) CUMUL.sto.h+=2/3600;
+  // Cumul stockage : MAX local vs Supabase pour survivre aux redémarrages
+  const newStoH = parseFloat(d.duree_fonct_pac_h || 0);
+  if(newStoH > CUMUL.sto.h) CUMUL.sto.h = newStoH;
+  else if(!!d.pac_on) CUMUL.sto.h += CYCLE_S/3600;
   const mode=d.mode_actif||'INIT';
-  if(mode.includes('FREE')) CUMUL.sto.fc+=2/3600;
+  if(mode.includes('FREE')) CUMUL.sto.fc += CYCLE_S/3600;
   document.getElementById('s-cumul-h').textContent=CUMUL.sto.h.toFixed(1)+' h';
   document.getElementById('s-cumul-fc').textContent=CUMUL.sto.fc.toFixed(1)+' h';
   document.getElementById('s-cumul-h2').textContent=CUMUL.sto.h.toFixed(1)+' h';
@@ -1073,6 +1265,24 @@ function updateSto(d){
   document.getElementById('s-acc').textContent='60+ min';
 
   const ap=document.getElementById('s-ap'),am=document.getElementById('s-am');
+  // ── CO2 affichage ─────────────────────────────────────────
+  const co2=parseFloat(d.co2_ppm||800);
+  const co2W=document.getElementById('s-co2-wrap');
+  if(co2W){
+    document.getElementById('s-co2-val').textContent=co2.toFixed(0);
+    const pct=Math.max(0,Math.min(100,(co2-400)/(6000-400)*100));
+    const co2F=document.getElementById('s-co2-fill');
+    let cls='co2-ok',lbl='NORMAL',grad='linear-gradient(90deg,#6BAF5E,#A8D85C)',txt='Respiration PDT normale';
+    let bbg='rgba(107,175,94,.18)',bco='#6BAF5E';
+    if(co2>5000){cls='co2-crit';lbl='CRITIQUE';grad='linear-gradient(90deg,#C4522A,#FF8A6A)';bbg='rgba(196,82,42,.25)';bco='#FF8A6A';txt='🚨 PURGE — Volets + ventilation forcée';}
+    else if(co2>3500){cls='co2-alerte';lbl='ALERTE';grad='linear-gradient(90deg,#D4A832,#E8C44A)';bbg='rgba(212,168,50,.22)';bco='#D4A832';txt='⚠ Aération en cours';}
+    else if(co2>2000){cls='co2-info';lbl='ELEVE';grad='linear-gradient(90deg,#D4943A,#E8C44A)';bbg='rgba(212,148,58,.18)';bco='#D4943A';txt='ℹ Surveillance renforcée';}
+    co2W.className='co2-wrap '+cls;
+    co2F.style.width=pct+'%'; co2F.style.background=grad;
+    const co2B=document.getElementById('s-co2-badge');
+    co2B.textContent=lbl; co2B.style.cssText=`background:${bbg};color:${bco}`;
+    document.getElementById('s-co2-action').textContent=txt;
+  }
   ap.className='apa';
   if(!d.alarme_active){ap.classList.add('as-ok');am.textContent='✓ Systeme nominal';}
   else{const niv=parseInt(d.niveau_alarme||0);ap.classList.add(niv>=3?'as-crit':'as-wrn');am.textContent=(niv>=3?'🚨 ':'⚠ ')+d.alarme_active;addLog(logsS,'s-log',d.alarme_active,niv);setBadge('badge-s',niv);}
@@ -1178,7 +1388,7 @@ function drawHistChart(labels,data,bat){
 //  SUPABASE REALTIME
 // ════════════════════════════════════════
 const SUPABASE_URL='https://diqxglwsffrlfziymplm.supabase.co';
-const SUPABASE_KEY='VOTRE_ANON_KEY'; // ← coller votre anon key
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcXhnbHdzZmZybGZ6aXltcGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODQwMjksImV4cCI6MjA5NDE2MDAyOX0.7sOo_xhhtISH9tQyJ7pg2Z3eXlDZfKZA5Xp6D7-Gs2w';
 const HDRS={apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`};
 let lastExt={};
 
@@ -1225,6 +1435,7 @@ function connectRealtime(){
 // ════════════════════════════════════════
 function demoMode(){
   let z1=20.2, z2=19.4, ecs=53, dep=42;
+  let co2_demo=900, co2_tr=0.3;
   let ts=6.8, hr=89, batt=9.5;
   let lastPacSto=false;  // mémoire cycle PAC pour hystérésis
   let text=11.0, hrext=78;
@@ -1246,13 +1457,20 @@ function demoMode(){
       hrextTend=(Math.random()-.5)*4.5;  // dérive lente %/step
     }
     // Atténuation progressive de la tendance (le front passe)
-    textTend  *=0.86;
-    hrextTend *=0.86;
-    // Bruit instantané fort (turbulences locales)
-    text  += textTend  + (Math.random()-.5)*4.0;   // ±4°C/step
-    hrext += hrextTend + (Math.random()-.5)*14;     // ±14%/step
-    text  = Math.max(-10, Math.min(40, text));
-    hrext = Math.max(20,  Math.min(100, hrext));
+    textTend  *=0.92;
+    hrextTend *=0.90;
+    // Rappel vers la normale saisonnière (évite la dérive infinie)
+    // Normales Hauts-de-France : Jan=3.5 Fev=4 Mar=7 Avr=10.5 Mai=14 Jun=17 Jul=19.5 Aou=19 Sep=15.5 Oct=11.5 Nov=7 Dec=4
+    const T_MOY_D=[3.5,4.0,7.0,10.5,14.0,17.0,19.5,19.0,15.5,11.5,7.0,4.0];
+    const HR_MOY_D=[87,85,80,75,73,72,73,74,79,83,87,88];
+    const moisD = new Date().getMonth();
+    const t_normale = T_MOY_D[moisD];
+    const hr_normale = HR_MOY_D[moisD];
+    const t_min_d = (moisD>=3 && moisD<=9) ? 2.0 : -2.0; // pas de gel avr-oct
+    text  += 0.10*(t_normale-text) + textTend  + (Math.random()-.5)*1.2;
+    hrext += 0.08*(hr_normale-hrext) + hrextTend + (Math.random()-.5)*4;
+    text  = Math.max(t_min_d, Math.min(38, text));
+    hrext = Math.max(35,  Math.min(99, hrext));
     ext.t_ext      = parseFloat(text.toFixed(1));
     ext.hr_ext     = parseFloat(hrext.toFixed(0));
     ext.t_rosee    = parseFloat((text-((100-hrext)/5)).toFixed(1));
@@ -1365,6 +1583,10 @@ function demoMode(){
     const bruit_T = (Math.random() - 0.5) * 0.025;  // réduit pour stabilité dans les plages de régulation
 
     ts += echange_env + froid_pac + apport_resp + bruit_T;
+    // ── CO2 démo ──────────────────────────────────────────────
+    const co2_volet_d = voletOuvert || curSto.includes('PURGE') || curSto.includes('AERAT');
+    co2_demo += 0.8*Math.pow(2,(ts-5)/10) + (co2_volet_d?0.08:0.005)*(420-co2_demo) + (Math.random()-.5)*3;
+    co2_demo = Math.max(400, Math.min(6000, co2_demo));
 
     // ── BILAN HYGRIQUE ───────────────────────────────────────────────
     // 1. Transpiration PDT → augmente HR
@@ -1411,6 +1633,7 @@ function demoMode(){
       t_stock:ts.toFixed(2), hr_stock:hr.toFixed(2), t_batterie:batt.toFixed(2),
       pac_on:pacSto, ventil_on:ventOn, degivrage_on:false,
       vitesse_ventil:vit.toFixed(2),
+      co2_ppm: Math.max(400, Math.min(6000, co2_demo)),
       t_consigne:CSG.sto.t, hr_consigne:CSG.sto.hr,
       mode_actif:curSm, duree_fonct_pac_h:CUMUL.sto.h.toFixed(1),
       t_ext:ext.t_ext, hr_ext:ext.hr_ext, t_rosee:ext.t_rosee, t_sol:ext.t_sol,
@@ -1424,7 +1647,7 @@ function demoMode(){
 }
 
 if(SUPABASE_KEY==='VOTRE_ANON_KEY'){ demoMode(); }
-else{ fetchInitial(); connectRealtime(); }
+else{ loadConsignes(); fetchInitial(); connectRealtime(); }
 </script>
 </body>
 </html>
