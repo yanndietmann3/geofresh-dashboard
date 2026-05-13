@@ -771,10 +771,10 @@ let _pollInterval = null;
 
 // Vitesses : 0=réel(30s) 1=×5(6s) 2=×50(600ms) 3=×100(300ms)
 const SPEEDS = [
-  { label:'▶ Temps réel', ms:30000, cls:'normal' },
-  { label:'⚡ ×5',        ms:6000,  cls:'fast' },
-  { label:'⚡ ×50',       ms:600,   cls:'fast' },
-  { label:'⚡ ×100',      ms:300,   cls:'fast' },
+  { label:'▶ Temps réel', ms:30000, cls:'normal', vitesse:1   },
+  { label:'⚡ ×5',        ms:6000,  cls:'fast',   vitesse:5   },
+  { label:'⚡ ×50',       ms:600,   cls:'fast',   vitesse:50  },
+  { label:'⚡ ×100',      ms:300,   cls:'fast',   vitesse:100 },
 ];
 let _speedIdx = 0;
 
@@ -786,6 +786,14 @@ function toggleSpeed() {
   btn.textContent = s.label;
   if(_pollInterval) clearInterval(_pollInterval);
   _pollInterval = setInterval(fetchLatest, s.ms);
+  // Envoyer la vitesse au simulateur via Supabase
+  if(SUPABASE_KEY!=='VOTRE_ANON_KEY') {
+    fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.stockage`, {
+      method:'PATCH',
+      headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({vitesse_sim: s.vitesse, updated_at: new Date().toISOString()})
+    });
+  }
 }
 
 // Fonction de polling manuel (complément au WebSocket)
