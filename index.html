@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>GeoFresh — Jumeau Numerique</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#0C1510; --cream:#F0EDE6; --muted:rgba(232,244,229,0.42);
+  --panel:rgba(18,30,22,0.95); --bdr:rgba(255,255,255,0.08);
+  --ha:#5BB8A0; --hd:#3D8A7A; --hbr:rgba(91,184,160,0.26);
+  --hsun:#E8C44A; --hsky:#7AB8D4; --hamb:#D4943A; --herr:#C45A4A;
+  --sa:#A8D85C; --sd:#4A7C3F; --sbr:rgba(107,175,94,0.26);
+  --sice:#B8D4E8; --samb:#D4A832; --serr:#C4522A;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--cream);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 55% 40% at 5% 5%,rgba(61,138,122,.14) 0%,transparent 55%),
+             radial-gradient(ellipse 45% 50% at 95% 95%,rgba(74,124,63,.11) 0%,transparent 55%);}
+.shell{position:relative;z-index:1;display:grid;grid-template-rows:auto auto 1fr;min-height:100vh;}
+
+/* ── HEADER ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 26px;
+  border-bottom:1px solid var(--bdr);background:rgba(8,14,10,.98);
+  backdrop-filter:blur(18px);position:sticky;top:0;z-index:300;}
+
+/* Logo GeoFresh SVG inline */
+.brand{display:flex;align-items:center;gap:12px;}
+.logo-svg{width:38px;height:38px;flex-shrink:0;}
+.brand-txt .name{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;letter-spacing:-.5px;color:var(--cream);}
+.brand-txt .name em{color:var(--sa);font-style:normal;}
+.brand-txt .sub{font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-top:1px;}
+
+.ext-strip{display:flex;gap:16px;align-items:center;padding:6px 14px;border-radius:9px;
+  background:rgba(255,255,255,.04);border:1px solid var(--bdr);}
+.ex{text-align:center;}
+.exv{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+.exl{font-size:7px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
+.sep{width:1px;height:22px;background:var(--bdr);}
+.hdr-r{display:flex;align-items:center;gap:12px;}
+.live{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:16px;
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  background:rgba(168,216,92,.09);border:1px solid rgba(168,216,92,.3);color:var(--sa);}
+.ldot{width:6px;height:6px;border-radius:50%;background:var(--sa);animation:pu 1.8s ease-in-out infinite;}
+@keyframes pu{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.65)}}
+#clk{font-size:11px;color:var(--muted);letter-spacing:1px;}
+
+/* ── TABS ── */
+.tabbar{display:flex;background:rgba(8,14,10,.97);border-bottom:1px solid var(--bdr);padding:0 26px;}
+.tb{display:flex;align-items:center;gap:9px;padding:12px 24px;
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.4px;
+  cursor:pointer;border:none;background:none;color:var(--muted);
+  border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;}
+.tb:hover{color:var(--cream);}
+.tb.ah{color:var(--ha);border-bottom-color:var(--ha);background:rgba(91,184,160,.05);}
+.tb.as{color:var(--sa);border-bottom-color:var(--sa);background:rgba(168,216,92,.05);}
+.tb.ax{color:#B8A0E8;border-bottom-color:#B8A0E8;background:rgba(184,160,232,.05);}
+.tbdg{font-size:7px;padding:2px 7px;border-radius:9px;letter-spacing:1px;text-transform:uppercase;font-weight:600;}
+.tok{background:rgba(107,175,94,.18);color:#6BAF5E;}
+.twrn{background:rgba(212,168,50,.2);color:#D4A832;}
+.tcrit{background:rgba(196,82,42,.28);color:#FF8A6A;animation:ap .8s infinite;}
+@keyframes ap{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── PANELS ── */
+.tc{display:none;}
+.tc.active{display:block;}
+#ph{padding:20px 26px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:13px;}
+#ps{padding:20px 26px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px;}
+#phistory{padding:20px 26px;}
+
+/* ── CARDS ── */
+.card{border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;transition:border-color .3s;background:var(--panel);}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.ch .card{border:1px solid var(--hbr);}
+.ch .card::before{background:linear-gradient(90deg,var(--hd),var(--ha),transparent);}
+.ch .card:hover{border-color:rgba(91,184,160,.5);}
+.cs .card{border:1px solid var(--sbr);}
+.cs .card::before{background:linear-gradient(90deg,var(--sd),var(--sa),transparent);}
+.cs .card:hover{border-color:rgba(107,175,94,.5);}
+.ct{font-family:'Syne',sans-serif;font-size:9px;font-weight:600;letter-spacing:3px;
+  text-transform:uppercase;color:var(--muted);margin-bottom:11px;display:flex;align-items:center;gap:7px;}
+.ct::before{content:'';display:inline-block;width:4px;height:4px;border-radius:50%;}
+.ch .ct::before{background:var(--ha);}
+.cs .ct::before{background:var(--sa);}
+
+/* ── METRICS ── */
+.mbig{font-family:'Syne',sans-serif;font-weight:800;font-size:46px;line-height:1;letter-spacing:-2px;margin-bottom:3px;}
+.mbig .u{font-size:15px;font-weight:400;color:var(--muted);}
+
+/* ── CONSIGNE CLIQUABLE ── */
+.csgbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:7px;
+  font-size:10px;cursor:pointer;border:1px dashed;transition:all .2s;background:transparent;
+  font-family:'DM Mono',monospace;margin-top:5px;}
+.csgbtn .ei{font-size:9px;opacity:.55;}
+.ch .csgbtn{color:var(--ha);border-color:rgba(91,184,160,.38);}
+.ch .csgbtn:hover{background:rgba(91,184,160,.1);border-style:solid;}
+.cs .csgbtn{color:var(--sa);border-color:rgba(168,216,92,.38);}
+.cs .csgbtn:hover{background:rgba(168,216,92,.08);border-style:solid;}
+
+/* ── SWITCH AUTO/MANU ── */
+.sw-wrap{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.sw-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.sw{position:relative;width:44px;height:24px;cursor:pointer;}
+.sw input{opacity:0;width:0;height:0;position:absolute;}
+.sw-track{position:absolute;inset:0;border-radius:12px;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.18);transition:all .3s;}
+.sw input:checked + .sw-track{background:rgba(212,168,50,.35);border-color:var(--samb);}
+.sw-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;
+  background:var(--muted);transition:all .3s;}
+.sw input:checked ~ .sw-thumb{left:23px;background:var(--samb);}
+.sw-val{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;}
+
+/* Commandes manuelles */
+.manu-cmds{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:10px;}
+.cmd-btn{padding:9px 6px;border-radius:9px;border:1px solid var(--bdr);background:rgba(0,0,0,.2);
+  font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;
+  cursor:pointer;transition:all .25s;color:var(--muted);text-align:center;}
+.cmd-btn.active{border-color:rgba(212,168,50,.6);background:rgba(212,168,50,.12);color:var(--samb);}
+.cmd-btn:hover{color:var(--cream);}
+
+/* ── ACTIONNEURS ── */
+.actg{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:7px;}
+.ai{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;
+  border-radius:9px;border:1px solid var(--bdr);background:rgba(0,0,0,.18);transition:all .35s;}
+.ai.on{border-color:rgba(107,175,94,.55);background:rgba(107,175,94,.1);}
+.ai.half{border-color:rgba(212,168,50,.5);background:rgba(212,168,50,.08);}
+.ai.off-forced{border-color:rgba(196,82,42,.4);background:rgba(196,82,42,.07);}
+.aico{font-size:16px;}
+.albl{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);text-align:center;}
+.ast{font-size:9px;font-weight:600;letter-spacing:.4px;}
+.ai.on .ast{color:var(--sa);}
+.ai.half .ast{color:var(--samb);}
+.ai.off-forced .ast{color:var(--serr);}
+.ai:not(.on):not(.half):not(.off-forced) .ast{color:var(--muted);}
+
+/* Ventilateur 3 etats */
+.ventblk{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  padding:12px;border-radius:9px;border:1px solid var(--bdr);background:rgba(0,0,0,.18);
+  margin-top:7px;transition:all .35s;}
+.ventblk.voff{border-color:var(--bdr);}
+.ventblk.vhalf{border-color:rgba(212,168,50,.5);background:rgba(212,168,50,.08);}
+.ventblk.vfull{border-color:rgba(107,175,94,.55);background:rgba(107,175,94,.1);}
+.ventblk .vico{font-size:22px;}
+.ventblk.vhalf .vico,.ventblk.vfull .vico{animation:spin 2s linear infinite;}
+.ventblk.vhalf .vico{animation-duration:3.5s;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.vlbl{font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.vval{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
+.ventblk.voff .vval{color:var(--muted);}
+.ventblk.vhalf .vval{color:var(--samb);}
+.ventblk.vfull .vval{color:var(--sa);}
+
+/* ── POMPES ── */
+.pmrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;}
+.pm{flex:1;min-width:60px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:8px 5px;border-radius:8px;border:1px solid var(--bdr);background:rgba(0,0,0,.15);transition:all .35s;}
+.pm.on{border-color:rgba(91,184,160,.42);background:rgba(91,184,160,.08);}
+.pmico{font-size:14px;}
+.pmlbl{font-size:6px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);text-align:center;}
+.pmst{font-size:8px;font-weight:500;}
+.pm.on .pmst{color:var(--ha);}
+.pm:not(.on) .pmst{color:var(--muted);}
+
+/* ── MODE BADGE ── */
+.mbdg{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:18px;
+  font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:.4px;
+  margin-bottom:7px;transition:all .35s;}
+.mph-ECS{background:rgba(212,148,58,.18);color:#D4943A;border:1px solid #D4943A;}
+.mph-CHAUF{background:rgba(232,196,74,.12);color:#E8C44A;border:1px solid rgba(232,196,74,.45);}
+.mph-CLIM{background:rgba(122,184,212,.18);color:#7AB8D4;border:1px solid #7AB8D4;}
+.mph-STAND{background:rgba(255,255,255,.04);color:var(--muted);border:1px solid var(--bdr);}
+.mph-ALARM{background:rgba(196,90,74,.2);color:#FF8A7A;border:1px solid #C45A4A;}
+.mph-MANU{background:rgba(212,168,50,.2);color:var(--samb);border:1px solid var(--samb);}
+.mbs-FROID{background:rgba(184,212,232,.1);color:var(--sice);border:1px solid var(--sice);}
+.mbs-SECH{background:rgba(212,168,50,.18);color:var(--samb);border:1px solid var(--samb);}
+.mbs-DEGIV{background:rgba(196,82,42,.18);color:#E88A6A;border:1px solid #C4522A;}
+.mbs-FREE{background:rgba(74,124,63,.22);color:var(--sa);border:1px solid var(--sa);}
+.mbs-MANU{background:rgba(212,168,50,.18);color:var(--samb);border:1px solid var(--samb);}
+.mbs-ALARM{background:rgba(196,82,42,.25);color:#FF8A6A;border:1px solid var(--serr);animation:ap .8s infinite;}
+.mbs-AUTO{background:rgba(107,175,94,.18);color:#6BAF5E;border:1px solid #6BAF5E;}
+
+/* ── GBAR ── */
+.gbar{height:5px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden;}
+.gfill{height:100%;border-radius:3px;transition:width 1s cubic-bezier(.4,0,.2,1);}
+
+/* ── FC badge -> renomme ventilo-conv ── */
+.fcb{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:11px;
+  font-size:7px;letter-spacing:1px;text-transform:uppercase;margin-top:4px;}
+.fcon{background:rgba(91,184,160,.16);color:var(--ha);border:1px solid var(--ha);}
+.fcoff{background:rgba(255,255,255,.04);color:var(--muted);border:1px solid var(--bdr);}
+
+/* ── ECS RING ── */
+.ecswrap{display:flex;align-items:center;gap:13px;margin-top:3px;}
+.ecsring{width:76px;height:76px;position:relative;}
+.ecsring svg{transform:rotate(-90deg);}
+.ecst{fill:none;stroke:rgba(255,255,255,.06);stroke-width:7;}
+.ecsp{fill:none;stroke:var(--hamb);stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset 1.2s;}
+.ecsin{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.ecsv{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;}
+.ecsu{font-size:7px;color:var(--muted);letter-spacing:1px;}
+
+/* ── PAC STATUS ── */
+.pacs{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:9px;border:1px solid;margin-top:7px;}
+.pac-on{border-color:rgba(91,184,160,.45);background:rgba(91,184,160,.07);}
+.pac-off{border-color:var(--bdr);background:rgba(0,0,0,.18);}
+.pacc{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.pac-on .pacc{background:rgba(91,184,160,.14);animation:spin 3s linear infinite;}
+.pac-off .pacc{background:rgba(255,255,255,.04);}
+.pact{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;}
+.pac-on .pact{color:var(--ha);}
+.pac-off .pact{color:var(--muted);}
+.pacd{font-size:8px;color:var(--muted);margin-top:2px;letter-spacing:.4px;}
+
+/* ── SAISON ── */
+.stag{padding:4px 10px;border-radius:14px;font-family:'Syne',sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;display:inline-block;margin-bottom:6px;}
+.sc{background:rgba(232,196,74,.12);color:#E8C44A;border:1px solid rgba(232,196,74,.38);}
+.sf{background:rgba(122,184,212,.12);color:#7AB8D4;border:1px solid rgba(122,184,212,.38);}
+
+/* ── ALARMES ── */
+.apa{padding:9px 12px;border-radius:8px;border:1px solid;font-size:9px;display:flex;align-items:center;gap:8px;margin-top:7px;}
+.aok{border-color:rgba(91,184,160,.32);background:rgba(91,184,160,.06);color:var(--ha);}
+.awrn{border-color:rgba(212,148,58,.45);background:rgba(212,148,58,.07);color:var(--hamb);}
+.acrit{border-color:rgba(196,90,74,.6);background:rgba(196,90,74,.1);color:#FF8A7A;}
+.as-ok{border-color:rgba(107,175,94,.32);background:rgba(107,175,94,.06);color:#6BAF5E;}
+.as-wrn{border-color:rgba(212,168,50,.45);background:rgba(212,168,50,.07);color:var(--samb);animation:ap 2s infinite;}
+.as-crit{border-color:rgba(196,82,42,.6);background:rgba(196,82,42,.1);color:#FF8A6A;animation:ap .8s infinite;}
+
+/* ── EAU ── */
+.eaug{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:3px;}
+.eauv{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;}
+.eaul{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:1px;}
+.eaub{height:3px;border-radius:2px;background:rgba(255,255,255,.06);margin-top:5px;overflow:hidden;}
+.eauf{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--hsky),var(--ha));transition:width 1s;}
+
+/* ── STATS MINI ── */
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px;}
+.si{padding:7px;border-radius:7px;border:1px solid var(--bdr);}
+.sl{font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.sv{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-top:2px;}
+
+/* ── CUMUL PAC ── */
+.cumul-strip{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;}
+.cumul-it{flex:1;min-width:70px;padding:8px;border-radius:8px;border:1px solid var(--bdr);text-align:center;}
+.cumul-v{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;}
+.cumul-l{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+
+/* ── LOG ── */
+.logl{max-height:100px;overflow-y:auto;scrollbar-width:none;}
+.logl::-webkit-scrollbar{display:none;}
+.le{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:8px;}
+.lt{color:var(--muted);min-width:50px;}
+.lm{flex:1;}
+.log-lvl-2 .lm{color:#D4A832;}
+.log-lvl-3 .lm{color:#FF8A6A;}
+
+/* ── SPANS ── */
+.s2{grid-column:span 2;}.s3{grid-column:span 3;}.s4{grid-column:span 4;}
+
+/* ── HISTORIQUE ── */
+.hist-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.hist-select{background:rgba(255,255,255,.06);border:1px solid var(--bdr);border-radius:8px;
+  padding:8px 12px;color:var(--cream);font-family:'DM Mono',monospace;font-size:12px;}
+.hist-select:focus{outline:none;border-color:var(--ha);}
+.hist-range-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.hist-card{background:var(--panel);border-radius:12px;border:1px solid var(--bdr);padding:20px;margin-bottom:14px;}
+.hist-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.hist-table{width:100%;border-collapse:collapse;font-size:11px;}
+.hist-table th{text-align:left;font-size:8px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--bdr);}
+.hist-table td{padding:8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--cream);}
+.hist-table tr:hover td{background:rgba(255,255,255,.03);}
+.hist-empty{text-align:center;padding:40px;color:var(--muted);font-size:11px;}
+.hist-chart{width:100%;height:180px;position:relative;margin-top:8px;}
+canvas.hc{width:100%!important;height:180px!important;}
+.hist-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.hstat{background:var(--panel);border:1px solid var(--bdr);border-radius:10px;padding:14px;text-align:center;}
+.hstat-v{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;}
+.hstat-l{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:3px;}
+
+/* ── MODALE ── */
+.overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.72);
+  align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:#0f1c14;border-radius:14px;padding:26px 30px;width:400px;max-width:92vw;
+  border:1px solid rgba(255,255,255,.13);box-shadow:0 20px 50px rgba(0,0,0,.55);}
+.mtitle{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:18px;
+  display:flex;align-items:center;justify-content:space-between;color:var(--cream);}
+.mclose{cursor:pointer;font-size:18px;color:var(--muted);background:none;border:none;padding:0;}
+.mclose:hover{color:var(--cream);}
+.mfield{margin-bottom:14px;}
+.mfield label{display:block;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.mfield input[type=number],.mfield select{width:100%;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.15);border-radius:7px;padding:9px 11px;
+  color:var(--cream);font-family:'DM Mono',monospace;font-size:12px;}
+.mfield input:focus,.mfield select:focus{outline:none;border-color:var(--ha);}
+.msep{height:1px;background:rgba(255,255,255,.08);margin:12px 0;}
+.mbtns{display:flex;gap:9px;margin-top:18px;}
+.mbcancel{flex:1;padding:10px;border-radius:8px;border:1px solid var(--bdr);background:transparent;
+  color:var(--muted);font-family:'Syne',sans-serif;font-size:11px;font-weight:700;cursor:pointer;}
+.mbcancel:hover{color:var(--cream);}
+.mbsave{flex:2;padding:10px;border-radius:8px;border:none;font-family:'Syne',sans-serif;
+  font-size:11px;font-weight:700;cursor:pointer;}
+.mbsave:hover{opacity:.85;}
+.mbsave-h{background:var(--ha);color:#04181200;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ══ HEADER ════════════════════════════════════════════ -->
+<header>
+  <div class="brand">
+    <img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAeABDgDASIAAhEBAxEB/8QAHAABAAMBAAMBAAAAAAAAAAAAAAYHCAUBAwQC/8QAWhABAAEDAgIDBwwPBAgFBAMBAAECAwQFBgcREiExF0FRYXGBkwgTIjI2QlNVcpGhsRQVIzNSYnN0kpSys8HR0iSipMIWNDU3Q0aC8CV1o8PTVGPh40RWZIP/xAAbAQEAAwEBAQEAAAAAAAAAAAAAAwQFBgIBB//EADgRAQACAQICBggGAwACAwEAAAABAgMEEQUSFCExM1FxExUyQVJhgaEiQpGxwdE04fAjkgYkQ1P/2gAMAwEAAhEDEQA/AMZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//Z" alt="GeoFresh" style="height:44px;width:auto;flex-shrink:0;"/>
+    <div class="brand-txt">
+      <div class="name" style="font-family:'Georgia',serif;font-size:18px;letter-spacing:-.3px;">
+        <span style="color:#5A8A3C">Geo</span><span style="color:#A0723A">Fresh</span>
+      </div>
+      <div class="sub">Jumeau Numerique · Installation Complete</div>
+    </div>
+  </div>
+
+  <div class="ext-strip">
+    <div class="ex"><div class="exv" id="hdr-text">--°C</div><div class="exl">T ext</div></div>
+    <div class="sep"></div>
+    <div class="ex"><div class="exv" id="hdr-hr">--%</div><div class="exl">HR ext</div></div>
+    <div class="sep"></div>
+    <div class="ex"><div class="exv" id="hdr-sol" style="color:var(--ha)">--°C</div><div class="exl">T sol</div></div>
+    <div class="sep"></div>
+    <div class="ex"><div class="exv" id="hdr-wind" style="color:var(--muted)">-- m/s</div><div class="exl">Vent</div></div>
+  </div>
+
+  <div class="hdr-r">
+    <div class="live"><div class="ldot"></div>Temps reel</div>
+    <div id="clk">--:--:--</div>
+  </div>
+</header>
+
+<!-- ══ TABS ═══════════════════════════════════════════════ -->
+<div class="tabbar">
+  <button class="tb ah" id="tbh" onclick="switchTab('h')">
+    🏠 Habitation — PAC Sol/Sol
+    <span class="tbdg tok" id="badge-h">OK</span>
+  </button>
+  <button class="tb" id="tbs" onclick="switchTab('s')">
+    🥔 Batiment Stockage — Pommes de Terre
+    <span class="tbdg tok" id="badge-s">OK</span>
+  </button>
+  <button class="tb" id="tbx" onclick="switchTab('x')">
+    📊 Historique
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PANEL HABITATION
+══════════════════════════════════════════════════════ -->
+<div class="tc active ch" id="ph">
+
+  <!-- Zone 1 -->
+  <div class="card">
+    <div class="ct">Zone 1 — Sejour</div>
+    <div class="mbig" id="h-z1">--<span class="u">°C</span></div>
+    <button class="csgbtn" onclick="openModal('hab','z1')" id="h-csgz1-btn">Csg : -- °C <span class="ei">✎</span></button>
+    <div style="margin-top:10px;">
+      <div style="font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Ventilo-convecteur Z1</div>
+      <div class="gbar" style="margin-top:4px;"><div class="gfill" id="h-vc1-fill" style="width:12%"></div></div>
+    </div>
+    <div class="fcb fcoff" id="h-vc1-b">Inactif</div>
+    <div class="sg">
+      <div class="si"><div class="sl">T consigne</div><div class="sv" id="h-csgz1-v">-- °C</div></div>
+      <div class="si"><div class="sl">Clim csg</div><div class="sv" id="h-clim1-v">-- °C</div></div>
+    </div>
+  </div>
+
+  <!-- Zone 2 -->
+  <div class="card">
+    <div class="ct">Zone 2 — Chambres</div>
+    <div class="mbig" id="h-z2">--<span class="u">°C</span></div>
+    <button class="csgbtn" onclick="openModal('hab','z2')" id="h-csgz2-btn">Csg : -- °C <span class="ei">✎</span></button>
+    <div style="margin-top:10px;">
+      <div style="font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Ventilo-convecteur Z2</div>
+      <div class="gbar" style="margin-top:4px;"><div class="gfill" id="h-vc2-fill" style="width:12%"></div></div>
+    </div>
+    <div class="fcb fcoff" id="h-vc2-b">Inactif</div>
+    <div class="sg">
+      <div class="si"><div class="sl">T consigne</div><div class="sv" id="h-csgz2-v">-- °C</div></div>
+      <div class="si"><div class="sl">Clim csg</div><div class="sv" id="h-clim2-v">-- °C</div></div>
+    </div>
+  </div>
+
+  <!-- ECS -->
+  <div class="card">
+    <div class="ct">ECS — Eau Chaude Sanitaire</div>
+    <div class="ecswrap">
+      <div class="ecsring">
+        <svg viewBox="0 0 76 76" width="76" height="76">
+          <circle class="ecst" cx="38" cy="38" r="29"/>
+          <circle class="ecsp" id="h-ecsp" cx="38" cy="38" r="29" stroke-dasharray="182" stroke-dashoffset="182"/>
+        </svg>
+        <div class="ecsin"><div class="ecsv" id="h-ecs-v">--</div><div class="ecsu">°C</div></div>
+      </div>
+      <div>
+        <div style="font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Consigne ECS</div>
+        <div style="font-family:'Syne';font-size:19px;font-weight:700;color:var(--hamb)" id="h-csgecs-v">-- °C</div>
+        <button class="csgbtn" style="margin-top:5px;" onclick="openModal('hab','ecs')">Modifier <span class="ei">✎</span></button>
+        <div style="margin-top:7px;font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Vanne ECS</div>
+        <div class="fcb fcoff" id="h-vanne-b" style="margin-top:3px;">Fermee</div>
+      </div>
+    </div>
+    <!-- Cumul PAC saison -->
+    <div class="cumul-strip">
+      <div class="cumul-it">
+        <div class="cumul-v" id="h-cumul-h" style="color:var(--ha)">0 h</div>
+        <div class="cumul-l">Cumul PAC saison</div>
+      </div>
+      <div class="cumul-it">
+        <div class="cumul-v" id="h-cumul-ecs" style="color:var(--hamb)">0 h</div>
+        <div class="cumul-l">Dont ECS</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAC + Mode + Switch AUTO/MANU -->
+  <div class="card">
+    <div class="ct">PAC & Mode</div>
+    <div class="mbdg mph-STAND" id="h-mode">INIT</div>
+    <div id="h-saison" class="stag sc">☀ CHAUD</div>
+    <div class="pacs pac-off" id="h-pac">
+      <div class="pacc">⚙️</div>
+      <div><div class="pact" id="h-pact">PAC OFF</div><div class="pacd" id="h-pacd">En attente</div></div>
+    </div>
+    <!-- Switch AUTO / MANU -->
+    <div class="sw-wrap" style="margin-top:10px;">
+      <span class="sw-lbl">Mode</span>
+      <label class="sw" title="Basculer Auto/Manu">
+        <input type="checkbox" id="h-sw-manu" onchange="toggleManu('hab')"/>
+        <div class="sw-track"></div>
+        <div class="sw-thumb"></div>
+      </label>
+      <span class="sw-val" id="h-sw-lbl" style="color:var(--muted)">AUTO</span>
+    </div>
+    <!-- Commandes manuelles (masquees si AUTO) -->
+    <div id="h-manu-cmds" style="display:none;margin-top:8px;">
+      <div style="font-size:7px;letter-spacing:2px;color:var(--samb);text-transform:uppercase;margin-bottom:6px;">Commandes manuelles</div>
+      <div class="manu-cmds">
+        <div class="cmd-btn" id="h-cmd-pac" onclick="toggleCmd('hab','pac')">❄️ PAC</div>
+        <div class="cmd-btn" id="h-cmd-vc1" onclick="toggleCmd('hab','vc1')">🌬 VC Z1</div>
+        <div class="cmd-btn" id="h-cmd-vc2" onclick="toggleCmd('hab','vc2')">🌬 VC Z2</div>
+      </div>
+    </div>
+    <div class="sg" style="margin-top:8px;">
+      <div class="si"><div class="sl">Anti-cycle</div><div class="sv" id="h-acc">-- min</div></div>
+      <div class="si"><div class="sl">T eau dep</div><div class="sv" style="color:var(--hsky)" id="h-dep">-- °C</div></div>
+    </div>
+  </div>
+
+  <!-- Circuit hydraulique + Pompes -->
+  <div class="card s2">
+    <div class="ct">Circuit hydraulique & Pompes</div>
+    <div class="eaug">
+      <div>
+        <div class="eaul">T depart</div><div class="eauv" id="h-eau-dep">-- °C</div>
+        <div class="eaub"><div class="eauf" id="h-dep-f" style="width:50%"></div></div>
+      </div>
+      <div>
+        <div class="eaul">T retour</div><div class="eauv" id="h-eau-ret">-- °C</div>
+        <div class="eaub"><div class="eauf" id="h-ret-f" style="width:40%;background:var(--hd)"></div></div>
+      </div>
+    </div>
+    <div class="pmrow">
+      <div class="pm" id="h-ps"><div class="pmico">🌡️</div><div class="pmlbl">Pompe Sol</div><div class="pmst" id="h-ps-s">OFF</div></div>
+      <div class="pm" id="h-pc"><div class="pmico">🔄</div><div class="pmlbl">Circuit</div><div class="pmst" id="h-pc-s">OFF</div></div>
+      <div class="pm" id="h-p1"><div class="pmico">🌬️</div><div class="pmlbl">VC Zone 1</div><div class="pmst" id="h-p1-s">OFF</div></div>
+      <div class="pm" id="h-p2"><div class="pmico">🌬️</div><div class="pmlbl">VC Zone 2</div><div class="pmst" id="h-p2-s">OFF</div></div>
+      <div class="pm" id="h-pe"><div class="pmico">🚿</div><div class="pmlbl">Vanne ECS</div><div class="pmst" id="h-pe-s">OFF</div></div>
+    </div>
+  </div>
+
+  <!-- Securites + Alarmes -->
+  <div class="card s2">
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
+      <div>
+        <div class="ct">Alarmes & Securites</div>
+        <div class="apa aok" id="h-ap"><span>✓</span><span id="h-am">Systeme nominal</span></div>
+        <div class="sg" style="margin-top:8px;">
+          <div class="si"><div class="sl">Surchauffe ECS</div><div class="sv" id="h-ecsmax">OK</div></div>
+          <div class="si"><div class="sl">Gel sol</div><div class="sv" id="h-gel">OK</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="ct">Journal</div>
+        <div class="logl" id="h-log"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /ph -->
+
+<!-- ══════════════════════════════════════════════════════
+     PANEL STOCKAGE
+══════════════════════════════════════════════════════ -->
+<div class="tc cs" id="ps">
+
+  <!-- Temperature -->
+  <div class="card">
+    <div class="ct">Temperature Stockage</div>
+    <div class="mbig" id="s-ts">--<span class="u">°C</span></div>
+    <button class="csgbtn" onclick="openModal('sto','t')" id="s-csgt-btn">Csg : -- °C <span class="ei">✎</span></button>
+    <div class="sg">
+      <div class="si"><div class="sl">T batterie evap.</div><div class="sv" id="s-batt">-- °C</div></div>
+      <div class="si"><div class="sl">Duree PAC</div><div class="sv" id="s-dpac">-- h</div></div>
+    </div>
+    <!-- Sonde batterie -->
+    <div style="margin-top:8px;">
+      <div style="font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Sonde batterie evaporateur</div>
+      <div class="gbar"><div class="gfill" id="s-batt-fill" style="width:50%;background:linear-gradient(90deg,var(--sice),var(--sa))"></div></div>
+    </div>
+    <!-- Cumul PAC saison -->
+    <div class="cumul-strip">
+      <div class="cumul-it">
+        <div class="cumul-v" id="s-cumul-h" style="color:var(--sa)">0 h</div>
+        <div class="cumul-l">Cumul PAC saison</div>
+      </div>
+      <div class="cumul-it">
+        <div class="cumul-v" id="s-cumul-fc" style="color:var(--sice)">0 h</div>
+        <div class="cumul-l">Free cooling</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Humidite -->
+  <div class="card">
+    <div class="ct">Humidite Relative Stockage</div>
+    <div class="mbig" id="s-hr">--<span class="u">%</span></div>
+    <button class="csgbtn" onclick="openModal('sto','hr')" id="s-csghr-btn">Csg : --% <span class="ei">✎</span></button>
+    <div class="sg">
+      <div class="si"><div class="sl">T rosee ext</div><div class="sv" id="s-rosee">-- °C</div></div>
+      <div class="si"><div class="sl">HR ext</div><div class="sv" id="s-hrext">-- %</div></div>
+    </div>
+    <div style="margin-top:8px;">
+      <div style="font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Conditions volet libre</div>
+      <div class="apa" id="s-volet-cond" style="margin-top:0;font-size:8px;">
+        <span id="s-volet-reason">— calcul en cours —</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mode + Actionneurs + Switch AUTO/MANU -->
+  <div class="card">
+    <div class="ct">Mode & Actionneurs</div>
+    <div class="mbdg mbs-AUTO" id="s-mode">INIT</div>
+
+    <!-- Switch AUTO / MANU -->
+    <div class="sw-wrap">
+      <span class="sw-lbl">Mode</span>
+      <label class="sw" title="Basculer Auto/Manu">
+        <input type="checkbox" id="s-sw-manu" onchange="toggleManu('sto')"/>
+        <div class="sw-track"></div>
+        <div class="sw-thumb"></div>
+      </label>
+      <span class="sw-val" id="s-sw-lbl" style="color:var(--muted)">AUTO</span>
+    </div>
+    <!-- Commandes manuelles -->
+    <div id="s-manu-cmds" style="display:none;margin-top:8px;">
+      <div style="font-size:7px;letter-spacing:2px;color:var(--samb);text-transform:uppercase;margin-bottom:6px;">Commandes manuelles</div>
+      <div class="manu-cmds">
+        <div class="cmd-btn" id="s-cmd-pac"   onclick="toggleCmd('sto','pac')">❄️ PAC</div>
+        <div class="cmd-btn" id="s-cmd-volet" onclick="toggleCmd('sto','volet')">🪟 Volet</div>
+        <div class="cmd-btn" id="s-cmd-vent"  onclick="toggleCmd('sto','vent')">🌀 Ventil.</div>
+      </div>
+    </div>
+
+    <div class="actg" style="margin-top:8px;">
+      <div class="ai" id="s-pac"><div class="aico">❄️</div><div class="albl">PAC</div><div class="ast" id="s-pac-s">OFF</div></div>
+      <div class="ai" id="s-degiv"><div class="aico">🔥</div><div class="albl">Degivrage</div><div class="ast" id="s-degiv-s">OFF</div></div>
+      <div class="ai" id="s-reg"><div class="aico">🪟</div><div class="albl">Volet</div><div class="ast" id="s-reg-s">FERME</div></div>
+    </div>
+
+    <!-- Ventilation 3 etats -->
+    <div class="ventblk voff" id="s-vblk">
+      <div class="vico" id="s-vico">🌀</div>
+      <div class="vlbl">Ventilation</div>
+      <div class="vval" id="s-vval">OFF</div>
+    </div>
+  </div>
+
+  <!-- Conditions ext + consignes -->
+  <div class="card">
+    <div class="ct">Conditions exterieures</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:3px;">
+      <div><div class="sl">T ext</div><div style="font-family:'Syne';font-size:26px;font-weight:800;" id="s-text">--</div><div style="font-size:8px;color:var(--muted)">°C</div></div>
+      <div><div class="sl">T sol</div><div style="font-family:'Syne';font-size:26px;font-weight:800;color:var(--sa);" id="s-tsol">--</div><div style="font-size:8px;color:var(--muted)">°C</div></div>
+      <div><div class="sl">HR ext</div><div style="font-family:'Syne';font-size:18px;font-weight:700;" id="s-hr2">-- %</div></div>
+      <div><div class="sl">T rosee</div><div style="font-family:'Syne';font-size:18px;font-weight:700;color:var(--sice);" id="s-tros2">-- °C</div></div>
+    </div>
+    <div style="margin-top:10px;">
+      <button class="csgbtn" style="width:100%;justify-content:center;" onclick="openModal('sto','all')">
+        ⚙ Toutes les consignes <span class="ei">✎</span>
+      </button>
+    </div>
+    <div class="sg" style="margin-top:8px;">
+      <div class="si"><div class="sl">T consigne</div><div class="sv" id="s-cv">-- °C</div></div>
+      <div class="si"><div class="sl">HR consigne</div><div class="sv" id="s-hrv">-- %</div></div>
+    </div>
+  </div>
+
+  <!-- Post-recolte + compteurs -->
+  <div class="card">
+    <div class="ct">Post-recolte & Compteurs</div>
+    <div class="sg">
+      <div class="si"><div class="sl">Post-recolte</div><div class="sv" id="s-pr">Inactif</div></div>
+      <div class="si"><div class="sl">Degivrage</div><div class="sv" id="s-deg">0 min</div></div>
+      <div class="si"><div class="sl">Anti-cycle</div><div class="sv" id="s-acc">-- min</div></div>
+      <div class="si"><div class="sl">Hyst T</div><div class="sv" id="s-hyst">±-- °C</div></div>
+    </div>
+    <div class="cumul-strip" style="margin-top:10px;">
+      <div class="cumul-it">
+        <div class="cumul-v" id="s-cumul-h2" style="color:var(--sa)">0 h</div>
+        <div class="cumul-l">Cumul PAC saison</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alarmes -->
+  <div class="card">
+    <div class="ct">Alarmes & Securites</div>
+    <div class="apa as-ok" id="s-ap"><span>✓</span><span id="s-am">Systeme nominal</span></div>
+    <div class="sg" style="margin-top:8px;">
+      <div class="si"><div class="sl">Gel produit</div><div class="sv" style="color:var(--sa)" id="s-gel">OK</div></div>
+      <div class="si"><div class="sl">Batt evap</div><div class="sv" style="color:var(--sa)" id="s-battok">OK</div></div>
+    </div>
+    <div style="margin-top:8px;"><div class="ct" style="margin-bottom:6px;">Journal</div><div class="logl" id="s-log"></div></div>
+  </div>
+
+</div><!-- /ps -->
+
+<!-- ══════════════════════════════════════════════════════
+     PANEL HISTORIQUE
+══════════════════════════════════════════════════════ -->
+<div class="tc" id="phistory">
+  <div class="hist-toolbar">
+    <select class="hist-select" id="hist-bat" onchange="loadHistory()">
+      <option value="hab">🏠 Habitation — PAC Sol/Sol</option>
+      <option value="sto">🥔 Batiment de Stockage</option>
+    </select>
+    <span class="hist-range-lbl">Periode :</span>
+    <select class="hist-select" id="hist-range" onchange="loadHistory()">
+      <option value="1h">1 heure</option>
+      <option value="6h">6 heures</option>
+      <option value="24h" selected>24 heures</option>
+      <option value="7d">7 jours</option>
+      <option value="30d">30 jours</option>
+      <option value="saison">Saison complete</option>
+    </select>
+    <button class="csgbtn" style="border-style:solid;color:var(--sa);border-color:rgba(168,216,92,.4);" onclick="loadHistory()">↻ Actualiser</button>
+  </div>
+
+  <!-- Stats globales -->
+  <div class="hist-stats-grid" id="hist-stats">
+    <div class="hstat"><div class="hstat-v" id="hs-cumul" style="color:var(--sa)">0 h</div><div class="hstat-l">Cumul PAC saison</div></div>
+    <div class="hstat"><div class="hstat-v" id="hs-tmoy" style="color:var(--cream)">-- °C</div><div class="hstat-l">T moy periode</div></div>
+    <div class="hstat"><div class="hstat-v" id="hs-alarmes" style="color:var(--samb)">0</div><div class="hstat-l">Alarmes declenchees</div></div>
+    <div class="hstat"><div class="hstat-v" id="hs-modes" style="color:var(--sice)">--</div><div class="hstat-l">Mode dominant</div></div>
+  </div>
+
+  <!-- Chart mini -->
+  <div class="hist-card">
+    <div class="hist-title" id="hist-chart-title">Evolution temperature — 24h</div>
+    <div class="hist-chart"><canvas class="hc" id="hist-canvas"></canvas></div>
+  </div>
+
+  <!-- Tableau evenements -->
+  <div class="hist-card">
+    <div class="hist-title">Evenements & changements de mode</div>
+    <div id="hist-table-wrap">
+      <div class="hist-empty" id="hist-empty">Connexion Supabase requise pour l'historique en temps reel.<br>En mode demo, les donnees sont simulees.</div>
+      <table class="hist-table" id="hist-table" style="display:none;">
+        <thead><tr><th>Horodatage</th><th>Mode</th><th>T stock / T int</th><th>HR / ECS</th><th>PAC</th><th>Alarme</th></tr></thead>
+        <tbody id="hist-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div><!-- /phistory -->
+
+</div><!-- /shell -->
+
+<!-- ══ MODALE CONSIGNES ══════════════════════════════════ -->
+<div class="overlay" id="modal-ov" onclick="closeModalOut(event)">
+  <div class="modal">
+    <div class="mtitle">
+      <span id="m-title">Modifier la consigne</span>
+      <button class="mclose" onclick="closeModal()">✕</button>
+    </div>
+    <div id="m-fields"></div>
+    <div class="mbtns">
+      <button class="mbcancel" onclick="closeModal()">Annuler</button>
+      <button class="mbsave mbsave-h" id="m-save" onclick="saveModal()" style="color:#041a12">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+//  ETAT
+// ════════════════════════════════════════
+const CSG = {
+  hab:{ z1:20.0, z2:19.0, ecs:55.0, hyst_ecs:3.0, clim1:26.0, clim2:26.0 },
+  sto:{ t:6.0, hr:90.0, hyst_t:0.5, hyst_hr:3.0 }
+};
+const MANU = { hab:{ on:false, pac:false, vc1:false, vc2:false },
+               sto:{ on:false, pac:false, volet:false, vent:false } };
+const CUMUL = { hab:{ h:0, ecs:0 }, sto:{ h:0, fc:0 } };
+
+// ════════════════════════════════════════
+//  ONGLETS
+// ════════════════════════════════════════
+function switchTab(t) {
+  document.querySelectorAll('.tc').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.tb').forEach(e=>e.classList.remove('ah','as','ax'));
+  document.getElementById('p'+(t==='x'?'history':t)).classList.add('active');
+  const btn=document.getElementById('tb'+t);
+  btn.classList.add(t==='h'?'ah':t==='s'?'as':'ax');
+  if(t==='x') loadHistory();
+}
+
+// ════════════════════════════════════════
+//  SWITCH AUTO / MANU
+// ════════════════════════════════════════
+function toggleManu(src) {
+  const on = document.getElementById(src==='hab'?'h-sw-manu':'s-sw-manu').checked;
+  MANU[src==='hab'?'hab':'sto'].on = on;
+  const lbl = document.getElementById(src==='hab'?'h-sw-lbl':'s-sw-lbl');
+  const cmds = document.getElementById(src==='hab'?'h-manu-cmds':'s-manu-cmds');
+  lbl.textContent = on ? 'MANU' : 'AUTO';
+  lbl.style.color = on ? 'var(--samb)' : 'var(--muted)';
+  cmds.style.display = on ? 'block' : 'none';
+}
+
+function toggleCmd(src, cmd) {
+  const m = MANU[src==='hab'?'hab':'sto'];
+  m[cmd] = !m[cmd];
+  const id = src==='hab' ? `h-cmd-${cmd}` : `s-cmd-${cmd}`;
+  document.getElementById(id).classList.toggle('active', m[cmd]);
+}
+
+// ════════════════════════════════════════
+//  MODALE CONSIGNES
+// ════════════════════════════════════════
+let mCtx={};
+function mf(id,lbl,val,mn,mx,step=0.5){
+  return `<div class="mfield"><label>${lbl}</label><input type="number" id="mf-${id}" value="${val}" min="${mn}" max="${mx}" step="${step}"></div>`;
+}
+const MCFG = {
+  'hab-z1'   :{ t:'Consigne Zone 1 — Sejour',   f:()=>mf('hz1','Temperature cible (°C)',CSG.hab.z1,10,30) },
+  'hab-z2'   :{ t:'Consigne Zone 2 — Chambres', f:()=>mf('hz2','Temperature cible (°C)',CSG.hab.z2,10,30) },
+  'hab-ecs'  :{ t:'Consigne ECS',               f:()=>mf('hecs','Ballon ECS (°C)',CSG.hab.ecs,40,65)+mf('hhyst','Hysteresis (°C)',CSG.hab.hyst_ecs,1,5) },
+  'hab-clim1':{ t:'Consigne Climatisation Z1',   f:()=>mf('hc1','Clim Z1 (°C)',CSG.hab.clim1,20,32) },
+  'hab-clim2':{ t:'Consigne Climatisation Z2',   f:()=>mf('hc2','Clim Z2 (°C)',CSG.hab.clim2,20,32) },
+  'sto-t'    :{ t:'Consigne Temperature Stockage', f:()=>mf('st','Temperature cible (°C)',CSG.sto.t,2,15)+mf('shyst','Hysteresis ±°C',CSG.sto.hyst_t,0.1,2,0.1) },
+  'sto-hr'   :{ t:'Consigne Humidite Stockage',   f:()=>mf('shr','HR cible (%)',CSG.sto.hr,70,98)+mf('shrh','Hysteresis ±%',CSG.sto.hyst_hr,1,8) },
+  'sto-all'  :{ t:'Toutes les consignes Stockage', f:()=>
+    mf('sta','T_consigne (°C)',CSG.sto.t,2,15)+mf('stb','Hyst T ±°C',CSG.sto.hyst_t,0.1,2,0.1)+
+    '<div class="msep"></div>'+
+    mf('src','HR_consigne (%)',CSG.sto.hr,70,98)+mf('srd','Hyst HR ±%',CSG.sto.hyst_hr,1,8) }
+};
+
+function openModal(src,key) {
+  const k=`${src}-${key}`, cfg=MCFG[k]; if(!cfg)return;
+  mCtx={src,key,k};
+  document.getElementById('m-title').textContent=cfg.t;
+  document.getElementById('m-fields').innerHTML=cfg.f();
+  document.getElementById('modal-ov').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal-ov').classList.remove('open'); }
+function closeModalOut(e){ if(e.target===document.getElementById('modal-ov')) closeModal(); }
+function gv(id){ const el=document.getElementById('mf-'+id); return el?parseFloat(el.value):null; }
+
+function saveModal() {
+  const {src,key,k}=mCtx;
+  if(k==='hab-z1')  { CSG.hab.z1=gv('hz1')??CSG.hab.z1; }
+  if(k==='hab-z2')  { CSG.hab.z2=gv('hz2')??CSG.hab.z2; }
+  if(k==='hab-ecs') { CSG.hab.ecs=gv('hecs')??CSG.hab.ecs; CSG.hab.hyst_ecs=gv('hhyst')??CSG.hab.hyst_ecs; }
+  if(k==='hab-clim1'){CSG.hab.clim1=gv('hc1')??CSG.hab.clim1; }
+  if(k==='hab-clim2'){CSG.hab.clim2=gv('hc2')??CSG.hab.clim2; }
+  if(k==='sto-t')   { CSG.sto.t=gv('st')??CSG.sto.t; CSG.sto.hyst_t=gv('shyst')??CSG.sto.hyst_t; }
+  if(k==='sto-hr')  { CSG.sto.hr=gv('shr')??CSG.sto.hr; CSG.sto.hyst_hr=gv('shrh')??CSG.sto.hyst_hr; }
+  if(k==='sto-all') { CSG.sto.t=gv('sta')??CSG.sto.t; CSG.sto.hyst_t=gv('stb')??CSG.sto.hyst_t;
+                      CSG.sto.hr=gv('src')??CSG.sto.hr; CSG.sto.hyst_hr=gv('srd')??CSG.sto.hyst_hr; }
+  refreshCsg();
+  closeModal();
+}
+
+function refreshCsg() {
+  document.getElementById('h-csgz1-btn').innerHTML=`Csg : ${CSG.hab.z1.toFixed(1)} °C <span class="ei">✎</span>`;
+  document.getElementById('h-csgz2-btn').innerHTML=`Csg : ${CSG.hab.z2.toFixed(1)} °C <span class="ei">✎</span>`;
+  document.getElementById('h-csgecs-v').textContent=`${CSG.hab.ecs.toFixed(0)} °C`;
+  document.getElementById('h-csgz1-v').textContent=`${CSG.hab.z1.toFixed(1)} °C`;
+  document.getElementById('h-csgz2-v').textContent=`${CSG.hab.z2.toFixed(1)} °C`;
+  document.getElementById('h-clim1-v').textContent=`${CSG.hab.clim1.toFixed(1)} °C`;
+  document.getElementById('h-clim2-v').textContent=`${CSG.hab.clim2.toFixed(1)} °C`;
+  document.getElementById('s-csgt-btn').innerHTML=`Csg : ${CSG.sto.t.toFixed(1)} °C <span class="ei">✎</span>`;
+  document.getElementById('s-csghr-btn').innerHTML=`Csg : ${CSG.sto.hr.toFixed(0)}% <span class="ei">✎</span>`;
+  document.getElementById('s-cv').textContent=`${CSG.sto.t.toFixed(1)} °C`;
+  document.getElementById('s-hrv').textContent=`${CSG.sto.hr.toFixed(0)} %`;
+  document.getElementById('s-hyst').textContent=`±${CSG.sto.hyst_t.toFixed(1)} °C`;
+}
+
+// ════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════
+const logsH=[],logsS=[];
+function addLog(arr,id,msg,niv){
+  const t=new Date().toTimeString().slice(0,8);
+  arr.unshift({t,msg,niv}); if(arr.length>15)arr.pop();
+  document.getElementById(id).innerHTML=arr.map(l=>
+    `<div class="le log-lvl-${l.niv}"><span class="lt">${l.t}</span><span class="lm">${l.msg}</span></div>`
+  ).join('');
+}
+function setPm(id,sid,on){ document.getElementById(id).classList.toggle('on',on); document.getElementById(sid).textContent=on?'ON':'OFF'; }
+function setFcb(id,on){ const b=document.getElementById(id); b.textContent=on?'Actif':'Inactif'; b.className='fcb '+(on?'fcon':'fcoff'); }
+function setBadge(id,niv){
+  const b=document.getElementById(id);
+  if(niv>=3){b.textContent='CRITIQUE';b.className='tbdg tcrit';}
+  else if(niv>=2){b.textContent='ALERTE';b.className='tbdg twrn';}
+  else{b.textContent='OK';b.className='tbdg tok';}
+}
+
+// ════════════════════════════════════════
+//  UPDATE EXT (commun header)
+// ════════════════════════════════════════
+function updateExt(e){
+  document.getElementById('hdr-text').textContent=parseFloat(e.t_ext||0).toFixed(1)+'°C';
+  document.getElementById('hdr-hr').textContent=parseFloat(e.hr_ext||0).toFixed(0)+'%';
+  document.getElementById('hdr-sol').textContent=parseFloat(e.t_sol||10).toFixed(1)+'°C';
+  document.getElementById('hdr-wind').textContent=parseFloat(e.wind_speed||0).toFixed(1)+' m/s';
+}
+
+// ════════════════════════════════════════
+//  UPDATE HABITATION
+// ════════════════════════════════════════
+function updateHab(d){
+  const z1=parseFloat(d.t_int_z1||20),z2=parseFloat(d.t_int_z2||19);
+  document.getElementById('h-z1').innerHTML=z1.toFixed(1)+'<span class="u">°C</span>';
+  document.getElementById('h-z2').innerHTML=z2.toFixed(1)+'<span class="u">°C</span>';
+  refreshCsg();
+
+  const saison=d.saison||'CHAUD', vc1=!!d.fancoil_z1_on, vc2=!!d.fancoil_z2_on;
+  const fcC=saison==='FROID'?'var(--hsky)':'var(--hamb)';
+  document.getElementById('h-vc1-fill').style.cssText=`width:${vc1?85:12}%;background:${fcC}`;
+  document.getElementById('h-vc2-fill').style.cssText=`width:${vc2?85:12}%;background:${fcC}`;
+  setFcb('h-vc1-b',vc1); setFcb('h-vc2-b',vc2);
+
+  const tecs=parseFloat(d.t_ecs||52);
+  document.getElementById('h-ecs-v').textContent=tecs.toFixed(1);
+  const ecsPct=Math.max(0,Math.min(1,(tecs-15)/(CSG.hab.ecs+10-15)));
+  document.getElementById('h-ecsp').style.strokeDashoffset=182-182*ecsPct;
+  const von=!!d.vanne_ecs_on;
+  const vb=document.getElementById('h-vanne-b'); vb.textContent=von?'Ouverte':'Fermee'; vb.className='fcb '+(von?'fcon':'fcoff');
+
+  // Cumul
+  if(!!d.pac_on){ CUMUL.hab.h+=2/3600; if(von)CUMUL.hab.ecs+=2/3600; }
+  document.getElementById('h-cumul-h').textContent=CUMUL.hab.h.toFixed(1)+' h';
+  document.getElementById('h-cumul-ecs').textContent=CUMUL.hab.ecs.toFixed(1)+' h';
+
+  const mode=d.mode_actif||'INIT';
+  const isManu=MANU.hab.on;
+  const mp=document.getElementById('h-mode'); mp.textContent=isManu?'MANU — '+mode:mode; mp.className='mbdg';
+  if(isManu) mp.classList.add('mph-MANU');
+  else if(mode.includes('ECS'))   mp.classList.add('mph-ECS');
+  else if(mode.includes('CHAUF')||mode.includes('Z1')||mode.includes('Z2')) mp.classList.add('mph-CHAUF');
+  else if(mode.includes('CLIM'))  mp.classList.add('mph-CLIM');
+  else if(mode.includes('ALARM')) mp.classList.add('mph-ALARM');
+  else mp.classList.add('mph-STAND');
+
+  const st=document.getElementById('h-saison'); st.className='stag '+(saison==='FROID'?'sf':'sc');
+  st.textContent=(saison==='FROID'?'❄ ':'☀ ')+saison;
+
+  const pOn=!!d.pac_on;
+  const ps=document.getElementById('h-pac'); ps.className='pacs '+(pOn?'pac-on':'pac-off');
+  document.getElementById('h-pact').textContent=pOn?'PAC EN MARCHE':'PAC ARRETEE';
+  document.getElementById('h-pacd').textContent=pOn?'Sol→eau | OK':'Standby';
+
+  document.getElementById('h-acc').textContent=parseFloat(d.temps_depuis_arret_pac_min||0).toFixed(0)+' min';
+  document.getElementById('h-dep').textContent=parseFloat(d.t_eau_dep||40).toFixed(1)+' °C';
+  document.getElementById('h-eau-dep').textContent=parseFloat(d.t_eau_dep||40).toFixed(1)+' °C';
+  document.getElementById('h-eau-ret').textContent=parseFloat(d.t_eau_ret||35).toFixed(1)+' °C';
+  document.getElementById('h-dep-f').style.width=Math.max(0,Math.min(100,(parseFloat(d.t_eau_dep||40)-5)/50*100))+'%';
+  document.getElementById('h-ret-f').style.width=Math.max(0,Math.min(100,(parseFloat(d.t_eau_ret||35)-5)/50*100))+'%';
+
+  setPm('h-ps','h-ps-s',!!d.pompe_sol_on);
+  setPm('h-pc','h-pc-s',!!d.pompe_circuit_on);
+  setPm('h-p1','h-p1-s',vc1); setPm('h-p2','h-p2-s',vc2); setPm('h-pe','h-pe-s',von);
+
+  const ap=document.getElementById('h-ap'),am=document.getElementById('h-am');
+  ap.className='apa';
+  if(!d.alarme_active){ap.classList.add('aok');am.textContent='✓ Systeme nominal';}
+  else{const niv=parseInt(d.niveau_alarme||0);ap.classList.add(niv>=3?'acrit':'awrn');am.textContent=(niv>=3?'🚨 ':'⚠ ')+d.alarme_active;addLog(logsH,'h-log',d.alarme_active,niv);setBadge('badge-h',niv);}
+  if(!d.alarme_active)setBadge('badge-h',0);
+
+  const tEcs=parseFloat(d.t_ecs||0);
+  const ee=document.getElementById('h-ecsmax'); ee.textContent=tEcs>63?'⚠ '+tEcs.toFixed(1)+'°C':'OK'; ee.style.color=tEcs>63?'var(--herr)':'var(--ha)';
+  const tSol=parseFloat(d.t_sol||10);
+  const ge=document.getElementById('h-gel'); ge.textContent=tSol<-3?'⚠ '+tSol.toFixed(1)+'°C':'OK'; ge.style.color=tSol<-3?'var(--herr)':'var(--ha)';
+}
+
+// ════════════════════════════════════════
+//  UPDATE STOCKAGE
+// ════════════════════════════════════════
+function setAi(id,sid,on,onL,offL){
+  const el=document.getElementById(id); el.className='ai'; if(on)el.classList.add('on');
+  document.getElementById(sid).textContent=on?onL:offL;
+}
+
+function setVentil(on,half){
+  const bl=document.getElementById('s-vblk'),vl=document.getElementById('s-vval');
+  bl.className='ventblk';
+  if(!on&&!half){bl.classList.add('voff');vl.textContent='OFF';}
+  else if(half) {bl.classList.add('vhalf');vl.textContent='1/2 — Mi-vitesse';}
+  else          {bl.classList.add('vfull');vl.textContent='ON — Pleine vitesse';}
+}
+
+// ═══════════════════════════════════════════════════
+//  LOGIQUE VOLET — conforme Draw.io pages 1-4
+//
+//  FREE COOLING  → OUVERT (les conditions T_ext/T_rosée ont
+//                  déjà été vérifiées avant d'entrer dans ce mode ;
+//                  le volet s'ouvre TOUJOURS en free cooling)
+//  FROID MECA    → FERMÉ (circuit fermé, refroidissement interne)
+//  SECHAGE air   → OUVERT (cas 1 : air ext favorable)
+//  SECHAGE cond  → FERMÉ (cas 2 : PAC déshumidifie en circuit fermé)
+//  DEGIVRAGE     → FERMÉ
+//  ANTI-CYCLE    → FERMÉ
+//  ALARME/SECU   → FERMÉ (T_stock < 2°C → volets fermés draw.io p4)
+//  VENTIL CYCL   → FERMÉ (homogénéisation air interne)
+//  Défaut        → FERMÉ
+// ═══════════════════════════════════════════════════
+function getVoletState(mode){
+  const m = (mode || '').toUpperCase();
+  // FREE COOLING : volet TOUJOURS ouvert — c'est le principe même du mode
+  if(m.includes('FREE')) return 'OUVERT';
+  // SECHAGE CAS 1 — air frais extérieur
+  if(m.includes('SECH') && (m.includes('AIR') || m.includes('FRAIS') || m.includes('EXT')))
+    return 'OUVERT';
+  // Tous les autres cas → FERME
+  return 'FERME';
+}
+
+function updateSto(d){
+  const ts=parseFloat(d.t_stock||6), hr=parseFloat(d.hr_stock||88);
+  document.getElementById('s-ts').innerHTML=ts.toFixed(1)+'<span class="u">°C</span>';
+  document.getElementById('s-hr').innerHTML=hr.toFixed(1)+'<span class="u">%</span>';
+  refreshCsg();
+
+  const batt=parseFloat(d.t_batterie||10);
+  document.getElementById('s-batt').textContent=batt.toFixed(1)+' °C';
+  document.getElementById('s-dpac').textContent=parseFloat(d.duree_fonct_pac_h||0).toFixed(1)+' h';
+  document.getElementById('s-batt-fill').style.width=Math.max(0,Math.min(100,((batt+5)/25)*100))+'%';
+  // Couleur sonde batterie : rouge si proche gel (<2°C), orange si bas, vert si OK
+  document.getElementById('s-batt').style.color = batt<2?'var(--serr)':batt<5?'var(--samb)':'var(--sa)';
+
+  // Cumul PAC
+  if(!!d.pac_on) CUMUL.sto.h+=2/3600;
+  const mode=d.mode_actif||'INIT';
+  if(mode.includes('FREE')) CUMUL.sto.fc+=2/3600;
+  document.getElementById('s-cumul-h').textContent=CUMUL.sto.h.toFixed(1)+' h';
+  document.getElementById('s-cumul-fc').textContent=CUMUL.sto.fc.toFixed(1)+' h';
+  document.getElementById('s-cumul-h2').textContent=CUMUL.sto.h.toFixed(1)+' h';
+
+  const isManu=MANU.sto.on;
+  const mb=document.getElementById('s-mode'); mb.textContent=isManu?'MANU — '+mode:mode; mb.className='mbdg';
+  if(isManu) mb.classList.add('mbs-MANU');
+  else if(mode.includes('FROID')||mode.includes('MECANIQUE')) mb.classList.add('mbs-FROID');
+  else if(mode.includes('SECH'))  mb.classList.add('mbs-SECH');
+  else if(mode.includes('DEGIV')) mb.classList.add('mbs-DEGIV');
+  else if(mode.includes('FREE'))  mb.classList.add('mbs-FREE');
+  else if(mode.includes('ALARM')) mb.classList.add('mbs-ALARM');
+  else mb.classList.add('mbs-AUTO');
+
+  // Etat volet corrigé — conforme Draw.io
+  const t_ext=parseFloat(d.t_ext||0), t_rosee=parseFloat(d.t_rosee||0);
+  const voletOpen = isManu ? (MANU.sto.volet ? 'OUVERT' : 'FERME') : getVoletState(mode);
+  const voletIsOpen = voletOpen === 'OUVERT';
+
+  setAi('s-pac',  's-pac-s',  !!d.pac_on,      'ON','OFF');
+  setAi('s-degiv','s-degiv-s',!!d.degivrage_on, 'ON','OFF');
+
+  // Volet : affichage dédié (classe vop pour couleur cyan)
+  const vit_el = document.getElementById('s-reg');
+  const vst_el = document.getElementById('s-reg-s');
+  vit_el.className = 'ai' + (voletIsOpen ? ' on' : '');
+  // Couleur spéciale volet ouvert (cyan free cooling vs vert PAC)
+  if(voletIsOpen){
+    vit_el.style.borderColor = 'rgba(122,184,212,.6)';
+    vit_el.style.background  = 'rgba(122,184,212,.1)';
+    vst_el.style.color       = '#7AB8D4';
+  } else {
+    vit_el.style.borderColor = '';
+    vit_el.style.background  = '';
+    vst_el.style.color       = 'var(--muted)';
+  }
+  vst_el.textContent = voletIsOpen ? 'OUVERT' : 'FERME';
+
+  // Ventilation : ON complet / 1/2 / OFF
+  // Ventilation 3 états — déduit du MODE (conforme Draw.io p.2)
+  // VENTIL CYCLIQUE → 1/2 (mi-vitesse, 10min ON / 60min OFF)
+  // FROID MECA T>csg+1 → pleine vitesse
+  // FROID MECA T dans csg±0.5 → 1/2
+  // FREE COOLING / SECHAGE cas1 → pleine vitesse
+  // DEGIVRAGE / ANTI-CYCLE / ALARME → OFF
+  let ventFull = false, ventHalf = false;
+  if(!isManu){
+    const mv = mode.toUpperCase();
+    if(mv.includes('DEGIV') || mv.includes('ANTI') || mv.includes('ALARM') || mv.includes('SECU')){
+      ventFull = false; ventHalf = false;
+    } else if(mv.includes('CYCL')){
+      // Ventilation cyclique : toujours 1/2 affiché (le ON/OFF 10min/60min est géré par l'automate)
+      ventFull = false; ventHalf = true;
+    } else if(mv.includes('FREE') || (mv.includes('SECH') && (mv.includes('AIR')||mv.includes('FRAIS')))){
+      ventFull = true; ventHalf = false;
+    } else if(mv.includes('FROID') || mv.includes('MECANIQUE')){
+      // Draw.io p.2 — trois plages strictes :
+      // T > csg + 1°C   → ventil 100% (refroidissement actif fort)
+      // T dans csg±0.5°C → ventil 50%  (régulation fine, homogénéisation)
+      // T ≤ csg − 0.5°C  → ventil OFF  (consigne atteinte, maintien)
+      if     (ts > CSG.sto.t + 1.0)                              { ventFull = true;  ventHalf = false; }
+      else if(ts > CSG.sto.t - CSG.sto.hyst_t)                   { ventFull = false; ventHalf = true;  }
+      else                                                         { ventFull = false; ventHalf = false; }
+    } else if(mv.includes('SECH')){
+      // Séchage condensation (cas 2) : ventil ON recirculation interne
+      ventFull = true; ventHalf = false;
+    } else {
+      // STANDBY / INIT : OFF
+      ventFull = false; ventHalf = false;
+    }
+  } else {
+    ventFull = MANU.sto.vent;
+  }
+  setVentil(ventFull, ventHalf);
+
+  // Conditions ext
+  document.getElementById('s-rosee').textContent=t_rosee.toFixed(1)+' °C';
+  document.getElementById('s-hrext').textContent=parseFloat(d.hr_ext||0).toFixed(0)+' %';
+  document.getElementById('s-text').textContent=t_ext.toFixed(1);
+  document.getElementById('s-tsol').textContent=parseFloat(d.t_sol||10).toFixed(1);
+  document.getElementById('s-hr2').textContent=parseFloat(d.hr_ext||0).toFixed(0)+' %';
+  document.getElementById('s-tros2').textContent=t_rosee.toFixed(1)+' °C';
+
+  // Panneau explicatif état volet
+  const condEl=document.getElementById('s-volet-cond'), rsEl=document.getElementById('s-volet-reason');
+  condEl.className='apa '+(voletIsOpen?'as-ok':'as-wrn');
+  if(voletIsOpen){
+    rsEl.textContent = mode.toUpperCase().includes('FREE')
+      ? `✓ FREE COOLING — volet ouvert | T_ext=${t_ext.toFixed(1)}°C T_rosée=${t_rosee.toFixed(1)}°C T_stock=${ts.toFixed(1)}°C`
+      : `✓ SECHAGE air frais — volet ouvert`;
+  } else {
+    const reason = mode.toUpperCase().includes('FROID')  ? 'FROID MECANIQUE — circuit fermé' :
+                   mode.toUpperCase().includes('DEGIV')  ? 'DEGIVRAGE — volet fermé' :
+                   mode.toUpperCase().includes('SECH')   ? 'SECHAGE condensation — volet fermé' :
+                   mode.toUpperCase().includes('CYCL')   ? 'VENTILATION CYCLIQUE — volet fermé' :
+                   mode.toUpperCase().includes('ANTI')   ? 'ANTI-CYCLE — volet fermé' :
+                   mode.toUpperCase().includes('ALARM')  ? 'ALARME/SECURITE — volet fermé' :
+                   'Mode '+mode+' — volet fermé';
+    rsEl.textContent = '✗ ' + reason + ` | T_ext=${t_ext.toFixed(1)}°C T_rosée=${t_rosee.toFixed(1)}°C`;
+  }
+
+  // Post-recolte
+  const pr=parseInt(d.pr_phase||0);
+  document.getElementById('s-pr').textContent=pr===0?'Inactif':pr===1?'Ph.1 Cicatris.':'Ph.2 Descente';
+  document.getElementById('s-deg').textContent=parseFloat(d.duree_degivrage_min||0).toFixed(0)+' min';
+  document.getElementById('s-acc').textContent='60+ min';
+
+  const ap=document.getElementById('s-ap'),am=document.getElementById('s-am');
+  ap.className='apa';
+  if(!d.alarme_active){ap.classList.add('as-ok');am.textContent='✓ Systeme nominal';}
+  else{const niv=parseInt(d.niveau_alarme||0);ap.classList.add(niv>=3?'as-crit':'as-wrn');am.textContent=(niv>=3?'🚨 ':'⚠ ')+d.alarme_active;addLog(logsS,'s-log',d.alarme_active,niv);setBadge('badge-s',niv);}
+  if(!d.alarme_active)setBadge('badge-s',0);
+
+  const gelEl=document.getElementById('s-gel'); gelEl.textContent=ts<2?'⚠ '+ts.toFixed(1)+'°C':'OK'; gelEl.style.color=ts<2?'var(--serr)':'var(--sa)';
+  const battEl=document.getElementById('s-battok'); battEl.textContent=batt<2?'⚠ '+batt.toFixed(1)+'°C':'OK'; battEl.style.color=batt<2?'var(--serr)':'var(--sa)';
+}
+
+// ════════════════════════════════════════
+//  HORLOGE
+// ════════════════════════════════════════
+setInterval(()=>document.getElementById('clk').textContent=new Date().toTimeString().slice(0,8),1000);
+document.getElementById('clk').textContent=new Date().toTimeString().slice(0,8);
+refreshCsg();
+
+// ════════════════════════════════════════
+//  HISTORIQUE
+// ════════════════════════════════════════
+const histData = { hab:[], sto:[] };
+
+function loadHistory(){
+  const bat=document.getElementById('hist-bat').value;
+  const range=document.getElementById('hist-range').value;
+  const data=histData[bat];
+
+  // Stats
+  if(data.length===0){
+    document.getElementById('hist-empty').style.display='block';
+    document.getElementById('hist-table').style.display='none';
+    document.getElementById('hs-cumul').textContent='--';
+    document.getElementById('hs-tmoy').textContent='--';
+    document.getElementById('hs-alarmes').textContent='--';
+    document.getElementById('hs-modes').textContent='--';
+    drawHistChart([],[],bat);
+    return;
+  }
+  document.getElementById('hist-empty').style.display='none';
+  document.getElementById('hist-table').style.display='table';
+
+  const temps = data.map(r=>bat==='hab'?parseFloat(r.t_int_z1||20):parseFloat(r.t_stock||6));
+  const tmoy = (temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1);
+  const alarmes = data.filter(r=>r.alarme_active).length;
+  const modes = {};
+  data.forEach(r=>{ const m=r.mode_actif||'INIT'; modes[m]=(modes[m]||0)+1; });
+  const dominant = Object.entries(modes).sort((a,b)=>b[1]-a[1])[0]?.[0]||'--';
+  const cumul = (data.filter(r=>r.pac_on).length * 2 / 3600).toFixed(1);
+
+  document.getElementById('hs-cumul').textContent=cumul+' h';
+  document.getElementById('hs-tmoy').textContent=tmoy+' °C';
+  document.getElementById('hs-alarmes').textContent=alarmes;
+  document.getElementById('hs-modes').textContent=dominant.slice(0,12);
+  document.getElementById('hist-chart-title').textContent=
+    `Evolution temperature — ${bat==='hab'?'Habitation':'Stockage'} — ${range}`;
+
+  // Tableau
+  const tbody=document.getElementById('hist-tbody');
+  tbody.innerHTML=data.slice(-50).reverse().map(r=>{
+    const t=bat==='hab';
+    return `<tr>
+      <td>${r.ts?new Date(r.ts).toLocaleTimeString('fr-FR'):'--'}</td>
+      <td>${r.mode_actif||'--'}</td>
+      <td>${t?parseFloat(r.t_int_z1||0).toFixed(1)+'°C / '+parseFloat(r.t_int_z2||0).toFixed(1)+'°C':parseFloat(r.t_stock||0).toFixed(1)+'°C'}</td>
+      <td>${t?parseFloat(r.t_ecs||0).toFixed(0)+'°C':parseFloat(r.hr_stock||0).toFixed(0)+'%'}</td>
+      <td>${r.pac_on?'<span style="color:var(--sa)">ON</span>':'<span style="color:var(--muted)">OFF</span>'}</td>
+      <td>${r.alarme_active?'<span style="color:#D4A832">'+r.alarme_active+'</span>':'<span style="color:var(--muted)">—</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  drawHistChart(data.map((_,i)=>i), temps, bat);
+}
+
+function drawHistChart(labels,data,bat){
+  const canvas=document.getElementById('hist-canvas');
+  const ctx=canvas.getContext('2d');
+  canvas.width=canvas.offsetWidth||600; canvas.height=180;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!data.length){
+    ctx.fillStyle='rgba(255,255,255,.2)'; ctx.font='12px DM Mono,monospace';
+    ctx.fillText('Donnees insuffisantes',canvas.width/2-80,90); return;
+  }
+  const W=canvas.width,H=180,PAD=30;
+  const mn=Math.min(...data), mx=Math.max(...data), rng=mx-mn||1;
+  const col=bat==='hab'?'#5BB8A0':'#A8D85C';
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,col+'44'); grad.addColorStop(1,col+'00');
+  ctx.beginPath();
+  data.forEach((v,i)=>{
+    const x=PAD+(i/(data.length-1||1))*(W-PAD*2);
+    const y=H-PAD-((v-mn)/rng)*(H-PAD*2);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle=col; ctx.lineWidth=2; ctx.stroke();
+  ctx.lineTo(W-PAD,H-PAD); ctx.lineTo(PAD,H-PAD); ctx.closePath();
+  ctx.fillStyle=grad; ctx.fill();
+  // Axes
+  ctx.fillStyle='rgba(255,255,255,.2)'; ctx.font='9px DM Mono,monospace';
+  ctx.fillText(mx.toFixed(1)+'°C',2,PAD+4);
+  ctx.fillText(mn.toFixed(1)+'°C',2,H-PAD+4);
+}
+
+// ════════════════════════════════════════
+//  SUPABASE REALTIME
+// ════════════════════════════════════════
+const SUPABASE_URL='https://diqxglwsffrlfziymplm.supabase.co';
+const SUPABASE_KEY='VOTRE_ANON_KEY'; // ← coller votre anon key
+const HDRS={apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`};
+let lastExt={};
+
+async function fetchInitial(){
+  try{
+    const [hR,sR,eR]=await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/conditions_externes?order=ts.desc&limit=1`,{headers:HDRS}),
+    ]);
+    const [hD,sD,eD]=await Promise.all([hR.json(),sR.json(),eR.json()]);
+    if(eD?.[0]){lastExt=eD[0];updateExt(lastExt);}
+    if(hD?.[0]){histData.hab.push({...hD[0],...lastExt});updateHab({...hD[0],...lastExt});}
+    if(sD?.[0]){histData.sto.push({...sD[0],...lastExt});updateSto({...sD[0],...lastExt});}
+  }catch(e){console.warn('[Init]',e);}
+}
+
+function connectRealtime(){
+  const ws=new WebSocket(`wss://diqxglwsffrlfziymplm.supabase.co/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
+  ws.onopen=()=>{
+    ['habitation_readings','stockage_readings','conditions_externes','alarmes_log'].forEach((tbl,i)=>
+      ws.send(JSON.stringify({topic:`realtime:public:${tbl}`,event:'phx_join',
+        payload:{config:{broadcast:{self:true},presence:{key:''},
+          postgres_changes:[{event:'INSERT',schema:'public',table:tbl}]}},ref:String(i+1)})));
+    setInterval(()=>ws.readyState===1&&ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:null})),25000);
+  };
+  ws.onmessage=evt=>{
+    try{
+      const msg=JSON.parse(evt.data),rec=msg?.payload?.data?.record;
+      if(!rec)return;
+      const tbl=msg?.payload?.data?.table;
+      if(tbl==='conditions_externes'){lastExt=rec;updateExt(rec);}
+      else if(tbl==='habitation_readings'){histData.hab.push({...rec,...lastExt});if(histData.hab.length>500)histData.hab.shift();updateHab({...rec,...lastExt});}
+      else if(tbl==='stockage_readings'){histData.sto.push({...rec,...lastExt});if(histData.sto.length>500)histData.sto.shift();updateSto({...rec,...lastExt});}
+    }catch(e){}
+  };
+  ws.onclose=()=>{console.warn('[RT] Reco 3s');setTimeout(connectRealtime,3000);};
+}
+
+// ════════════════════════════════════════
+//  DEMO MODE — simulation agressive / stress test
+//  Météo : bruit brownien + fronts + rafales
+//  But : pousser l'installation dans ses retranchements
+// ════════════════════════════════════════
+function demoMode(){
+  let z1=20.2, z2=19.4, ecs=53, dep=42;
+  let ts=6.8, hr=89, batt=9.5;
+  let lastPacSto=false;  // mémoire cycle PAC pour hystérésis
+  let text=11.0, hrext=78;
+  let textTend=0, hrextTend=0, frontTimer=0;
+  let cycle=0, sIdx=0;
+  const hm=["CHAUFFAGE Z1","ECS PRIORITAIRE","STANDBY","CLIM Z2","CHAUFFAGE Z1+Z2"];
+  const sm=["FROID MECANIQUE","FREE COOLING","SECHAGE-AIR FRAIS","VENTILATION CYCLIQUE","FROID MECANIQUE"];
+  const ss=["CHAUD","FROID"];
+  const ext={t_ext:text,hr_ext:hrext,t_sol:10.1,t_rosee:7.0,wind_speed:3.0};
+  updateExt(ext);
+
+  setInterval(()=>{
+    cycle++;
+    frontTimer--;
+    // Front météo : toutes les 20-40 cycles => changement brutal de tendance
+    if(frontTimer<=0){
+      frontTimer=20+Math.floor(Math.random()*20);
+      textTend=(Math.random()-.5)*1.4;   // dérive lente °C/step
+      hrextTend=(Math.random()-.5)*4.5;  // dérive lente %/step
+    }
+    // Atténuation progressive de la tendance (le front passe)
+    textTend  *=0.86;
+    hrextTend *=0.86;
+    // Bruit instantané fort (turbulences locales)
+    text  += textTend  + (Math.random()-.5)*4.0;   // ±4°C/step
+    hrext += hrextTend + (Math.random()-.5)*14;     // ±14%/step
+    text  = Math.max(-10, Math.min(40, text));
+    hrext = Math.max(20,  Math.min(100, hrext));
+    ext.t_ext      = parseFloat(text.toFixed(1));
+    ext.hr_ext     = parseFloat(hrext.toFixed(0));
+    ext.t_rosee    = parseFloat((text-((100-hrext)/5)).toFixed(1));
+    ext.wind_speed = parseFloat(Math.max(0, 3+(Math.random()-.35)*9).toFixed(1));
+    ext.t_sol      = parseFloat(Math.max(3, Math.min(16, ext.t_sol+(Math.random()-.5)*.04)).toFixed(2));
+    updateExt(ext);
+
+    // ── Habitation : réaction à la météo ──
+    const pac_h=cycle%4!==0, vc1=cycle%3!==0, vc2=cycle%6===0;
+    z1 += (Math.random()-.48)*.35 + (pac_h&&vc1?0.12:-0.07)*(1+Math.abs(text-20)/18);
+    z2 += (Math.random()-.48)*.35 + (pac_h&&vc2?0.12:-0.07)*(1+Math.abs(text-20)/18);
+    ecs += (cycle%5===0 ? 0.9 : -0.18);
+    dep += (Math.random()-.5)*.35;
+    if(text < -3){ z1-=0.25; z2-=0.22; }
+    if(text >  33){ z1+=0.18; z2+=0.18; }
+    z1 = Math.max(13, Math.min(30, z1));
+    z2 = Math.max(13, Math.min(29, z2));
+    ecs= Math.max(35, Math.min(65, ecs));
+    if(cycle%40===0) sIdx=(sIdx+1)%2;
+    const curHm=hm[cycle%hm.length];
+    const alHab = ext.t_sol<4.5 ? "RISQUE GEL CAPTEURS SOL T_sol="+ext.t_sol+"°C" : null;
+    const habData={
+      t_int_z1:z1.toFixed(2), t_int_z2:z2.toFixed(2),
+      t_ecs:ecs.toFixed(2),
+      t_eau_dep:Math.max(22,Math.min(54,dep)).toFixed(2),
+      t_eau_ret:Math.max(17,Math.min(48,dep-6+Math.random()-.5)).toFixed(2),
+      pac_on:pac_h, pompe_sol_on:pac_h, pompe_circuit_on:true,
+      vanne_ecs_on:cycle%5===0, fancoil_z1_on:vc1, fancoil_z2_on:vc2,
+      mode_actif:curHm, saison:ss[sIdx],
+      temps_depuis_arret_pac_min:(Math.random()*8).toFixed(0),
+      alarme_active:alHab, niveau_alarme:alHab?2:0,
+      t_sol:ext.t_sol, ts:new Date().toISOString()
+    };
+    histData.hab.push({...habData,...ext});
+    if(histData.hab.length>500) histData.hab.shift();
+    updateHab({...habData,...ext});
+
+    // ── Stockage : physique réaliste avec respiration PDT ──
+    // ─── BOUCLE PRINCIPALE Draw.io p.1 ─────────────────────────────
+    // ── SÉLECTION DU MODE — priorités conformes Draw.io pages 1-4 ──────
+    const t_rosee_ext = ext.t_ext - ((100 - ext.hr_ext) / 5);
+    const besoin_froid = ts > CSG.sto.t + CSG.sto.hyst_t;
+    const besoin_sech  = hr > CSG.sto.hr + CSG.sto.hyst_hr;
+
+    // FREE COOLING — TROIS conditions SIMULTANÉES obligatoires (Draw.io p.3) :
+    //   1. T_ext < T_stock − 2°C  (air vraiment plus froid que le stock)
+    //   2. T_rosée_ext < T_stock  (pas de risque de condensation sur les PDT)
+    //   3. T_ext > 0°C            (jamais de free cooling si risque de gel de l'enveloppe)
+    // → Si T_ext remonte et viole UNE de ces conditions → SORTIE immédiate du free cooling
+    const fc_possible = (ext.t_ext < ts - 2.0)
+                     && (t_rosee_ext < ts - 0.5)   // marge 0.5°C sur le point de rosée
+                     && (ext.t_ext > 0.5);          // protection gel enveloppe
+
+    const degiv_requis = (batt <= 0.5) || (CUMUL.sto.h > 5.0);
+
+    let curSm;
+    if(besoin_sech){
+      // Séchage : air favorable si T_rosée_ext < T_stock ET T_ext dans [T_stock-5 ; T_stock+3]
+      const air_fav = (t_rosee_ext < ts) && (ext.t_ext > ts-5) && (ext.t_ext < ts+3);
+      curSm = air_fav ? "SECHAGE-AIR FRAIS" : "SECHAGE-CONDENSATION";
+    } else if(degiv_requis && lastPacSto){
+      curSm = "DEGIVRAGE";
+    } else if(fc_possible && besoin_froid){
+      // FREE COOLING préféré au froid mécanique si conditions réunies
+      curSm = "FREE COOLING";
+    } else if(besoin_froid){
+      // Froid mécanique : T_ext trop haute ou trop froide → PAC
+      curSm = "FROID MECANIQUE";
+    } else {
+      // Consigne atteinte → ventilation cyclique d'homogénéisation
+      curSm = "VENTILATION CYCLIQUE";
+    }
+    // ────────────────────────────────────────────────────────────────
+    const voletOuvert=getVoletState(curSm)==='OUVERT';
+    // Cycle PAC avec hystérésis réel (évite le tout ou rien)
+    // PAC démarre si ts > csg + hyst, s'arrête si ts ≤ csg - hyst
+    const pacSto = curSm.includes("FROID") && (
+      ts > CSG.sto.t + CSG.sto.hyst_t ? true :
+      ts > CSG.sto.t - CSG.sto.hyst_t ? lastPacSto : false
+    );
+    lastPacSto = pacSto;
+
+    // ── RESPIRATION CELLULAIRE DES POMMES DE TERRE ──────────────────
+    // Modèle Q10 : la respiration double tous les 10°C (loi de Van't Hoff)
+    // Valeurs réelles : ~10 mg CO2 / kg / h à 5°C, ~20 à 15°C
+    // Charge estimée : 200 t en plein stockage → ~200 000 kg
+    // Chaleur dégagée ≈ 0.98 kJ / g CO2 → ~2.72 W/tonne à 5°C (montant à 6+ W/t à 15°C)
+    // En simulation on traduit en °C/cycle (cycle = 2s, local ~250 m³)
+    const Q10 = 2.0;                        // doublement / 10°C
+    const resp_ref = 0.0018;                // °C/cycle à T_ref=5°C (enveloppe 250m³, 200t PDT)
+    const T_ref = 5.0;
+    const q10_factor = Math.pow(Q10, (ts - T_ref) / 10.0);
+    // Phase post-récolte : respiration x3 (blessures + cicatrisation)
+    const phase_factor = 1.0; // mettre 3.0 si pr_phase>0
+    const chaleur_resp = resp_ref * q10_factor * phase_factor;
+
+    // ── TRANSPIRATION : les PDT perdent de l'eau → humidification de l'air ──
+    // ~0.2 % masse/jour en condition normale, +Q10 aussi
+    const transp_ref = 0.0012;             // % HR / cycle à T_ref
+    const chaleur_transp_hr = transp_ref * q10_factor;
+
+    // ── BILAN THERMIQUE COMPLET ──────────────────────────────────────
+    // 1. Échanges avec l'extérieur (enveloppe isolée → faible)
+    const echange_env = (voletOuvert ? 0.05 : 0.008) * (ext.t_ext - ts);
+    // 2. Refroidissement PAC
+    const froid_pac = pacSto ? -0.10 : 0;  // réduit : oscille lentement autour de la consigne
+    // 3. Respiration PDT (toujours positif — source interne permanente)
+    const apport_resp = chaleur_resp;
+    // 4. Bruit thermique (capteur + micro-courants d'air)
+    const bruit_T = (Math.random() - 0.5) * 0.025;  // réduit pour stabilité dans les plages de régulation
+
+    ts += echange_env + froid_pac + apport_resp + bruit_T;
+
+    // ── BILAN HYGRIQUE ───────────────────────────────────────────────
+    // 1. Transpiration PDT → augmente HR
+    const apport_hr = chaleur_transp_hr;
+    // 2. Échange air neuf (volet ouvert)
+    const echange_hr = voletOuvert ? 0.06 * (ext.hr_ext - hr) : 0;
+    // 3. Déshumidification par condensation (PAC froide)
+    const dehumid_pac = pacSto ? -0.12 : 0;
+    // 4. Bruit hygro
+    const bruit_hr = (Math.random() - 0.5) * 0.4;
+
+    hr += apport_hr + echange_hr + dehumid_pac + bruit_hr;
+
+    // ── BATTERIE ÉVAPORATEUR ─────────────────────────────────────────
+    // Se refroidit sous charge PAC, remonte vers T_ext sinon
+    batt += (pacSto ? -0.15 : 0.07 * (ext.t_ext - batt)) + (Math.random() - 0.5) * 0.18;
+
+    ts   = Math.max(2.0, Math.min(16, ts));
+    hr   = Math.max(68, Math.min(99, hr));
+    batt = Math.max(1.0, Math.min(20, batt));
+    // ventil_on + vitesse_ventil conformes Draw.io p.2
+    let vit=0, ventOn=false;
+    if(curSm.includes("DEGIV") || curSm.includes("ANTI") || curSm.includes("ALARM")){
+      ventOn=false; vit=0;
+    } else if(curSm.includes("CYCL")){
+      // Ventilation cyclique : 1/2 vitesse (10min ON / 60min OFF géré automate)
+      ventOn=true; vit=0.5;
+    } else if(curSm.includes("FREE")){
+      ventOn=true; vit=1.0;
+    } else if(curSm.includes("SECH")){
+      ventOn=true; vit=1.0;
+    } else if(curSm.includes("FROID")){
+      // Même logique que updateSto — 3 plages strictes
+      if     (ts > CSG.sto.t + 1.0)             { ventOn=true;  vit=1.0; }
+      else if(ts > CSG.sto.t - CSG.sto.hyst_t)  { ventOn=true;  vit=0.5; }
+      else                                        { ventOn=false; vit=0;   }
+    }
+    let alSto=null, nSto=0;
+    if(ts<3.0)          { alSto="GEL PRODUIT T="+ts.toFixed(1)+"°C"; nSto=3; }
+    else if(ts>CSG.sto.t+3){ alSto="T_HAUTE "+ts.toFixed(1)+"°C vs csg "+CSG.sto.t+"°C"; nSto=2; }
+    else if(batt<2.5)   { alSto="ANTIGEL BATTERIE T_batt="+batt.toFixed(1)+"°C"; nSto=3; }
+    else if(hr>96)      { alSto="HR CRITIQUE "+hr.toFixed(0)+"%"; nSto=2; }
+    const stoData={
+      t_stock:ts.toFixed(2), hr_stock:hr.toFixed(2), t_batterie:batt.toFixed(2),
+      pac_on:pacSto, ventil_on:ventOn, degivrage_on:false,
+      vitesse_ventil:vit.toFixed(2),
+      t_consigne:CSG.sto.t, hr_consigne:CSG.sto.hr,
+      mode_actif:curSm, duree_fonct_pac_h:CUMUL.sto.h.toFixed(1),
+      t_ext:ext.t_ext, hr_ext:ext.hr_ext, t_rosee:ext.t_rosee, t_sol:ext.t_sol,
+      alarme_active:alSto, niveau_alarme:nSto,
+      pr_phase:0, duree_degivrage_min:0, ts:new Date().toISOString()
+    };
+    histData.sto.push({...stoData,...ext});
+    if(histData.sto.length>500) histData.sto.shift();
+    updateSto({...stoData,...ext});
+  }, 2000);
+}
+
+if(SUPABASE_KEY==='VOTRE_ANON_KEY'){ demoMode(); }
+else{ fetchInitial(); connectRealtime(); }
+</script>
+</body>
+</html>
