@@ -1659,7 +1659,11 @@ function demoMode(){
 
     text  += 0.10*(t_cible_h-text) + textTend  + (Math.random()-.5)*1.2;
     hrext += 0.08*(hr_cible_h-hrext) + hrextTend + (Math.random()-.5)*4;
-    text  = Math.max(t_min_d, Math.min(38, text));
+    // Borne haute réaliste selon mois (Hauts-de-France)
+    // T_max journalière = T_moy + amplitude (4-8°C selon saison)
+    const T_AMPL_D=[4.5,4.5,5.0,6.0,7.0,7.5,8.0,8.0,7.0,5.5,4.5,4.0];
+    const t_max_d = t_normale + T_AMPL_D[moisD];  // jamais plus de T_moy + amplitude
+    text  = Math.max(t_min_d, Math.min(t_max_d, text));
     hrext = Math.max(35,  Math.min(99, hrext));
     ext.t_ext      = parseFloat(text.toFixed(1));
     ext.hr_ext     = parseFloat(hrext.toFixed(0));
