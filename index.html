@@ -1649,7 +1649,8 @@ function demoMode(){
     const hr_normale = HR_MOY_D[moisD];
     const t_min_d = (moisD>=3 && moisD<=9) ? 2.0 : -2.0; // pas de gel avr-oct
     // Variation journalière réaliste : min à 6h, max à 14h
-    const heureActuelle = new Date().getHours() + new Date().getMinutes()/60;
+    // Utiliser l'heure SIMULÉE (timelapse) et non l'heure réelle
+    const heureActuelle = _simNow.getHours() + _simNow.getMinutes()/60;
     const cycleJour = Math.sin((heureActuelle - 6) * Math.PI / 14);
     const amplJour = T_MOY_D[moisD] < 10 ? 4.0 : 6.0;  // amplitude selon saison
     const t_cible_h = t_normale + amplJour * 0.5 * (6<=heureActuelle&&heureActuelle<=20 ? cycleJour : -0.3);
