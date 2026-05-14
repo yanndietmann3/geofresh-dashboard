@@ -40,11 +40,6 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .exl{font-size:7px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
 .sep{width:1px;height:22px;background:var(--bdr);}
 .hdr-r{display:flex;align-items:center;gap:12px;}
-.speed-btn{display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:14px;
-  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
-  border:1px solid;font-family:'DM Mono',monospace;transition:all .2s;}
-.speed-btn.normal{background:rgba(91,184,160,.08);border-color:rgba(91,184,160,.3);color:var(--ha);}
-.speed-btn.fast{background:rgba(232,196,74,.15);border-color:rgba(232,196,74,.5);color:#E8C44A;animation:pu 1s infinite;}
 .live{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:16px;
   font-size:9px;letter-spacing:2px;text-transform:uppercase;
   background:rgba(168,216,92,.09);border:1px solid rgba(168,216,92,.3);color:var(--sa);}
@@ -356,9 +351,6 @@ canvas.hc{width:100%!important;height:180px!important;}
 
   <div class="hdr-r">
     <div class="live"><div class="ldot"></div>Temps reel</div>
-    <button class="speed-btn normal" id="speed-btn" onclick="toggleSpeed()" title="Accélérer le rafraîchissement">
-      ▶ Temps réel
-    </button>
     <div id="clk">--:--:--</div>
   </div>
 </header>
@@ -451,7 +443,7 @@ canvas.hc{width:100%!important;height:180px!important;}
   <div class="card">
     <div class="ct">PAC & Mode</div>
     <div class="mbdg mph-STAND" id="h-mode">INIT</div>
-
+    <div id="h-saison" class="stag sc">☀ CHAUD</div>
     <div class="pacs pac-off" id="h-pac">
       <div class="pacc">⚙️</div>
       <div><div class="pact" id="h-pact">PAC OFF</div><div class="pacd" id="h-pacd">En attente</div></div>
@@ -600,13 +592,7 @@ canvas.hc{width:100%!important;height:180px!important;}
     <div class="actg" style="margin-top:8px;">
       <div class="ai" id="s-pac"><div class="aico">❄️</div><div class="albl">PAC</div><div class="ast" id="s-pac-s">OFF</div></div>
       <div class="ai" id="s-degiv"><div class="aico">🔥</div><div class="albl">Degivrage</div><div class="ast" id="s-degiv-s">OFF</div></div>
-      <div class="ai" id="s-reg"><div class="aico">🪟</div><div class="albl">Volet air neuf</div><div class="ast" id="s-reg-s">FERME</div></div>
-    </div>
-    <!-- Volet CO2 dédié -->
-    <div class="volet-it" id="s-volet-co2" style="margin-top:7px;">
-      <div style="font-size:15px;">🌬️</div>
-      <div style="font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);flex:1">Volet CO&#x2082;</div>
-      <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--muted)" id="s-volet-co2-v">FERME</div>
+      <div class="ai" id="s-reg"><div class="aico">🪟</div><div class="albl">Volet</div><div class="ast" id="s-reg-s">FERME</div></div>
     </div>
 
     <!-- Ventilation 3 etats -->
@@ -771,52 +757,7 @@ const CSG = {
 const MANU = { hab:{ on:false, pac:false, vc1:false, vc2:false },
                sto:{ on:false, pac:false, volet:false, vent:false } };
 const CUMUL = { hab:{ h:0, ecs:0 }, sto:{ h:0, fc:0 } };
-let CYCLE_S = 30; // intervalle polling en secondes
-let _speedFast = false;
-let _pollInterval = null;
-
-// Vitesses : 0=réel(30s) 1=×5(6s) 2=×50(600ms) 3=×100(300ms)
-const SPEEDS = [
-  { label:'▶ Temps réel', ms:30000, cls:'normal', vitesse:1   },
-  { label:'⚡ ×5',        ms:6000,  cls:'fast',   vitesse:5   },
-  { label:'⚡ ×50',       ms:600,   cls:'fast',   vitesse:50  },
-  { label:'⚡ ×100',      ms:300,   cls:'fast',   vitesse:100 },
-];
-let _speedIdx = 0;
-
-function toggleSpeed() {
-  _speedIdx = (_speedIdx + 1) % SPEEDS.length;
-  const s = SPEEDS[_speedIdx];
-  const btn = document.getElementById('speed-btn');
-  btn.className = 'speed-btn ' + s.cls;
-  btn.textContent = s.label;
-  if(_pollInterval) clearInterval(_pollInterval);
-  _pollInterval = setInterval(fetchLatest, s.ms);
-  // Envoyer la vitesse au simulateur via Supabase
-  if(SUPABASE_KEY!=='VOTRE_ANON_KEY') {
-    fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.stockage`, {
-      method:'PATCH',
-      headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body: JSON.stringify({vitesse_sim: s.vitesse, updated_at: new Date().toISOString()})
-    });
-  }
-}
-
-// Fonction de polling manuel (complément au WebSocket)
-async function fetchLatest() {
-  if(SUPABASE_KEY==='VOTRE_ANON_KEY') return;
-  try {
-    const [hR,sR,eR] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?order=ts.desc&limit=1`,{headers:HDRS}),
-      fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?order=ts.desc&limit=1`,{headers:HDRS}),
-      fetch(`${SUPABASE_URL}/rest/v1/conditions_externes?order=ts.desc&limit=1`,{headers:HDRS})
-    ]);
-    const [hD,sD,eD] = await Promise.all([hR.json(),sR.json(),eR.json()]);
-    if(eD?.[0]){lastExt=eD[0];updateExt(lastExt);}
-    if(hD?.[0]) updHab({...hD[0],...lastExt});
-    if(sD?.[0]) updSto({...sD[0],...lastExt});
-  } catch(e){}
-}
+const CYCLE_S = 30; // intervalle Supabase en secondes (doit correspondre au simulateur)
 
 // ════════════════════════════════════════
 //  ONGLETS
@@ -892,7 +833,7 @@ function toggleCmd(src, cmd) {
 
 // Push commande manu vers Supabase (table consignes)
 async function pushManuCmd(side) {
-  if(SUPABASE_KEY==='VOTRE_ANON_KEY') return;
+  if(SUPABASE_KEY==='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcXhnbHdzZmZybGZ6aXltcGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODQwMjksImV4cCI6MjA5NDE2MDAyOX0.7sOo_xhhtISH9tQyJ7pg2Z3eXlDZfKZA5Xp6D7-Gs2w') return;
   const m = MANU[side];
   const patch = side==='hab'
     ? { mode_manu_hab:true,  manu_pac_hab:m.pac,   manu_vc1:m.vc1, manu_vc2:m.vc2 }
@@ -1081,8 +1022,9 @@ function updateHab(d){
   document.getElementById('h-z2').innerHTML=z2.toFixed(1)+'<span class="u">°C</span>';
   refreshCsg();
 
-  const vc1=!!d.fancoil_z1_on, vc2=!!d.fancoil_z2_on;
-  const fcC='var(--hamb)';  // toujours ambre (chauffage uniquement)
+  const saison=d.saison||'CHAUD', vc1=!!d.fancoil_z1_on, vc2=!!d.fancoil_z2_on;
+  // FROID=chauffage→ambre | CHAUD=climatisation→bleu ciel
+  const fcC=saison==='FROID'?'var(--hamb)':'var(--hsky)';
   // En MANU : commandes clavier | En AUTO : données simulateur
   const isManuH = MANU.hab.on;
   const vc1m = isManuH ? MANU.hab.vc1 : vc1;
@@ -1121,7 +1063,8 @@ function updateHab(d){
   else if(mode.includes('ALARM')) mp.classList.add('mph-ALARM');
   else mp.classList.add('mph-STAND');
 
-
+  const st=document.getElementById('h-saison'); st.className='stag '+(saison==='FROID'?'sf':'sc');
+  st.textContent=(saison==='FROID'?'❄ ':'☀ ')+saison;
 
   // En mode MANU : commandes opérateur | En AUTO : données simulateur
   const pOn  = isManu ? MANU.hab.pac : !!d.pac_on;
@@ -1232,17 +1175,6 @@ function updateSto(d){
   const t_ext=parseFloat(d.t_ext||0), t_rosee=parseFloat(d.t_rosee||0);
   const voletOpen = isManu ? (MANU.sto.volet ? 'OUVERT' : 'FERME') : getVoletState(mode);
   const voletIsOpen = voletOpen === 'OUVERT';
-  // Volet CO2 dédié
-  const vco2 = !!d.volet_co2_ouvert;
-  const vco2El = document.getElementById('s-volet-co2');
-  const vco2V  = document.getElementById('s-volet-co2-v');
-  if(vco2El){
-    vco2El.className = 'volet-it' + (vco2 ? ' vop' : '');
-    vco2V.textContent = vco2 ? 'OUVERT' : 'FERME';
-    vco2V.style.color = vco2 ? '#7AB8D4' : 'var(--muted)';
-    if(vco2){ vco2El.style.borderColor='rgba(122,184,212,.6)'; vco2El.style.background='rgba(122,184,212,.1)'; }
-    else { vco2El.style.borderColor=''; vco2El.style.background=''; }
-  }
 
   setAi('s-pac',  's-pac-s',  !!d.pac_on,      'ON','OFF');
   setAi('s-degiv','s-degiv-s',!!d.degivrage_on, 'ON','OFF');
@@ -1342,8 +1274,8 @@ function updateSto(d){
     const co2F=document.getElementById('s-co2-fill');
     let cls='co2-ok',lbl='NORMAL',grad='linear-gradient(90deg,#6BAF5E,#A8D85C)',txt='Respiration PDT normale';
     let bbg='rgba(107,175,94,.18)',bco='#6BAF5E';
-    if(co2>5000){cls='co2-crit';lbl='CRITIQUE';grad='linear-gradient(90deg,#C4522A,#FF8A6A)';bbg='rgba(196,82,42,.25)';bco='#FF8A6A';txt='🚨 Volet CO₂ ouvert — Purge immédiate';}
-    else if(co2>3500){cls='co2-alerte';lbl='ALERTE';grad='linear-gradient(90deg,#D4A832,#E8C44A)';bbg='rgba(212,168,50,.22)';bco='#D4A832';txt='⚠ Volet CO₂ ouvert — Evacuation en cours';}
+    if(co2>5000){cls='co2-crit';lbl='CRITIQUE';grad='linear-gradient(90deg,#C4522A,#FF8A6A)';bbg='rgba(196,82,42,.25)';bco='#FF8A6A';txt='🚨 PURGE — Volets + ventilation forcée';}
+    else if(co2>3500){cls='co2-alerte';lbl='ALERTE';grad='linear-gradient(90deg,#D4A832,#E8C44A)';bbg='rgba(212,168,50,.22)';bco='#D4A832';txt='⚠ Aération en cours';}
     else if(co2>2000){cls='co2-info';lbl='ELEVE';grad='linear-gradient(90deg,#D4943A,#E8C44A)';bbg='rgba(212,148,58,.18)';bco='#D4943A';txt='ℹ Surveillance renforcée';}
     co2W.className='co2-wrap '+cls;
     co2F.style.width=pct+'%'; co2F.style.background=grad;
