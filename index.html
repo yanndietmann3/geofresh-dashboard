@@ -802,6 +802,7 @@ canvas.hc{width:100%!important;height:180px!important;}
   </div>
 </div>
 
+<script src="config.js"></script>
 <script>
 // ════════════════════════════════════════
 //  ETAT
@@ -1071,18 +1072,17 @@ async function loadConsignes() {
 }
 
 function refreshCsg() {
-  document.getElementById('h-csgz1-btn').innerHTML=`Csg : ${CSG.hab.z1.toFixed(1)} °C <span class="ei">✎</span>`;
-  document.getElementById('h-csgz2-btn').innerHTML=`Csg : ${CSG.hab.z2.toFixed(1)} °C <span class="ei">✎</span>`;
-  document.getElementById('h-csgecs-v').textContent=`${CSG.hab.ecs.toFixed(0)} °C`;
-  document.getElementById('h-csgz1-v').textContent=`${CSG.hab.z1.toFixed(1)} °C`;
-  document.getElementById('h-csgz2-v').textContent=`${CSG.hab.z2.toFixed(1)} °C`;
-  document.getElementById('h-clim1-v').textContent=`${CSG.hab.clim1.toFixed(1)} °C`;
-  document.getElementById('h-clim2-v').textContent=`${CSG.hab.clim2.toFixed(1)} °C`;
-  document.getElementById('s-csgt-btn').innerHTML=`Csg : ${CSG.sto.t.toFixed(1)} °C <span class="ei">✎</span>`;
-  document.getElementById('s-csghr-btn').innerHTML=`Csg : ${CSG.sto.hr.toFixed(0)}% <span class="ei">✎</span>`;
-  document.getElementById('s-cv').textContent=`${CSG.sto.t.toFixed(1)} °C`;
-  document.getElementById('s-hrv').textContent=`${CSG.sto.hr.toFixed(0)} %`;
-  document.getElementById('s-hyst').textContent=`±${CSG.sto.hyst_t.toFixed(1)} °C`;
+  const safe = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  safe('h-csgz1-btn', `Csg : ${CSG.hab.z1.toFixed(1)} °C ✎`);
+  safe('h-csgz2-btn', `Csg : ${CSG.hab.z2.toFixed(1)} °C ✎`);
+  safe('h-csgecs-v',  `${CSG.hab.ecs.toFixed(0)} °C`);
+  safe('h-csgz1-v',  `${CSG.hab.z1.toFixed(1)} °C`);
+  safe('h-csgz2-v',  `${CSG.hab.z2.toFixed(1)} °C`);
+  safe('s-csgt-btn', `Csg : ${CSG.sto.t.toFixed(1)} °C ✎`);
+  safe('s-csghr-btn',`Csg : ${CSG.sto.hr.toFixed(0)}% ✎`);
+  safe('s-cv',       `${CSG.sto.t.toFixed(1)} °C`);
+  safe('s-hrv',      `${CSG.sto.hr.toFixed(0)} %`);
+  safe('s-hyst',     `±${CSG.sto.hyst_t.toFixed(1)} °C`);
 }
 
 // ════════════════════════════════════════
@@ -1569,7 +1569,7 @@ function drawHistChart(labels,data,bat){
 //  SUPABASE REALTIME
 // ════════════════════════════════════════
 const SUPABASE_URL='https://diqxglwsffrlfziymplm.supabase.co';
-const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcXhnbHdzZmZybGZ6aXltcGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODQwMjksImV4cCI6MjA5NDE2MDAyOX0.7sOo_xhhtISH9tQyJ7pg2Z3eXlDZfKZA5Xp6D7-Gs2w';
+const SUPABASE_KEY = window.GEOFRESH_KEY || 'VOTRE_ANON_KEY';
 const HDRS={apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`};
 let lastExt={};
 
