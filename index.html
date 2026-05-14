@@ -781,6 +781,7 @@ const SPEEDS = [
   { label:'⚡ ×5',        ms:6000,  cls:'fast',   vitesse:5   },
   { label:'⚡ ×50',       ms:600,   cls:'fast',   vitesse:50  },
   { label:'⚡ ×100',      ms:300,   cls:'fast',   vitesse:100 },
+  { label:'⚡ ×500',      ms:100,   cls:'fast',   vitesse:500 },
 ];
 let _speedIdx = 0;
 
@@ -1113,8 +1114,11 @@ function updateHab(d){
 
   const mode=d.mode_actif||'INIT';
   const isManu=MANU.hab.on;
-  const mp=document.getElementById('h-mode'); mp.textContent=isManu?'MANU — '+mode:mode; mp.className='mbdg';
-  if(isManu) mp.classList.add('mph-MANU');
+  const mp=document.getElementById('h-mode');
+  // En MANU : afficher juste STANDBY (pas le mode AUTO)
+  mp.textContent = isManu ? 'STANDBY' : mode;
+  mp.className='mbdg';
+  if(isManu) mp.classList.add('mph-STAND');
   else if(mode.includes('ECS'))   mp.classList.add('mph-ECS');
   else if(mode.includes('CHAUF')||mode.includes('Z1')||mode.includes('Z2')) mp.classList.add('mph-CHAUF');
   else if(mode.includes('CLIM'))  mp.classList.add('mph-CLIM');
@@ -1535,8 +1539,16 @@ function demoMode(){
     const t_normale = T_MOY_D[moisD];
     const hr_normale = HR_MOY_D[moisD];
     const t_min_d = (moisD>=3 && moisD<=9) ? 2.0 : -2.0; // pas de gel avr-oct
-    text  += 0.10*(t_normale-text) + textTend  + (Math.random()-.5)*1.2;
-    hrext += 0.08*(hr_normale-hrext) + hrextTend + (Math.random()-.5)*4;
+    // Variation journalière réaliste : min à 6h, max à 14h
+    const heureActuelle = new Date().getHours() + new Date().getMinutes()/60;
+    const cycleJour = Math.sin((heureActuelle - 6) * Math.PI / 14);
+    const amplJour = T_MOY_D[moisD] < 10 ? 4.0 : 6.0;  // amplitude selon saison
+    const t_cible_h = t_normale + amplJour * 0.5 * (6<=heureActuelle&&heureActuelle<=20 ? cycleJour : -0.3);
+    // HR inverse : plus basse le jour (air chaud absorbe), plus haute la nuit
+    const hr_cible_h = hr_normale - 12 * Math.max(0, cycleJour);
+
+    text  += 0.10*(t_cible_h-text) + textTend  + (Math.random()-.5)*1.2;
+    hrext += 0.08*(hr_cible_h-hrext) + hrextTend + (Math.random()-.5)*4;
     text  = Math.max(t_min_d, Math.min(38, text));
     hrext = Math.max(35,  Math.min(99, hrext));
     ext.t_ext      = parseFloat(text.toFixed(1));
