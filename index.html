@@ -451,7 +451,7 @@ canvas.hc{width:100%!important;height:180px!important;}
   <div class="card">
     <div class="ct">PAC & Mode</div>
     <div class="mbdg mph-STAND" id="h-mode">INIT</div>
-    <div id="h-saison" class="stag sc">☀ CHAUD</div>
+
     <div class="pacs pac-off" id="h-pac">
       <div class="pacc">⚙️</div>
       <div><div class="pact" id="h-pact">PAC OFF</div><div class="pacd" id="h-pacd">En attente</div></div>
@@ -600,7 +600,13 @@ canvas.hc{width:100%!important;height:180px!important;}
     <div class="actg" style="margin-top:8px;">
       <div class="ai" id="s-pac"><div class="aico">❄️</div><div class="albl">PAC</div><div class="ast" id="s-pac-s">OFF</div></div>
       <div class="ai" id="s-degiv"><div class="aico">🔥</div><div class="albl">Degivrage</div><div class="ast" id="s-degiv-s">OFF</div></div>
-      <div class="ai" id="s-reg"><div class="aico">🪟</div><div class="albl">Volet</div><div class="ast" id="s-reg-s">FERME</div></div>
+      <div class="ai" id="s-reg"><div class="aico">🪟</div><div class="albl">Volet air neuf</div><div class="ast" id="s-reg-s">FERME</div></div>
+    </div>
+    <!-- Volet CO2 dédié -->
+    <div class="volet-it" id="s-volet-co2" style="margin-top:7px;">
+      <div style="font-size:15px;">🌬️</div>
+      <div style="font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);flex:1">Volet CO&#x2082;</div>
+      <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--muted)" id="s-volet-co2-v">FERME</div>
     </div>
 
     <!-- Ventilation 3 etats -->
@@ -1075,9 +1081,8 @@ function updateHab(d){
   document.getElementById('h-z2').innerHTML=z2.toFixed(1)+'<span class="u">°C</span>';
   refreshCsg();
 
-  const saison=d.saison||'CHAUD', vc1=!!d.fancoil_z1_on, vc2=!!d.fancoil_z2_on;
-  // FROID=chauffage→ambre | CHAUD=climatisation→bleu ciel
-  const fcC=saison==='FROID'?'var(--hamb)':'var(--hsky)';
+  const vc1=!!d.fancoil_z1_on, vc2=!!d.fancoil_z2_on;
+  const fcC='var(--hamb)';  // toujours ambre (chauffage uniquement)
   // En MANU : commandes clavier | En AUTO : données simulateur
   const isManuH = MANU.hab.on;
   const vc1m = isManuH ? MANU.hab.vc1 : vc1;
@@ -1116,8 +1121,7 @@ function updateHab(d){
   else if(mode.includes('ALARM')) mp.classList.add('mph-ALARM');
   else mp.classList.add('mph-STAND');
 
-  const st=document.getElementById('h-saison'); st.className='stag '+(saison==='FROID'?'sf':'sc');
-  st.textContent=(saison==='FROID'?'❄ ':'☀ ')+saison;
+
 
   // En mode MANU : commandes opérateur | En AUTO : données simulateur
   const pOn  = isManu ? MANU.hab.pac : !!d.pac_on;
@@ -1228,6 +1232,17 @@ function updateSto(d){
   const t_ext=parseFloat(d.t_ext||0), t_rosee=parseFloat(d.t_rosee||0);
   const voletOpen = isManu ? (MANU.sto.volet ? 'OUVERT' : 'FERME') : getVoletState(mode);
   const voletIsOpen = voletOpen === 'OUVERT';
+  // Volet CO2 dédié
+  const vco2 = !!d.volet_co2_ouvert;
+  const vco2El = document.getElementById('s-volet-co2');
+  const vco2V  = document.getElementById('s-volet-co2-v');
+  if(vco2El){
+    vco2El.className = 'volet-it' + (vco2 ? ' vop' : '');
+    vco2V.textContent = vco2 ? 'OUVERT' : 'FERME';
+    vco2V.style.color = vco2 ? '#7AB8D4' : 'var(--muted)';
+    if(vco2){ vco2El.style.borderColor='rgba(122,184,212,.6)'; vco2El.style.background='rgba(122,184,212,.1)'; }
+    else { vco2El.style.borderColor=''; vco2El.style.background=''; }
+  }
 
   setAi('s-pac',  's-pac-s',  !!d.pac_on,      'ON','OFF');
   setAi('s-degiv','s-degiv-s',!!d.degivrage_on, 'ON','OFF');
@@ -1327,8 +1342,8 @@ function updateSto(d){
     const co2F=document.getElementById('s-co2-fill');
     let cls='co2-ok',lbl='NORMAL',grad='linear-gradient(90deg,#6BAF5E,#A8D85C)',txt='Respiration PDT normale';
     let bbg='rgba(107,175,94,.18)',bco='#6BAF5E';
-    if(co2>5000){cls='co2-crit';lbl='CRITIQUE';grad='linear-gradient(90deg,#C4522A,#FF8A6A)';bbg='rgba(196,82,42,.25)';bco='#FF8A6A';txt='🚨 PURGE — Volets + ventilation forcée';}
-    else if(co2>3500){cls='co2-alerte';lbl='ALERTE';grad='linear-gradient(90deg,#D4A832,#E8C44A)';bbg='rgba(212,168,50,.22)';bco='#D4A832';txt='⚠ Aération en cours';}
+    if(co2>5000){cls='co2-crit';lbl='CRITIQUE';grad='linear-gradient(90deg,#C4522A,#FF8A6A)';bbg='rgba(196,82,42,.25)';bco='#FF8A6A';txt='🚨 Volet CO₂ ouvert — Purge immédiate';}
+    else if(co2>3500){cls='co2-alerte';lbl='ALERTE';grad='linear-gradient(90deg,#D4A832,#E8C44A)';bbg='rgba(212,168,50,.22)';bco='#D4A832';txt='⚠ Volet CO₂ ouvert — Evacuation en cours';}
     else if(co2>2000){cls='co2-info';lbl='ELEVE';grad='linear-gradient(90deg,#D4943A,#E8C44A)';bbg='rgba(212,148,58,.18)';bco='#D4943A';txt='ℹ Surveillance renforcée';}
     co2W.className='co2-wrap '+cls;
     co2F.style.width=pct+'%'; co2F.style.background=grad;
