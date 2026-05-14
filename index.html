@@ -277,6 +277,23 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .co2-ticks{display:flex;justify-content:space-between;margin-top:3px;}
 .co2-tick{font-size:7px;color:var(--muted);}
 
+/* ── HORLOGE TIMELAPSE ── */
+.sim-clock{display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:9px;
+  background:rgba(0,0,0,.2);border:1px solid var(--bdr);margin-bottom:8px;}
+.sim-time{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;color:var(--cream);}
+.sim-date{font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.sim-speed-lbl{font-size:7px;letter-spacing:2px;color:var(--samb);text-transform:uppercase;margin-left:auto;}
+
+/* Boutons mode stockage */
+.mode-btns{display:flex;gap:7px;margin-top:8px;}
+.mode-btn{flex:1;padding:8px 6px;border-radius:8px;border:1px solid var(--bdr);
+  background:rgba(0,0,0,.18);cursor:pointer;font-family:'DM Mono',monospace;
+  font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);
+  text-align:center;transition:all .2s;}
+.mode-btn:hover{color:var(--cream);}
+.mode-btn.active-standby{border-color:rgba(212,168,50,.6);background:rgba(212,168,50,.1);color:var(--samb);}
+.mode-btn.active-descente{border-color:rgba(122,184,212,.6);background:rgba(122,184,212,.1);color:var(--hsky);}
+
 /* ── SPANS ── */
 .s2{grid-column:span 2;}.s3{grid-column:span 3;}.s4{grid-column:span 4;}
 
@@ -359,6 +376,13 @@ canvas.hc{width:100%!important;height:180px!important;}
     <button class="speed-btn normal" id="speed-btn" onclick="toggleSpeed()" title="Accélérer le rafraîchissement">
       ▶ Temps réel
     </button>
+    <div class="sim-clock">
+      <div>
+        <div class="sim-time" id="sim-time">--:--</div>
+        <div class="sim-date" id="sim-date">--/--/----</div>
+      </div>
+      <div class="sim-speed-lbl" id="sim-speed-lbl">×1</div>
+    </div>
     <div id="clk">--:--:--</div>
   </div>
 </header>
@@ -576,6 +600,24 @@ canvas.hc{width:100%!important;height:180px!important;}
   <div class="card">
     <div class="ct">Mode & Actionneurs</div>
     <div class="mbdg mbs-AUTO" id="s-mode">INIT</div>
+    <!-- Boutons STANDBY et DESCENTE -->
+    <div class="mode-btns">
+      <div class="mode-btn" id="btn-standby" onclick="toggleModeStockage('standby')" title="PAC OFF — ventilation cyclique seule">
+        ⏸ STANDBY
+      </div>
+      <div class="mode-btn" id="btn-descente" onclick="toggleModeStockage('descente')" title="-1°C/jour depuis T ambiante">
+        📉 DESCENTE
+      </div>
+      <div class="mode-btn" id="btn-auto-sto" onclick="toggleModeStockage('auto')" title="Mode automatique normal">
+        ▶ AUTO
+      </div>
+    </div>
+    <!-- T cible descente -->
+    <div id="descente-info" style="display:none;margin-top:6px;padding:7px 10px;border-radius:7px;border:1px solid rgba(122,184,212,.4);background:rgba(122,184,212,.07);font-size:9px;">
+      <span style="color:var(--muted)">T cible descente :</span>
+      <span style="color:var(--hsky);font-family:'Syne',sans-serif;font-weight:700;" id="t-cible-descente">-- °C</span>
+      <span style="color:var(--muted);margin-left:8px;">(-1°C/24h)</span>
+    </div>
 
     <!-- Switch AUTO / MANU -->
     <div class="sw-wrap">
@@ -1120,8 +1162,8 @@ function updateHab(d){
   mp.className='mbdg';
   if(isManu) mp.classList.add('mph-STAND');
   else if(mode.includes('ECS'))   mp.classList.add('mph-ECS');
-  else if(mode.includes('CHAUF')||mode.includes('Z1')||mode.includes('Z2')) mp.classList.add('mph-CHAUF');
-  else if(mode.includes('CLIM'))  mp.classList.add('mph-CLIM');
+  else if(mode.includes('CLIM'))  mp.classList.add('mph-CLIM');   // CLIM avant CHAUF/Z1/Z2
+  else if(mode.includes('CHAUF')) mp.classList.add('mph-CHAUF');
   else if(mode.includes('ALARM')) mp.classList.add('mph-ALARM');
   else mp.classList.add('mph-STAND');
 
@@ -1330,6 +1372,16 @@ function updateSto(d){
     rsEl.textContent = '✗ ' + reason + ` | T_ext=${t_ext.toFixed(1)}°C T_rosée=${t_rosee.toFixed(1)}°C`;
   }
 
+  // T cible descente
+  if(d.t_cible_descente !== undefined) {
+    const tcd = document.getElementById('t-cible-descente');
+    if(tcd) tcd.textContent = parseFloat(d.t_cible_descente).toFixed(1) + ' °C';
+  }
+  // Sync boutons mode avec données Supabase
+  if(d.mode_standby && _modeStockage !== 'standby')   toggleModeStockage('standby');
+  if(d.mode_descente && _modeStockage !== 'descente')  toggleModeStockage('descente');
+  if(!d.mode_standby && !d.mode_descente && _modeStockage !== 'auto') toggleModeStockage('auto');
+
   // Post-recolte
   const pr=parseInt(d.pr_phase||0);
   document.getElementById('s-pr').textContent=pr===0?'Inactif':pr===1?'Ph.1 Cicatris.':'Ph.2 Descente';
@@ -1369,6 +1421,63 @@ function updateSto(d){
 // ════════════════════════════════════════
 setInterval(()=>document.getElementById('clk').textContent=new Date().toTimeString().slice(0,8),1000);
 document.getElementById('clk').textContent=new Date().toTimeString().slice(0,8);
+
+// ── Horloge timelapse simulée ─────────────────────────────────
+// En mode accéléré, on affiche l'heure simulée qui avance vite
+let _simNow = new Date();  // heure simulée
+let _lastReal = Date.now();
+
+function updateSimClock() {
+  const realElapsed = Date.now() - _lastReal;
+  _lastReal = Date.now();
+  // Avancer l'heure simulée selon la vitesse courante
+  const vitesse = SPEEDS[_speedIdx]?.vitesse || 1;
+  _simNow = new Date(_simNow.getTime() + realElapsed * vitesse);
+  // Affichage
+  const hh = String(_simNow.getHours()).padStart(2,'0');
+  const mm = String(_simNow.getMinutes()).padStart(2,'0');
+  const dd = String(_simNow.getDate()).padStart(2,'0');
+  const mo = String(_simNow.getMonth()+1).padStart(2,'0');
+  const yy = _simNow.getFullYear();
+  const simT = document.getElementById('sim-time');
+  const simD = document.getElementById('sim-date');
+  const simS = document.getElementById('sim-speed-lbl');
+  if(simT) simT.textContent = `${hh}:${mm}`;
+  if(simD) simD.textContent = `${dd}/${mo}/${yy}`;
+  if(simS) simS.textContent = vitesse > 1 ? `×${vitesse}` : '×1 — Temps réel';
+}
+setInterval(updateSimClock, 200);
+updateSimClock();
+
+// ── Boutons STANDBY / DESCENTE stockage ──────────────────────
+let _modeStockage = 'auto';  // 'auto' | 'standby' | 'descente'
+
+async function toggleModeStockage(mode) {
+  _modeStockage = mode;
+  // Mettre à jour les boutons
+  document.getElementById('btn-standby').className = 'mode-btn' + (mode==='standby'?' active-standby':'');
+  document.getElementById('btn-descente').className = 'mode-btn' + (mode==='descente'?' active-descente':'');
+  document.getElementById('btn-auto-sto').className = 'mode-btn' + (mode==='auto'?' active-descente':'');
+  // Afficher/masquer info descente
+  const di = document.getElementById('descente-info');
+  if(di) di.style.display = mode==='descente' ? 'block' : 'none';
+  // Envoyer vers Supabase
+  if(SUPABASE_KEY!=='VOTRE_ANON_KEY') {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.stockage`, {
+        method:'PATCH',
+        headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body: JSON.stringify({
+          mode_standby:  mode==='standby',
+          mode_descente: mode==='descente',
+          updated_at: new Date().toISOString()
+        })
+      });
+      console.log(`[GeoFresh] Mode stockage → ${mode}`);
+    } catch(e) { console.warn('toggleModeStockage err:', e); }
+  }
+}
+
 refreshCsg();
 
 // ════════════════════════════════════════
