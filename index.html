@@ -293,6 +293,12 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .mode-btn:hover{color:var(--cream);}
 .mode-btn.active-standby{border-color:rgba(212,168,50,.6);background:rgba(212,168,50,.1);color:var(--samb);}
 .mode-btn.active-descente{border-color:rgba(122,184,212,.6);background:rgba(122,184,212,.1);color:var(--hsky);}
+.mode-btn.active-pr{border-color:rgba(168,216,92,.6);background:rgba(168,216,92,.08);color:var(--sa);}
+/* Header figé */
+header{position:sticky;top:0;z-index:300;}
+.hdr-r{flex-wrap:nowrap;white-space:nowrap;}
+.speed-btn{white-space:nowrap;}
+.sim-clock{flex-shrink:0;}
 
 /* ── SPANS ── */
 .s2{grid-column:span 2;}.s3{grid-column:span 3;}.s4{grid-column:span 4;}
@@ -480,6 +486,15 @@ canvas.hc{width:100%!important;height:180px!important;}
       <div class="pacc">⚙️</div>
       <div><div class="pact" id="h-pact">PAC OFF</div><div class="pacd" id="h-pacd">En attente</div></div>
     </div>
+    <!-- Bouton STANDBY habitation -->
+    <div class="mode-btns" style="margin-top:8px;">
+      <div class="mode-btn" id="h-btn-standby" onclick="toggleStandbyHab()" title="PAC OFF — zones dérivent vers T_ext">
+        ⏸ STANDBY
+      </div>
+      <div class="mode-btn active-descente" id="h-btn-auto" onclick="toggleStandbyHab('auto')" title="Mode automatique">
+        ▶ AUTO
+      </div>
+    </div>
     <!-- Switch AUTO / MANU -->
     <div class="sw-wrap" style="margin-top:10px;">
       <span class="sw-lbl">Mode</span>
@@ -610,6 +625,9 @@ canvas.hc{width:100%!important;height:180px!important;}
       </div>
       <div class="mode-btn" id="btn-auto-sto" onclick="toggleModeStockage('auto')" title="Mode automatique normal">
         ▶ AUTO
+      </div>
+      <div class="mode-btn" id="btn-pr" onclick="toggleModeStockage('pr')" title="Post-récolte : cicatrisation + descente">
+        🌱 POST-RÉCOLTE
       </div>
     </div>
     <!-- T cible descente -->
@@ -1378,9 +1396,28 @@ function updateSto(d){
     if(tcd) tcd.textContent = parseFloat(d.t_cible_descente).toFixed(1) + ' °C';
   }
   // Sync boutons mode avec données Supabase
-  if(d.mode_standby && _modeStockage !== 'standby')   toggleModeStockage('standby');
-  if(d.mode_descente && _modeStockage !== 'descente')  toggleModeStockage('descente');
-  if(!d.mode_standby && !d.mode_descente && _modeStockage !== 'auto') toggleModeStockage('auto');
+  // Sync boutons mode SANS déclencher la boucle Supabase
+  if(d.mode_standby && _modeStockage !== 'standby') {
+    _modeStockage = 'standby';
+    document.getElementById('btn-standby').className = 'mode-btn active-standby';
+    document.getElementById('btn-descente').className = 'mode-btn';
+    document.getElementById('btn-auto-sto').className = 'mode-btn';
+    const swManu=document.getElementById('s-sw-manu');
+    if(swManu&&!swManu.checked){swManu.checked=true;toggleManu('sto');}
+  } else if(d.mode_descente && _modeStockage !== 'descente') {
+    _modeStockage = 'descente';
+    document.getElementById('btn-standby').className = 'mode-btn';
+    document.getElementById('btn-descente').className = 'mode-btn active-descente';
+    document.getElementById('btn-auto-sto').className = 'mode-btn';
+    const di=document.getElementById('descente-info'); if(di) di.style.display='block';
+  } else if(!d.mode_standby && !d.mode_descente && _modeStockage !== 'auto') {
+    _modeStockage = 'auto';
+    document.getElementById('btn-standby').className = 'mode-btn';
+    document.getElementById('btn-descente').className = 'mode-btn';
+    document.getElementById('btn-auto-sto').className = 'mode-btn active-descente';
+    const swManu=document.getElementById('s-sw-manu');
+    if(swManu&&swManu.checked){swManu.checked=false;toggleManu('sto');}
+  }
 
   // Post-recolte
   const pr=parseInt(d.pr_phase||0);
@@ -1452,28 +1489,69 @@ updateSimClock();
 // ── Boutons STANDBY / DESCENTE stockage ──────────────────────
 let _modeStockage = 'auto';  // 'auto' | 'standby' | 'descente'
 
+// ── STANDBY HABITATION ───────────────────────────────────────
+async function toggleStandbyHab(mode) {
+  const isStandby = mode !== 'auto' && document.getElementById('h-btn-standby').className.includes('active');
+  const newStandby = mode === 'auto' ? false : !isStandby;
+  document.getElementById('h-btn-standby').className = 'mode-btn' + (newStandby?' active-standby':'');
+  document.getElementById('h-btn-auto').className    = 'mode-btn' + (!newStandby?' active-descente':'');
+  // Basculer MANU si STANDBY
+  const swManu = document.getElementById('h-sw-manu');
+  if(newStandby && swManu && !swManu.checked){ swManu.checked=true; toggleManu('hab'); }
+  else if(!newStandby && swManu && swManu.checked){ swManu.checked=false; toggleManu('hab'); }
+  if(SUPABASE_KEY!=='VOTRE_ANON_KEY') {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.habitation`, {
+        method:'PATCH',
+        headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body: JSON.stringify({mode_standby_hab: newStandby, updated_at: new Date().toISOString()})
+      });
+    } catch(e) {}
+  }
+}
+
 async function toggleModeStockage(mode) {
   _modeStockage = mode;
-  // Mettre à jour les boutons
+  // Boutons
   document.getElementById('btn-standby').className = 'mode-btn' + (mode==='standby'?' active-standby':'');
   document.getElementById('btn-descente').className = 'mode-btn' + (mode==='descente'?' active-descente':'');
   document.getElementById('btn-auto-sto').className = 'mode-btn' + (mode==='auto'?' active-descente':'');
-  // Afficher/masquer info descente
+  // Info descente
   const di = document.getElementById('descente-info');
   if(di) di.style.display = mode==='descente' ? 'block' : 'none';
-  // Envoyer vers Supabase
+
+  // STANDBY → bascule le switch en mode MANU (PAC OFF visible)
+  const swManu = document.getElementById('s-sw-manu');
+  const swLbl  = document.getElementById('s-sw-lbl');
+  const manuCmds = document.getElementById('s-manu-cmds');
+  if(mode === 'standby') {
+    if(swManu) swManu.checked = true;
+    if(swLbl)  { swLbl.textContent='STANDBY'; swLbl.style.color='var(--samb)'; }
+    if(manuCmds) manuCmds.style.display='block';
+    MANU.sto.on = true;
+  } else if(mode === 'auto') {
+    // Retour AUTO → désactive MANU + désactive standby
+    if(swManu) swManu.checked = false;
+    if(swLbl)  { swLbl.textContent='AUTO'; swLbl.style.color='var(--muted)'; }
+    if(manuCmds) manuCmds.style.display='none';
+    MANU.sto.on = false;
+  }
+
+  // Supabase
+  // Post-récolte : badge et info
+  document.getElementById('btn-pr').className = 'mode-btn' + (mode==='pr'?' active-pr':'');
   if(SUPABASE_KEY!=='VOTRE_ANON_KEY') {
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.stockage`, {
         method:'PATCH',
         headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'},
         body: JSON.stringify({
-          mode_standby:  mode==='standby',
-          mode_descente: mode==='descente',
+          mode_standby:    mode==='standby',
+          mode_descente:   mode==='descente',
+          mode_post_recolte: mode==='pr',
           updated_at: new Date().toISOString()
         })
       });
-      console.log(`[GeoFresh] Mode stockage → ${mode}`);
     } catch(e) { console.warn('toggleModeStockage err:', e); }
   }
 }
@@ -1485,13 +1563,41 @@ refreshCsg();
 // ════════════════════════════════════════
 const histData = { hab:[], sto:[] };
 
-function loadHistory(){
+async function loadHistory(){
   const bat=document.getElementById('hist-bat').value;
   const range=document.getElementById('hist-range').value;
-  const data=histData[bat];
 
-  // Stats
-  if(data.length===0){
+  // Calculer la date de début selon la plage
+  const now = new Date();
+  const since = new Date(now);
+  if(range==='1h')     since.setHours(now.getHours()-1);
+  else if(range==='6h') since.setHours(now.getHours()-6);
+  else if(range==='24h') since.setDate(now.getDate()-1);
+  else if(range==='7d')  since.setDate(now.getDate()-7);
+  else if(range==='30d') since.setDate(now.getDate()-30);
+  else since.setFullYear(2020); // saison complète
+
+  const table = bat==='hab' ? 'habitation_readings' : 'stockage_readings';
+  const tCol  = bat==='hab' ? 't_int_z1' : 't_stock';
+
+  let data = [];
+  if(SUPABASE_KEY !== 'VOTRE_ANON_KEY') {
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/${table}?select=*&ts=gte.${since.toISOString()}&order=ts.asc&limit=500`,
+        { headers: HDRS }
+      );
+      data = await r.json();
+    } catch(e) { console.warn('loadHistory err:', e); }
+  }
+
+  // Fallback mémoire si pas de Supabase
+  if(!data.length) data = histData[bat];
+
+  document.getElementById('hist-chart-title').textContent =
+    `Evolution temperature — ${bat==='hab'?'Habitation':'Stockage'} — ${range}`;
+
+  if(!data.length){
     document.getElementById('hist-empty').style.display='block';
     document.getElementById('hist-table').style.display='none';
     document.getElementById('hs-cumul').textContent='--';
@@ -1501,6 +1607,7 @@ function loadHistory(){
     drawHistChart([],[],bat);
     return;
   }
+
   document.getElementById('hist-empty').style.display='none';
   document.getElementById('hist-table').style.display='table';
 
@@ -1510,21 +1617,21 @@ function loadHistory(){
   const modes = {};
   data.forEach(r=>{ const m=r.mode_actif||'INIT'; modes[m]=(modes[m]||0)+1; });
   const dominant = Object.entries(modes).sort((a,b)=>b[1]-a[1])[0]?.[0]||'--';
-  const cumul = (data.filter(r=>r.pac_on).length * 2 / 3600).toFixed(1);
+  const cumul = (data.filter(r=>r.pac_on).length * 30 / 3600).toFixed(1);
 
   document.getElementById('hs-cumul').textContent=cumul+' h';
   document.getElementById('hs-tmoy').textContent=tmoy+' °C';
   document.getElementById('hs-alarmes').textContent=alarmes;
-  document.getElementById('hs-modes').textContent=dominant.slice(0,12);
-  document.getElementById('hist-chart-title').textContent=
-    `Evolution temperature — ${bat==='hab'?'Habitation':'Stockage'} — ${range}`;
+  document.getElementById('hs-modes').textContent=dominant.slice(0,14);
 
   // Tableau
   const tbody=document.getElementById('hist-tbody');
   tbody.innerHTML=data.slice(-50).reverse().map(r=>{
     const t=bat==='hab';
+    const ts_str = r.ts ? new Date(r.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '--';
+    const date_str = r.ts ? new Date(r.ts).toLocaleDateString('fr-FR') : '';
     return `<tr>
-      <td>${r.ts?new Date(r.ts).toLocaleTimeString('fr-FR'):'--'}</td>
+      <td>${date_str} ${ts_str}</td>
       <td>${r.mode_actif||'--'}</td>
       <td>${t?parseFloat(r.t_int_z1||0).toFixed(1)+'°C / '+parseFloat(r.t_int_z2||0).toFixed(1)+'°C':parseFloat(r.t_stock||0).toFixed(1)+'°C'}</td>
       <td>${t?parseFloat(r.t_ecs||0).toFixed(0)+'°C':parseFloat(r.hr_stock||0).toFixed(0)+'%'}</td>
