@@ -45,6 +45,13 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
   border:1px solid;font-family:'DM Mono',monospace;transition:all .2s;}
 .speed-btn.normal{background:rgba(91,184,160,.08);border-color:rgba(91,184,160,.3);color:var(--ha);}
 .speed-btn.fast{background:rgba(232,196,74,.15);border-color:rgba(232,196,74,.5);color:#E8C44A;animation:pu 1s infinite;}
+.beta-btn{display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:14px;
+  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
+  border:1px solid;font-family:'DM Mono',monospace;transition:all .3s;}
+.beta-off{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.15);color:var(--muted);}
+.beta-on{background:rgba(122,184,212,.15);border-color:rgba(122,184,212,.5);color:#7AB8D4;animation:pu 2s infinite;}
+.beta-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.esp32-status{font-size:8px;color:var(--muted);letter-spacing:1px;}
 .live{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:16px;
   font-size:9px;letter-spacing:2px;text-transform:uppercase;
   background:rgba(168,216,92,.09);border:1px solid rgba(168,216,92,.3);color:var(--sa);}
@@ -390,6 +397,10 @@ canvas.hc{width:100%!important;height:180px!important;}
       <div class="sim-speed-lbl" id="sim-speed-lbl">×1</div>
     </div>
     <div id="clk">--:--:--</div>
+    <button class="beta-btn beta-off" id="beta-btn" onclick="toggleBeta()" title="Basculer mode ESP32 réel / Simulateur">
+      <div class="beta-dot"></div>BETA ESP32
+    </button>
+    <div class="esp32-status" id="esp32-status">Simulateur</div>
   </div>
 </header>
 
@@ -1088,6 +1099,58 @@ async function loadConsignes() {
     console.log('[GeoFresh] Consignes + cumuls chargés ✓');
   } catch(e) { console.error('[GeoFresh] Erreur load consignes:', e); }
 }
+
+// ── MODE BETA ESP32 ──────────────────────────────────────────
+let _betaActif = false;
+
+async function toggleBeta() {
+  _betaActif = !_betaActif;
+  const btn = document.getElementById('beta-btn');
+  const status = document.getElementById('esp32-status');
+  btn.className = 'beta-btn ' + (_betaActif ? 'beta-on' : 'beta-off');
+  btn.innerHTML = '<div class="beta-dot"></div>' + (_betaActif ? 'BETA ON' : 'BETA ESP32');
+  status.textContent = _betaActif ? '⚡ ESP32 actif' : 'Simulateur';
+  status.style.color = _betaActif ? '#7AB8D4' : 'var(--muted)';
+
+  if(SUPABASE_KEY !== 'VOTRE_ANON_KEY') {
+    try {
+      // Mettre à jour config_systeme dans Supabase
+      await fetch(`${SUPABASE_URL}/rest/v1/config_systeme?id=eq.beta_actif`, {
+        method: 'PATCH',
+        headers: {...HDRS, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+        body: JSON.stringify({ valeur: _betaActif ? 'true' : 'false', updated_at: new Date().toISOString() })
+      });
+      await fetch(`${SUPABASE_URL}/rest/v1/config_systeme?id=eq.mode_source`, {
+        method: 'PATCH',
+        headers: {...HDRS, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+        body: JSON.stringify({ valeur: _betaActif ? 'esp32' : 'simulateur', updated_at: new Date().toISOString() })
+      });
+      console.log('[GeoFresh] Mode BETA:', _betaActif ? 'ESP32 RÉEL' : 'SIMULATEUR');
+    } catch(e) { console.warn('toggleBeta err:', e); }
+  }
+}
+
+// Vérifier statut ESP32 toutes les 30s
+async function checkEsp32Status() {
+  if(!_betaActif) return;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/config_systeme?id=eq.esp32_last_seen&select=valeur`, { headers: HDRS });
+    const d = await r.json();
+    if(d?.[0]?.valeur) {
+      const lastSeen = new Date(d[0].valeur);
+      const silence = (Date.now() - lastSeen) / 1000;
+      const status = document.getElementById('esp32-status');
+      if(silence < 60) {
+        status.textContent = `⚡ ESP32 OK (${Math.round(silence)}s)`;
+        status.style.color = '#7AB8D4';
+      } else {
+        status.textContent = `⚠ ESP32 absent (${Math.round(silence/60)}min)`;
+        status.style.color = 'var(--herr)';
+      }
+    }
+  } catch(e) {}
+}
+setInterval(checkEsp32Status, 30000);
 
 function refreshCsg() {
   const safe = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
