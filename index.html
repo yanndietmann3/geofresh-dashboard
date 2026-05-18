@@ -1365,7 +1365,7 @@ function updateHab(d){
   document.getElementById('h-z2').innerHTML=z2.toFixed(1)+'<span class="u">°C</span>';
   refreshCsg();
 
-  const vc1=!!d.fancoil_z1_on, vc2=!!d.fancoil_z2_on;
+  const vc1=!!d.ventilateurcoil_z1_on, vc2=!!d.ventilateurcoil_z2_on;
   const fcC='var(--hamb)';  // toujours ambre (chauffage uniquement)
   // En MANU : commandes clavier | En AUTO : données simulateur
   const isManuH = MANU.hab.on;
@@ -2093,7 +2093,7 @@ function demoMode(){
       t_eau_dep:Math.max(22,Math.min(54,dep)).toFixed(2),
       t_eau_ret:Math.max(17,Math.min(48,dep-6+Math.random()-.5)).toFixed(2),
       pac_on:pac_h, pompe_sol_on:pac_h, pompe_circuit_on:true,
-      vanne_ecs_on:cycle%5===0, fancoil_z1_on:vc1, fancoil_z2_on:vc2,
+      vanne_ecs_on:cycle%5===0, ventilateurcoil_z1_on:vc1, ventilateurcoil_z2_on:vc2,
       mode_actif:curHm, saison:ss[sIdx],
       temps_depuis_arret_pac_min:(Math.random()*8).toFixed(0),
       alarme_active:alHab, niveau_alarme:alHab?2:0,

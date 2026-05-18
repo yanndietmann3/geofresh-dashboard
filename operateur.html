@@ -600,7 +600,7 @@ function updateUI(sto, hab, ext, csgs) {
   setPac('s-p2', p2on, 'PAC2', p2on?'15 kW':'0 kW');
 
   const vv = parseFloat(sto.vitesse_ventil??0);
-  set('s-vent', vv>=1?'2 FANS':vv>=0.5?'1 FAN':'ARRÊT');
+  set('s-vent', vv>=1?'2 VENTILATEURS':vv>=0.5?'1 VENTILATEUR':'ARRÊT');
   const fcOn = !!sto.registre_ouvert, co2On = !!sto.volet_co2_ouvert;
   set('s-volets', `FC:${fcOn?'<span style="color:var(--sa)">OUV</span>':'FER'} CO2:${co2On?'<span style="color:var(--samb)">OUV</span>':'FER'}`);
 
@@ -636,7 +636,7 @@ function updateUI(sto, hab, ext, csgs) {
   document.getElementById('h-p3kw').textContent = fmt1(parseFloat(hab.pac_kw??0))+' kW th';
   set('h-mode', hab.mode_actif??'–');
   set('h-tdep', fmt1(tDep)+'<span class="u">°C</span>');
-  const vc1 = !!hab.fancoil_z1_on, vc2 = !!hab.fancoil_z2_on;
+  const vc1 = !!hab.ventilateurcoil_z1_on, vc2 = !!hab.ventilateurcoil_z2_on;
   set('h-vc', `Z1:${vc1?'<span style="color:var(--ha)">ON</span>':'OFF'} Z2:${vc2?'<span style="color:var(--ha)">ON</span>':'OFF'}`);
   const alHab = hab.alarme_active;
   const alDivH = document.getElementById('h-alarm');
