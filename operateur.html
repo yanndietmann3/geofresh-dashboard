@@ -404,10 +404,7 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
         <div class="mlbl">T_rosée</div>
         <div class="mval" id="m-ros" style="font-size:16px;">–<span class="u">°C</span></div>
       </div>
-      <div class="metric">
-        <div class="mlbl">Vent</div>
-        <div class="mval" id="m-vent" style="font-size:16px;">–<span class="u">m/s</span></div>
-      </div>
+
     </div>
     <div style="margin-top:12px;border-top:1px solid var(--bdr);padding-top:10px;">
       <div class="mlbl" style="margin-bottom:6px;">Free cooling :</div>
@@ -687,7 +684,6 @@ function updateUI(sto, hab, ext, csgs) {
   set('m-t',   (tExt>=0?'+':'')+fmt1(tExt)+'<span class="u">°C</span>', tExt<0?'err':'info');
   set('m-hr',  fmt1(ext.hr_ext??0)+'<span class="u">%</span>', parseFloat(ext.hr_ext??0)>85?'warn':'ok');
   set('m-ros', fmt1(ext.t_rosee??0)+'<span class="u">°C</span>');
-  set('m-vent',fmt1(ext.wind_speed??0)+'<span class="u">m/s</span>');
 
   // Free cooling possible ?
   const fcPoss = tExt < tSto-2 && parseFloat(ext.t_rosee??99) < tSto-0.5 && tExt > 0.5 && parseFloat(ext.hr_ext??100) < 85;
@@ -889,7 +885,6 @@ function connectRealtimeOpe() {
         set('m-t',   (parseFloat(rec.t_ext??0)>=0?'+':'')+parseFloat(rec.t_ext??0).toFixed(1)+'<span class="u">°C</span>', parseFloat(rec.t_ext??0)<0?'err':'info');
         set('m-hr',  parseFloat(rec.hr_ext??0).toFixed(1)+'<span class="u">%</span>');
         set('m-ros', parseFloat(rec.t_rosee??0).toFixed(1)+'<span class="u">°C</span>');
-        set('m-vent',parseFloat(rec.wind_speed??0).toFixed(1)+'<span class="u">m/s</span>');
       }
       else if(tbl === 'stockage_readings' || tbl === 'habitation_readings') {
         // Relancer fetchAll pour mettre à jour tous les widgets d'un coup

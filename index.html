@@ -380,8 +380,7 @@ canvas.hc{width:100%!important;height:180px!important;}
     <div class="ex"><div class="exv" id="hdr-hr">--%</div><div class="exl">HR ext</div></div>
     <div class="sep"></div>
     <div class="ex"><div class="exv" id="hdr-sol" style="color:var(--ha)">--°C</div><div class="exl">T sol</div></div>
-    <div class="sep"></div>
-    <div class="ex"><div class="exv" id="hdr-wind" style="color:var(--muted)">-- m/s</div><div class="exl">Vent</div></div>
+
   </div>
 
   <div class="hdr-r">
@@ -1353,7 +1352,6 @@ function updateExt(e){
   document.getElementById('hdr-text').textContent=parseFloat(e.t_ext||0).toFixed(1)+'°C';
   document.getElementById('hdr-hr').textContent=parseFloat(e.hr_ext||0).toFixed(0)+'%';
   document.getElementById('hdr-sol').textContent=parseFloat(e.t_sol||10).toFixed(1)+'°C';
-  document.getElementById('hdr-wind').textContent=parseFloat(e.wind_speed||0).toFixed(1)+' m/s';
 }
 
 // ════════════════════════════════════════
@@ -1868,18 +1866,27 @@ async function loadHistory(){
         ? 'ts,t_int_z1,t_int_z2,t_ecs,pac_on,mode_actif'
         : 'ts,t_stock,hr_stock,co2_ppm,pac_on,mode_actif';
 
+      // Deux requêtes :
+      // 1. Compter les points dans la plage pour calibrer le sampling
+      // 2. Récupérer les derniers N points bien répartis sur la plage
       const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/${table}?select=${cols}&ts=gte.${since.toISOString()}&order=ts.asc&limit=${limit}`,
+        `${SUPABASE_URL}/rest/v1/${table}?select=${cols}&ts=gte.${since.toISOString()}&order=ts.desc&limit=${limit}`,
         { headers: HDRS }
       );
       const raw = await r.json();
 
-      // Sous-échantillonnage côté client si trop de points
-      if(raw.length > 500) {
-        const skip = Math.ceil(raw.length / 500);
-        data = raw.filter((_, i) => i % skip === 0);
+      if(!Array.isArray(raw) || raw.length === 0) {
+        data = [];
       } else {
-        data = raw;
+        // Remettre dans l'ordre chronologique (asc)
+        raw.reverse();
+        // Sous-échantillonnage si trop de points
+        if(raw.length > 300) {
+          const skip = Math.ceil(raw.length / 300);
+          data = raw.filter((_, i) => i % skip === 0);
+        } else {
+          data = raw;
+        }
       }
     } catch(e) { console.warn('loadHistory err:', e); }
   }
@@ -1939,14 +1946,20 @@ async function loadHistory(){
 function drawHistChart(labels,data,bat){
   const canvas=document.getElementById('hist-canvas');
   const ctx=canvas.getContext('2d');
-  canvas.width=canvas.offsetWidth||600; canvas.height=180;
+  canvas.width=canvas.offsetWidth||600; canvas.height=200;
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(!data.length){
     ctx.fillStyle='rgba(255,255,255,.2)'; ctx.font='12px DM Mono,monospace';
-    ctx.fillText('Donnees insuffisantes',canvas.width/2-80,90); return;
+    ctx.fillText('Donnees insuffisantes',canvas.width/2-80,100); return;
   }
-  const W=canvas.width,H=180,PAD=30;
-  const mn=Math.min(...data), mx=Math.max(...data), rng=mx-mn||1;
+  const W=canvas.width,H=200,PAD=35;
+  const rawMn=Math.min(...data), rawMx=Math.max(...data);
+  // Padding axe Y : minimum 2°C de plage pour rendre les variations lisibles
+  const rangMin = Math.max(rawMx - rawMn, 2.0);
+  const mid = (rawMn + rawMx) / 2;
+  const mn = mid - rangMin/2 - 0.3;
+  const mx = mid + rangMin/2 + 0.3;
+  const rng = mx - mn;
   const col=bat==='hab'?'#5BB8A0':'#A8D85C';
   const grad=ctx.createLinearGradient(0,0,0,H);
   grad.addColorStop(0,col+'44'); grad.addColorStop(1,col+'00');
@@ -1960,9 +1973,17 @@ function drawHistChart(labels,data,bat){
   ctx.lineTo(W-PAD,H-PAD); ctx.lineTo(PAD,H-PAD); ctx.closePath();
   ctx.fillStyle=grad; ctx.fill();
   // Axes
-  ctx.fillStyle='rgba(255,255,255,.2)'; ctx.font='9px DM Mono,monospace';
-  ctx.fillText(mx.toFixed(1)+'°C',2,PAD+4);
-  ctx.fillText(mn.toFixed(1)+'°C',2,H-PAD+4);
+  // Axes Y avec labels
+  ctx.fillStyle='rgba(255,255,255,.35)'; ctx.font='9px DM Mono,monospace';
+  ctx.fillText(rawMx.toFixed(1)+'°C',2,PAD+4);
+  ctx.fillText(rawMn.toFixed(1)+'°C',2,H-PAD+4);
+  // Ligne médiane
+  const yMid = H-PAD - (mid-mn)/rng*(H-PAD*2);
+  ctx.beginPath(); ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1;
+  ctx.setLineDash([4,4]); ctx.moveTo(PAD,yMid); ctx.lineTo(W-PAD,yMid); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,.2)'; ctx.font='8px DM Mono,monospace';
+  ctx.fillText(mid.toFixed(1)+'°C',2,yMid+3);
 }
 
 // ════════════════════════════════════════
