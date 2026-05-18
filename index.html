@@ -385,6 +385,7 @@ canvas.hc{width:100%!important;height:180px!important;}
   </div>
 
   <div class="hdr-r">
+    <a href="operateur.html" style="display:flex;align-items:center;gap:6px;padding:5px 13px;border-radius:14px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border:1px solid rgba(155,127,212,.55);background:rgba(155,127,212,.14);color:#B8A0E8;text-decoration:none;font-family:'DM Mono',monospace;font-weight:600;" title="Panneau opérateur">⚙ Opérateur</a>
     <div class="live"><div class="ldot"></div>Temps reel</div>
     <button class="speed-btn normal" id="speed-btn" onclick="toggleSpeed()" title="Accélérer le rafraîchissement">
       ▶ Temps réel
@@ -397,10 +398,10 @@ canvas.hc{width:100%!important;height:180px!important;}
       <div class="sim-speed-lbl" id="sim-speed-lbl">×1</div>
     </div>
     <div id="clk">--:--:--</div>
-    <button class="beta-btn beta-off" id="beta-btn" onclick="toggleBeta()" title="Basculer mode ESP32 réel / Simulateur">
-      <div class="beta-dot"></div>BETA ESP32
+    <button class="beta-btn beta-off" id="beta-btn" onclick="toggleBeta()" title="Basculer mode ESP32 reel / Simulateur">
+      <div class="beta-dot"></div><span id="beta-label">NUMERIQUE</span>
     </button>
-    <div class="esp32-status" id="esp32-status">Simulateur</div>
+    <div class="esp32-status" id="esp32-status">Simulateur actif</div>
   </div>
 </header>
 
@@ -416,6 +417,9 @@ canvas.hc{width:100%!important;height:180px!important;}
   </button>
   <button class="tb" id="tbx" onclick="switchTab('x')">
     📊 Historique
+  </button>
+  <button class="tb" id="tbe" onclick="switchTab('e')">
+    ⚡ Energie
   </button>
 </div>
 
@@ -781,6 +785,7 @@ canvas.hc{width:100%!important;height:180px!important;}
       <option value="6h">6 heures</option>
       <option value="24h" selected>24 heures</option>
       <option value="7d">7 jours</option>
+      <option value="10d">10 jours</option>
       <option value="30d">30 jours</option>
       <option value="saison">Saison complete</option>
     </select>
@@ -813,6 +818,123 @@ canvas.hc{width:100%!important;height:180px!important;}
     </div>
   </div>
 </div><!-- /phistory -->
+
+</div><!-- /phistory -->
+
+<!-- ══ PANEL ENERGIE ══════════════════════════════════════ -->
+<div class="tc" id="pe">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px;">
+
+    <!-- PAC Stockage -->
+    <div class="card">
+      <div class="ct">Stockage — PAC Sol/Sol 30kW</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+        <div style="flex:1;min-width:90px;text-align:center;padding:10px;background:rgba(0,0,0,.15);border-radius:8px;border:1px solid var(--bdr)">
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--cream)" id="e-sto-h">--</div>
+          <div style="font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:4px">Heures PAC</div>
+        </div>
+        <div style="flex:1;min-width:90px;text-align:center;padding:10px;background:rgba(0,0,0,.15);border-radius:8px;border:1px solid var(--bdr)">
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--cream)" id="e-sto-kwh">--</div>
+          <div style="font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:4px">kWh consommes</div>
+        </div>
+        <div style="flex:1;min-width:90px;text-align:center;padding:10px;background:rgba(0,0,0,.15);border-radius:8px;border:1px solid var(--bdr)">
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--cream)" id="e-sto-froid">--</div>
+          <div style="font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:4px">kWh froid produit</div>
+        </div>
+        <div style="flex:1;min-width:90px;text-align:center;padding:10px;background:rgba(0,0,0,.15);border-radius:8px;border:1px solid var(--bdr)">
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--hsky)" id="e-sto-cop">3.5</div>
+          <div style="font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:4px">COP sol/sol</div>
+        </div>
+      </div>
+      <!-- Comparaison groupe froid -->
+      <div style="margin-top:12px;padding:10px;border-radius:8px;background:rgba(0,0,0,.1);border:1px dashed var(--bdr)">
+        <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">vs Groupe Froid Classique (COP 2.0)</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:90px;text-align:center;padding:8px;background:rgba(255,0,0,.05);border-radius:6px">
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--herr)" id="e-gf-kwh">--</div>
+            <div style="font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:3px">kWh groupe froid</div>
+          </div>
+          <div style="flex:1;min-width:90px;text-align:center;padding:8px;background:rgba(0,255,0,.05);border-radius:6px">
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--sa)" id="e-eco-kwh">--</div>
+            <div style="font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:3px">kWh economies</div>
+          </div>
+          <div style="flex:1;min-width:90px;text-align:center;padding:8px;background:rgba(0,255,0,.05);border-radius:6px">
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--sa)" id="e-eco-eur">--</div>
+            <div style="font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:3px">Economie euros</div>
+          </div>
+          <div style="flex:1;min-width:90px;text-align:center;padding:8px;background:rgba(0,255,0,.05);border-radius:6px">
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--sa)" id="e-co2">--</div>
+            <div style="font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:3px">kg CO2 evite</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAC Habitation -->
+    <div class="card">
+      <div class="ct">Habitation — PAC Sol/Sol 10kW</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+        <div style="flex:1;min-width:90px;text-align:center;padding:10px;background:rgba(0,0,0,.15);border-radius:8px;border:1px solid var(--bdr)">
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--cream)" id="e-hab-h">--</div>
+          <div style="font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:4px">Heures PAC</div>
+        </div>
+        <div style="flex:1;min-width:90px;text-align:center;padding:10px;background:rgba(0,0,0,.15);border-radius:8px;border:1px solid var(--bdr)">
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--cream)" id="e-hab-kwh">--</div>
+          <div style="font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:4px">kWh consommes</div>
+        </div>
+        <div style="flex:1;min-width:90px;text-align:center;padding:10px;background:rgba(0,0,0,.15);border-radius:8px;border:1px solid var(--bdr)">
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--cream)" id="e-hab-th">--</div>
+          <div style="font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:4px">kWh thermiques</div>
+        </div>
+        <div style="flex:1;min-width:90px;text-align:center;padding:10px;background:rgba(0,0,0,.15);border-radius:8px;border:1px solid var(--bdr)">
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--hsky)" id="e-hab-cop">4.0</div>
+          <div style="font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:4px">COP sol/sol</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:10px;border-radius:8px;background:rgba(0,0,0,.1);border:1px dashed var(--bdr)">
+        <div style="font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">vs Chaudiere Gaz (rendement 90%)</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:90px;text-align:center;padding:8px;background:rgba(255,0,0,.05);border-radius:6px">
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--herr)" id="e-gaz-kwh">--</div>
+            <div style="font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:3px">kWh gaz equivalent</div>
+          </div>
+          <div style="flex:1;min-width:90px;text-align:center;padding:8px;background:rgba(0,255,0,.05);border-radius:6px">
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--sa)" id="e-eco-hab-kwh">--</div>
+            <div style="font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:3px">kWh economies</div>
+          </div>
+          <div style="flex:1;min-width:90px;text-align:center;padding:8px;background:rgba(0,255,0,.05);border-radius:6px">
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--sa)" id="e-eco-hab-eur">--</div>
+            <div style="font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:3px">Economie euros</div>
+          </div>
+          <div style="flex:1;min-width:90px;text-align:center;padding:8px;background:rgba(0,255,0,.05);border-radius:6px">
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--sa)" id="e-co2-hab">--</div>
+            <div style="font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:3px">kg CO2 evite</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bilan total -->
+    <div class="card" style="grid-column:span 2">
+      <div class="ct">Bilan Total Saison</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:space-around;margin-top:14px;">
+        <div style="text-align:center;padding:16px 24px;background:rgba(0,255,0,.06);border-radius:10px;border:1px solid rgba(0,255,0,.2)">
+          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--sa)" id="e-total-eco">--</div>
+          <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:6px">Economie totale kWh</div>
+        </div>
+        <div style="text-align:center;padding:16px 24px;background:rgba(0,255,0,.06);border-radius:10px;border:1px solid rgba(0,255,0,.2)">
+          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--sa)" id="e-total-eur">--</div>
+          <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:6px">Economie totale euros</div>
+        </div>
+        <div style="text-align:center;padding:16px 24px;background:rgba(0,255,0,.06);border-radius:10px;border:1px solid rgba(0,255,0,.2)">
+          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--sa)" id="e-total-co2">--</div>
+          <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:6px">CO2 evite total kg</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /pe -->
 
 </div><!-- /shell -->
 
@@ -896,11 +1018,13 @@ async function fetchLatest() {
 // ════════════════════════════════════════
 function switchTab(t) {
   document.querySelectorAll('.tc').forEach(e=>e.classList.remove('active'));
-  document.querySelectorAll('.tb').forEach(e=>e.classList.remove('ah','as','ax'));
-  document.getElementById('p'+(t==='x'?'history':t)).classList.add('active');
+  document.querySelectorAll('.tb').forEach(e=>e.classList.remove('ah','as','ax','ae'));
+  const panelId = t==='x'?'phistory':t==='e'?'pe':'p'+t;
+  document.getElementById(panelId).classList.add('active');
   const btn=document.getElementById('tb'+t);
-  btn.classList.add(t==='h'?'ah':t==='s'?'as':'ax');
+  btn.classList.add(t==='h'?'ah':t==='s'?'as':t==='e'?'ae':'ax');
   if(t==='x') loadHistory();
+  if(t==='e') loadEnergie();
 }
 
 // ════════════════════════════════════════
@@ -1062,6 +1186,42 @@ async function pushConsignes() {
 }
 
 // ── Charger les consignes depuis Supabase au démarrage ────────
+// ── SYNC CONSIGNES TEMPS RÉEL (depuis opérateur ou simulateur) ──
+function applyConsignesRow(row) {
+  if(!row || !row.id) return;
+  if(row.id === 'stockage') {
+    if(row.csg_t   != null) CSG.sto.t       = parseFloat(row.csg_t);
+    if(row.hyst_t  != null) CSG.sto.hyst_t  = parseFloat(row.hyst_t);
+    if(row.csg_hr  != null) CSG.sto.hr      = parseFloat(row.csg_hr);
+    if(row.hyst_hr != null) CSG.sto.hyst_hr = parseFloat(row.hyst_hr);
+    // Boutons mode
+    if(row.mode_standby != null) {
+      const b = document.getElementById('btn-standby');
+      if(b) b.className = 'mode-btn' + (row.mode_standby?' active-standby':'');
+    }
+    if(row.mode_descente != null) {
+      const b = document.getElementById('btn-descente');
+      if(b) b.className = 'mode-btn' + (row.mode_descente?' active-descente':'');
+      const di = document.getElementById('descente-info');
+      if(di) di.style.display = row.mode_descente?'block':'none';
+    }
+  }
+  if(row.id === 'habitation') {
+    if(row.csg_z1  != null) CSG.hab.z1       = parseFloat(row.csg_z1);
+    if(row.csg_z2  != null) CSG.hab.z2       = parseFloat(row.csg_z2);
+    if(row.csg_ecs != null) CSG.hab.ecs      = parseFloat(row.csg_ecs);
+    if(row.hyst_ecs!= null) CSG.hab.hyst_ecs = parseFloat(row.hyst_ecs);
+    if(row.csg_clim_z1 != null) CSG.hab.clim1 = parseFloat(row.csg_clim_z1);
+    if(row.csg_clim_z2 != null) CSG.hab.clim2 = parseFloat(row.csg_clim_z2);
+    // Standby hab
+    if(row.mode_standby_hab != null) {
+      const b = document.getElementById('h-btn-standby');
+      if(b) b.className = 'mode-btn' + (row.mode_standby_hab?' active-standby':'');
+    }
+  }
+  refreshCsg();
+}
+
 async function loadConsignes() {
   if(SUPABASE_KEY==='VOTRE_ANON_KEY') return;
   try {
@@ -1108,8 +1268,8 @@ async function toggleBeta() {
   const btn = document.getElementById('beta-btn');
   const status = document.getElementById('esp32-status');
   btn.className = 'beta-btn ' + (_betaActif ? 'beta-on' : 'beta-off');
-  btn.innerHTML = '<div class="beta-dot"></div>' + (_betaActif ? 'BETA ON' : 'BETA ESP32');
-  status.textContent = _betaActif ? '⚡ ESP32 actif' : 'Simulateur';
+  document.getElementById('beta-label').textContent = _betaActif ? 'ESP32 REEL' : 'NUMERIQUE';
+  status.textContent = _betaActif ? 'Capteurs physiques actifs' : 'Simulateur actif';
   status.style.color = _betaActif ? '#7AB8D4' : 'var(--muted)';
 
   if(SUPABASE_KEY !== 'VOTRE_ANON_KEY') {
@@ -1621,6 +1781,49 @@ async function toggleModeStockage(mode) {
 
 refreshCsg();
 
+// ── CALCUL ENERGETIQUE ───────────────────────────────────────
+const COP_STO=3.5, COP_HAB=4.0, COP_GF=2.0, P_STO=30, P_HAB=10;
+const PRIX_KWH=0.18, CO2_KWH=0.057, REND_GAZ=0.9, PRIX_GAZ=0.12;
+
+function calcEnergie(h_sto, h_hab) {
+  const safe=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  const kwh_sto=h_sto*P_STO/COP_STO, kwh_froid=h_sto*P_STO, kwh_gf=kwh_froid/COP_GF;
+  const eco_sto=kwh_gf-kwh_sto, eur_sto=eco_sto*PRIX_KWH, co2_sto=eco_sto*CO2_KWH;
+  safe('e-sto-h',    h_sto.toFixed(0)+' h');
+  safe('e-sto-kwh',  kwh_sto.toFixed(0)+' kWh');
+  safe('e-sto-froid',kwh_froid.toFixed(0)+' kWh');
+  safe('e-gf-kwh',   kwh_gf.toFixed(0)+' kWh');
+  safe('e-eco-kwh',  '+'+eco_sto.toFixed(0)+' kWh');
+  safe('e-eco-eur',  '+'+eur_sto.toFixed(0)+' €');
+  safe('e-co2',      co2_sto.toFixed(0)+' kg');
+  const kwh_hab=h_hab*P_HAB/COP_HAB, kwh_th=h_hab*P_HAB, kwh_gaz=kwh_th/REND_GAZ;
+  const eco_hab_e=kwh_gaz*PRIX_GAZ-kwh_hab*PRIX_KWH, eco_hab_k=kwh_gaz-kwh_hab, co2_hab=eco_hab_k*CO2_KWH;
+  safe('e-hab-h',      h_hab.toFixed(0)+' h');
+  safe('e-hab-kwh',    kwh_hab.toFixed(0)+' kWh');
+  safe('e-hab-th',     kwh_th.toFixed(0)+' kWh');
+  safe('e-gaz-kwh',    kwh_gaz.toFixed(0)+' kWh');
+  safe('e-eco-hab-kwh','+'+eco_hab_k.toFixed(0)+' kWh');
+  safe('e-eco-hab-eur','+'+eco_hab_e.toFixed(0)+' €');
+  safe('e-co2-hab',    co2_hab.toFixed(0)+' kg');
+  safe('e-total-eco',(eco_sto+eco_hab_k).toFixed(0)+' kWh');
+  safe('e-total-eur',(eur_sto+eco_hab_e).toFixed(0)+' €');
+  safe('e-total-co2',(co2_sto+co2_hab).toFixed(0)+' kg');
+}
+
+async function loadEnergie() {
+  if(SUPABASE_KEY==='VOTRE_ANON_KEY'){calcEnergie(0,0);return;}
+  try {
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/consignes?select=id,cumul_pac_sto_h,cumul_pac_hab_h`,{headers:HDRS});
+    const d=await r.json(); let h_sto=0,h_hab=0;
+    d.forEach(row=>{
+      if(row.id==='stockage')   h_sto=parseFloat(row.cumul_pac_sto_h||0);
+      if(row.id==='habitation') h_hab=parseFloat(row.cumul_pac_hab_h||0);
+    });
+    calcEnergie(h_sto,h_hab);
+  } catch(e){console.warn('loadEnergie:',e);}
+}
+
+
 // ════════════════════════════════════════
 //  HISTORIQUE
 // ════════════════════════════════════════
@@ -1633,12 +1836,25 @@ async function loadHistory(){
   // Calculer la date de début selon la plage
   const now = new Date();
   const since = new Date(now);
-  if(range==='1h')     since.setHours(now.getHours()-1);
+  if(range==='1h')      since.setHours(now.getHours()-1);
   else if(range==='6h') since.setHours(now.getHours()-6);
   else if(range==='24h') since.setDate(now.getDate()-1);
   else if(range==='7d')  since.setDate(now.getDate()-7);
+  else if(range==='10d') since.setDate(now.getDate()-10);
   else if(range==='30d') since.setDate(now.getDate()-30);
   else since.setFullYear(2020); // saison complète
+
+  // Adapter le nombre de points et l'échantillonnage selon la période
+  // Objectif : ~500 points maxi pour la lisibilité du graphe
+  // En ×500 un cycle = 1s réel → 1h simulée → beaucoup de points
+  let limit, step;
+  if      (range==='1h')   { limit=500;  step=1; }   // toutes les mesures
+  else if (range==='6h')   { limit=500;  step=1; }
+  else if (range==='24h')  { limit=500;  step=1; }
+  else if (range==='7d')   { limit=1000; step=1; }   // 1 point sur 1
+  else if (range==='10d')  { limit=1000; step=1; }
+  else if (range==='30d')  { limit=1000; step=1; }
+  else                     { limit=2000; step=1; }
 
   const table = bat==='hab' ? 'habitation_readings' : 'stockage_readings';
   const tCol  = bat==='hab' ? 't_int_z1' : 't_stock';
@@ -1646,11 +1862,25 @@ async function loadHistory(){
   let data = [];
   if(SUPABASE_KEY !== 'VOTRE_ANON_KEY') {
     try {
+      // Récupérer les données avec un sampling côté serveur si période longue
+      // On utilise une sélection partielle pour éviter de charger trop de données
+      const cols = bat==='hab'
+        ? 'ts,t_int_z1,t_int_z2,t_ecs,pac_on,mode_actif'
+        : 'ts,t_stock,hr_stock,co2_ppm,pac_on,mode_actif';
+
       const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/${table}?select=*&ts=gte.${since.toISOString()}&order=ts.asc&limit=500`,
+        `${SUPABASE_URL}/rest/v1/${table}?select=${cols}&ts=gte.${since.toISOString()}&order=ts.asc&limit=${limit}`,
         { headers: HDRS }
       );
-      data = await r.json();
+      const raw = await r.json();
+
+      // Sous-échantillonnage côté client si trop de points
+      if(raw.length > 500) {
+        const skip = Math.ceil(raw.length / 500);
+        data = raw.filter((_, i) => i % skip === 0);
+      } else {
+        data = raw;
+      }
     } catch(e) { console.warn('loadHistory err:', e); }
   }
 
@@ -1760,10 +1990,10 @@ async function fetchInitial(){
 function connectRealtime(){
   const ws=new WebSocket(`wss://diqxglwsffrlfziymplm.supabase.co/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
   ws.onopen=()=>{
-    ['habitation_readings','stockage_readings','conditions_externes','alarmes_log'].forEach((tbl,i)=>
+    ['habitation_readings','stockage_readings','conditions_externes','alarmes_log','consignes'].forEach((tbl,i)=>
       ws.send(JSON.stringify({topic:`realtime:public:${tbl}`,event:'phx_join',
         payload:{config:{broadcast:{self:true},presence:{key:''},
-          postgres_changes:[{event:'INSERT',schema:'public',table:tbl}]}},ref:String(i+1)})));
+          postgres_changes:[{event:'INSERT',schema:'public',table:tbl},{event:'UPDATE',schema:'public',table:tbl}]}},ref:String(i+1)})));
     setInterval(()=>ws.readyState===1&&ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:null})),25000);
   };
   ws.onmessage=evt=>{
@@ -1774,6 +2004,7 @@ function connectRealtime(){
       if(tbl==='conditions_externes'){lastExt=rec;updateExt(rec);}
       else if(tbl==='habitation_readings'){histData.hab.push({...rec,...lastExt});if(histData.hab.length>500)histData.hab.shift();updateHab({...rec,...lastExt});}
       else if(tbl==='stockage_readings'){histData.sto.push({...rec,...lastExt});if(histData.sto.length>500)histData.sto.shift();updateSto({...rec,...lastExt});}
+      else if(tbl==='consignes'){ applyConsignesRow(rec); }
     }catch(e){}
   };
   ws.onclose=()=>{console.warn('[RT] Reco 3s');setTimeout(connectRealtime,3000);};
