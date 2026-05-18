@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>GeoFresh — Panneau Opérateur</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#0C1510; --cream:#F0EDE6; --muted:rgba(232,244,229,0.42);
+  --panel:rgba(18,30,22,0.95); --bdr:rgba(255,255,255,0.08);
+  --ha:#5BB8A0; --hd:#3D8A7A; --hbr:rgba(91,184,160,0.26);
+  --sa:#A8D85C; --sd:#4A7C3F; --sbr:rgba(107,175,94,0.26);
+  --samb:#D4A832; --serr:#C4522A; --sice:#B8D4E8;
+  --geo:#9B7FD4; --geobr:rgba(155,127,212,0.26);
+  --enrg:#E8A84A; --enrgbr:rgba(232,168,74,0.26);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--cream);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 55% 40% at 5% 5%,rgba(61,138,122,.14) 0%,transparent 55%),
+             radial-gradient(ellipse 45% 50% at 95% 95%,rgba(155,127,212,.08) 0%,transparent 55%);}
+.shell{position:relative;z-index:1;min-height:100vh;}
+
+/* ── HEADER ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 26px;
+  border-bottom:1px solid var(--bdr);background:rgba(8,14,10,.98);
+  backdrop-filter:blur(18px);position:sticky;top:0;z-index:300;}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-txt .name{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;letter-spacing:-.5px;color:var(--cream);}
+.brand-txt .name em{color:var(--sa);font-style:normal;}
+.brand-txt .sub{font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-top:1px;}
+.op-badge{padding:4px 14px;border-radius:14px;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  font-family:'Syne',sans-serif;font-weight:700;
+  background:rgba(155,127,212,.15);border:1px solid rgba(155,127,212,.5);color:var(--geo);}
+.hdr-r{display:flex;align-items:center;gap:12px;}
+.back-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:14px;
+  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
+  border:1px solid rgba(91,184,160,.3);background:rgba(91,184,160,.06);color:var(--ha);
+  text-decoration:none;font-family:'DM Mono',monospace;transition:all .2s;}
+.back-btn:hover{background:rgba(91,184,160,.12);}
+.live{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:16px;
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  background:rgba(168,216,92,.09);border:1px solid rgba(168,216,92,.3);color:var(--sa);}
+.ldot{width:6px;height:6px;border-radius:50%;background:var(--sa);animation:pu 1.8s ease-in-out infinite;}
+#clk{font-size:11px;color:var(--muted);letter-spacing:1px;}
+@keyframes pu{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.65)}}
+
+/* ── GRID PRINCIPAL ── */
+.main{padding:20px 26px;display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  grid-template-rows:auto auto auto;
+  gap:14px;}
+
+/* ── CARDS ── */
+.card{border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;
+  transition:border-color .3s;background:var(--panel);}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+
+.c-sto{border:1px solid var(--sbr);}
+.c-sto::before{background:linear-gradient(90deg,var(--sd),var(--sa),transparent);}
+.c-hab{border:1px solid var(--hbr);}
+.c-hab::before{background:linear-gradient(90deg,var(--hd),var(--ha),transparent);}
+.c-geo{border:1px solid var(--geobr);}
+.c-geo::before{background:linear-gradient(90deg,#6B4AAA,var(--geo),transparent);}
+.c-enrg{border:1px solid var(--enrgbr);}
+.c-enrg::before{background:linear-gradient(90deg,#AA6A2A,var(--enrg),transparent);}
+.c-cmd{border:1px solid rgba(212,168,50,.26);}
+.c-cmd::before{background:linear-gradient(90deg,#8A6A1A,var(--samb),transparent);}
+.c-full{grid-column:1/-1;}
+.c-half{grid-column:span 2;}
+
+.ct{font-family:'Syne',sans-serif;font-size:9px;font-weight:600;letter-spacing:3px;
+  text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+.ct::before{content:'';display:inline-block;width:4px;height:4px;border-radius:50%;}
+.c-sto .ct::before{background:var(--sa);}
+.c-hab .ct::before{background:var(--ha);}
+.c-geo .ct::before{background:var(--geo);}
+.c-enrg .ct::before{background:var(--enrg);}
+.c-cmd .ct::before{background:var(--samb);}
+
+/* ── MÉTRIQUES ── */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;}
+.metric{display:flex;flex-direction:column;gap:3px;}
+.mlbl{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+.mval{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-1px;}
+.mval .u{font-size:10px;font-weight:400;color:var(--muted);}
+.mval.ok{color:var(--sa);}
+.mval.warn{color:var(--samb);}
+.mval.err{color:#FF8A6A;}
+.mval.info{color:var(--ha);}
+.mval.geo{color:var(--geo);}
+.mval.enrg{color:var(--enrg);}
+.msub{font-size:9px;color:var(--muted);}
+
+/* ── PAC STATUS ── */
+.pac-row{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;}
+.pac-unit{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;
+  border:1px solid var(--bdr);background:rgba(0,0,0,.2);transition:all .3s;min-width:80px;}
+.pac-unit.on{border-color:rgba(107,175,94,.55);background:rgba(107,175,94,.1);}
+.pac-unit.off{opacity:.5;}
+.pac-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:all .3s;}
+.pac-unit.on .pac-dot{background:var(--sa);box-shadow:0 0 6px var(--sa);}
+.pac-lbl{font-size:9px;letter-spacing:1px;text-transform:uppercase;}
+.pac-unit.on .pac-lbl{color:var(--sa);}
+.pac-unit.off .pac-lbl{color:var(--muted);}
+.pac-kw{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;margin-left:auto;}
+.pac-unit.on .pac-kw{color:var(--sa);}
+
+/* ── GBAR ── */
+.gbar{height:5px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:4px;}
+.gfill{height:100%;border-radius:3px;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+.gfill.ok{background:linear-gradient(90deg,var(--sd),var(--sa));}
+.gfill.warn{background:linear-gradient(90deg,#AA6A1A,var(--samb));}
+.gfill.err{background:linear-gradient(90deg,#8A2A1A,#FF6A4A);}
+.gfill.geo{background:linear-gradient(90deg,#6B4AAA,var(--geo));}
+.gfill.enrg{background:linear-gradient(90deg,#AA6A2A,var(--enrg));}
+
+/* ── VOYANT SOURCE ── */
+.voyant{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;
+  border:1px solid;transition:all .5s;margin-top:8px;}
+.voyant.bat{border-color:rgba(232,168,74,.5);background:rgba(232,168,74,.08);}
+.voyant.sol{border-color:rgba(122,184,212,.5);background:rgba(122,184,212,.08);}
+.voyant.eq{border-color:rgba(168,216,92,.4);background:rgba(168,216,92,.06);}
+.voyant-ico{font-size:20px;}
+.voyant-txt .vt{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;}
+.voyant.bat .voyant-txt .vt{color:var(--enrg);}
+.voyant.sol .voyant-txt .vt{color:#7AB8D4;}
+.voyant.eq .voyant-txt .vt{color:var(--sa);}
+.voyant-txt .vs{font-size:9px;color:var(--muted);letter-spacing:.5px;}
+
+/* ── BILAN FLUX ── */
+.flux-row{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.flux-box{flex:1;text-align:center;padding:8px;border-radius:8px;background:rgba(0,0,0,.2);border:1px solid var(--bdr);}
+.flux-lbl{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+.flux-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;}
+.flux-val.inj{color:var(--enrg);}
+.flux-val.pui{color:var(--ha);}
+.flux-arrow{font-size:20px;color:var(--muted);}
+
+/* ── HISTORIQUE SPARKLINE ── */
+.spark-wrap{display:flex;align-items:flex-end;gap:2px;height:40px;margin-top:8px;}
+.spark-bar{flex:1;border-radius:2px 2px 0 0;min-width:3px;transition:height .5s;}
+.spark-lbl{font-size:7px;color:var(--muted);display:flex;justify-content:space-between;margin-top:3px;}
+
+/* ── COMMANDES ── */
+.cmd-section{margin-top:10px;}
+.cmd-title{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.cmd-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.cmd-item{display:flex;flex-direction:column;gap:4px;}
+.cmd-lbl{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+.cmd-ctrl{display:flex;align-items:center;gap:6px;}
+.cmd-val{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--cream);min-width:50px;}
+.cmd-btn{padding:3px 9px;border-radius:6px;border:1px solid var(--bdr);background:rgba(0,0,0,.2);
+  font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;color:var(--muted);transition:all .2s;}
+.cmd-btn:hover{background:rgba(255,255,255,.05);color:var(--cream);}
+.cmd-apply{width:100%;margin-top:10px;padding:9px;border-radius:9px;border:none;cursor:pointer;
+  font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  background:rgba(212,168,50,.18);border:1px solid rgba(212,168,50,.5);color:var(--samb);
+  transition:all .2s;}
+.cmd-apply:hover{background:rgba(212,168,50,.28);}
+.cmd-apply:active{transform:scale(.97);}
+.toggle-btn{padding:5px 14px;border-radius:8px;border:1px solid;cursor:pointer;
+  font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;transition:all .2s;}
+.toggle-btn.off{background:rgba(0,0,0,.2);border-color:var(--bdr);color:var(--muted);}
+.toggle-btn.on{background:rgba(212,168,50,.15);border-color:rgba(212,168,50,.6);color:var(--samb);}
+
+/* ── ALARME ── */
+.alarm-row{padding:8px 12px;border-radius:8px;border:1px solid;font-size:10px;margin-top:8px;}
+.alarm-row.ok{border-color:rgba(168,216,92,.3);background:rgba(168,216,92,.05);color:var(--sa);}
+.alarm-row.warn{border-color:rgba(212,168,50,.4);background:rgba(212,168,50,.08);color:var(--samb);}
+.alarm-row.crit{border-color:rgba(196,82,42,.5);background:rgba(196,82,42,.1);color:#FF8A6A;animation:pu 1s infinite;}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:10px;
+  font-size:11px;letter-spacing:.5px;z-index:999;transition:all .3s;transform:translateY(60px);opacity:0;
+  background:rgba(107,175,94,.2);border:1px solid rgba(107,175,94,.5);color:var(--sa);}
+#toast.show{transform:translateY(0);opacity:1;}
+
+/* ── FOOTER ── */
+footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var(--muted);
+  border-top:1px solid var(--bdr);margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- HEADER -->
+<header>
+  <div class="brand">
+    <svg class="logo-svg" viewBox="0 0 38 38" fill="none">
+      <circle cx="19" cy="19" r="18" stroke="#A8D85C" stroke-width="1.5" opacity=".4"/>
+      <path d="M10 24 Q14 10 19 14 Q24 18 28 10" stroke="#5BB8A0" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <circle cx="19" cy="14" r="3" fill="#A8D85C" opacity=".8"/>
+    </svg>
+    <div class="brand-txt">
+      <div class="name">Geo<em>Fresh</em></div>
+      <div class="sub">Panneau Opérateur</div>
+    </div>
+    <div class="op-badge">⚙ Opérateur</div>
+  </div>
+  <div class="hdr-r">
+    <div class="live"><div class="ldot"></div><span id="conn-lbl">CONNEXION…</span></div>
+    <span id="clk">--:--:--</span>
+    <a class="back-btn" href="index.html">← Vue Client</a>
+  </div>
+</header>
+
+<!-- GRID PRINCIPAL -->
+<div class="main">
+
+  <!-- ── STOCKAGE PAC1/PAC2 ── -->
+  <div class="card c-sto">
+    <div class="ct">⚡ Stockage PDT — PAC1 + PAC2</div>
+    <div class="row3">
+      <div class="metric">
+        <div class="mlbl">T_stock</div>
+        <div class="mval ok" id="s-t">–<span class="u">°C</span></div>
+        <div class="msub" id="s-tcsg">csg –°C</div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">T_batterie</div>
+        <div class="mval info" id="s-batt">–<span class="u">°C</span></div>
+        <div class="msub">évaporateur</div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">CO2</div>
+        <div class="mval ok" id="s-co2">–<span class="u">ppm</span></div>
+        <div class="msub" id="s-co2st">normal</div>
+      </div>
+    </div>
+    <div class="pac-row" style="margin-top:12px;" id="s-pac-row">
+      <div class="pac-unit off" id="s-p1"><div class="pac-dot"></div><div class="pac-lbl">PAC1</div><div class="pac-kw">0 kW</div></div>
+      <div class="pac-unit off" id="s-p2"><div class="pac-dot"></div><div class="pac-lbl">PAC2</div><div class="pac-kw">0 kW</div></div>
+    </div>
+    <div class="row3" style="margin-top:10px;">
+      <div class="metric">
+        <div class="mlbl">Mode</div>
+        <div style="font-size:10px;font-weight:600;color:var(--sa);margin-top:2px;" id="s-mode">–</div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">Ventilation</div>
+        <div class="mval" id="s-vent" style="font-size:16px;">–</div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">Volets</div>
+        <div style="font-size:9px;margin-top:4px;" id="s-volets">–</div>
+      </div>
+    </div>
+    <div id="s-alarm" class="alarm-row ok" style="margin-top:10px;">✓ Aucune alarme</div>
+  </div>
+
+  <!-- ── HABITATION PAC3 ── -->
+  <div class="card c-hab">
+    <div class="ct">🏠 Habitation — PAC3</div>
+    <div class="row3">
+      <div class="metric">
+        <div class="mlbl">Zone 1</div>
+        <div class="mval info" id="h-z1">–<span class="u">°C</span></div>
+        <div class="msub" id="h-z1csg">csg –°C</div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">Zone 2</div>
+        <div class="mval info" id="h-z2">–<span class="u">°C</span></div>
+        <div class="msub" id="h-z2csg">csg –°C</div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">ECS</div>
+        <div class="mval" id="h-ecs">–<span class="u">°C</span></div>
+        <div class="msub" id="h-ecscsg">csg –°C</div>
+      </div>
+    </div>
+    <div class="pac-row" style="margin-top:12px;">
+      <div class="pac-unit off" id="h-p3"><div class="pac-dot"></div><div class="pac-lbl">PAC3</div><div class="pac-kw" id="h-p3kw">0 kW</div></div>
+    </div>
+    <div class="row3" style="margin-top:10px;">
+      <div class="metric">
+        <div class="mlbl">Mode</div>
+        <div style="font-size:10px;font-weight:600;color:var(--ha);margin-top:2px;" id="h-mode">–</div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">T_eau dep</div>
+        <div class="mval info" id="h-tdep" style="font-size:16px;">–<span class="u">°C</span></div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">VC Z1 / Z2</div>
+        <div style="font-size:9px;margin-top:4px;" id="h-vc">–</div>
+      </div>
+    </div>
+    <div id="h-alarm" class="alarm-row ok" style="margin-top:10px;">✓ Aucune alarme</div>
+  </div>
+
+  <!-- ── BOUCLE GÉOTHERMIQUE ── -->
+  <div class="card c-geo">
+    <div class="ct">♻ Boucle Géothermique</div>
+    <div class="row2">
+      <div class="metric">
+        <div class="mlbl">T_boucle</div>
+        <div class="mval geo" id="g-t">–<span class="u">°C</span></div>
+        <div class="msub">C_sol 60 000 kJ/°C</div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">Bilan</div>
+        <div class="mval geo" id="g-bilan">–<span class="u">kW</span></div>
+        <div class="msub" id="g-bilanst">–</div>
+      </div>
+    </div>
+    <div class="flux-row">
+      <div class="flux-box">
+        <div class="flux-lbl">P_inject (PAC1+2 → boucle)</div>
+        <div class="flux-val inj" id="g-inj">– kW</div>
+      </div>
+      <div class="flux-arrow">⇌</div>
+      <div class="flux-box">
+        <div class="flux-lbl">P_puise (boucle → PAC3)</div>
+        <div class="flux-val pui" id="g-pui">– kW</div>
+      </div>
+    </div>
+    <div class="voyant eq" id="g-voyant" style="margin-top:10px;">
+      <div class="voyant-ico" id="g-vico">⚖️</div>
+      <div class="voyant-txt">
+        <div class="vt" id="g-vtit">ÉQUILIBRE</div>
+        <div class="vs" id="g-vsub">échanges équilibrés</div>
+      </div>
+    </div>
+    <div class="row2" style="margin-top:10px;">
+      <div class="metric">
+        <div class="mlbl">COP froid (PAC1+2)</div>
+        <div class="mval geo" id="g-copf">–</div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">COP chaud (PAC3)</div>
+        <div class="mval geo" id="g-copc">–</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BILAN ÉNERGIE INSTANTANÉ ── -->
+  <div class="card c-enrg">
+    <div class="ct">⚡ Puissances instantanées</div>
+    <div class="row4">
+      <div class="metric">
+        <div class="mlbl">PAC1+2 élec</div>
+        <div class="mval enrg" id="e-psto">–<span class="u">kW</span></div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">Ventilation</div>
+        <div class="mval enrg" id="e-pvent">–<span class="u">kW</span></div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">PAC3 élec</div>
+        <div class="mval enrg" id="e-phab">–<span class="u">kW</span></div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">Pompe glycol</div>
+        <div class="mval enrg" id="e-ppompe">–<span class="u">kW</span></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+        <span style="font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);">Total installation</span>
+        <span class="mval enrg" id="e-ptot" style="font-size:28px;">–<span class="u">kW</span></span>
+      </div>
+      <div class="gbar"><div class="gfill enrg" id="e-bar" style="width:0%;"></div></div>
+      <div style="font-size:7px;color:var(--muted);text-align:right;margin-top:2px;">max ~50 kW</div>
+    </div>
+    <div style="margin-top:12px;border-top:1px solid var(--bdr);padding-top:12px;">
+      <div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Cumuls session</div>
+      <div class="row3">
+        <div class="metric">
+          <div class="mlbl">kWh PAC1+2</div>
+          <div class="mval enrg" id="e-kwh-sto" style="font-size:16px;">0.0<span class="u">kWh</span></div>
+        </div>
+        <div class="metric">
+          <div class="mlbl">kWh PAC3</div>
+          <div class="mval enrg" id="e-kwh-hab" style="font-size:16px;">0.0<span class="u">kWh</span></div>
+        </div>
+        <div class="metric">
+          <div class="mlbl">Total + coût</div>
+          <div class="mval enrg" id="e-kwh-tot" style="font-size:16px;">0.0<span class="u">kWh</span></div>
+          <div class="msub" id="e-cost">0.00 €</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MÉTÉO ── -->
+  <div class="card c-hab" style="border-color:rgba(122,184,212,.26);">
+    <div class="ct" style="color:var(--muted);">🌡 Météo extérieure</div>
+    <div class="row2">
+      <div class="metric">
+        <div class="mlbl">T_ext</div>
+        <div class="mval info" id="m-t">–<span class="u">°C</span></div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">HR_ext</div>
+        <div class="mval" id="m-hr">–<span class="u">%</span></div>
+      </div>
+    </div>
+    <div class="row2" style="margin-top:8px;">
+      <div class="metric">
+        <div class="mlbl">T_rosée</div>
+        <div class="mval" id="m-ros" style="font-size:16px;">–<span class="u">°C</span></div>
+      </div>
+      <div class="metric">
+        <div class="mlbl">Vent</div>
+        <div class="mval" id="m-vent" style="font-size:16px;">–<span class="u">m/s</span></div>
+      </div>
+    </div>
+    <div style="margin-top:12px;border-top:1px solid var(--bdr);padding-top:10px;">
+      <div class="mlbl" style="margin-bottom:6px;">Free cooling :</div>
+      <div id="m-fc" style="font-size:10px;padding:6px 10px;border-radius:7px;border:1px solid var(--bdr);">–</div>
+    </div>
+  </div>
+
+  <!-- ── COMMANDES STOCKAGE ── -->
+  <div class="card c-cmd">
+    <div class="ct">⚙ Commandes stockage</div>
+    <div class="cmd-section">
+      <div class="cmd-grid">
+        <div class="cmd-item">
+          <div class="cmd-lbl">T consigne (°C)</div>
+          <div class="cmd-ctrl">
+            <button class="cmd-btn" onclick="adj('csg_t',-0.5)">−</button>
+            <div class="cmd-val" id="v-csg-t">4.0</div>
+            <button class="cmd-btn" onclick="adj('csg_t',+0.5)">+</button>
+          </div>
+        </div>
+        <div class="cmd-item">
+          <div class="cmd-lbl">HR consigne (%)</div>
+          <div class="cmd-ctrl">
+            <button class="cmd-btn" onclick="adj('csg_hr',-1)">−</button>
+            <div class="cmd-val" id="v-csg-hr">90</div>
+            <button class="cmd-btn" onclick="adj('csg_hr',+1)">+</button>
+          </div>
+        </div>
+        <div class="cmd-item">
+          <div class="cmd-lbl">Vitesse sim</div>
+          <div class="cmd-ctrl" style="flex-wrap:wrap;gap:4px;">
+            <button class="cmd-btn" id="vbtn-1"   onclick="setVitesse(1)"   style="padding:3px 7px;">×1</button>
+            <button class="cmd-btn" id="vbtn-5"   onclick="setVitesse(5)"   style="padding:3px 7px;">×5</button>
+            <button class="cmd-btn" id="vbtn-50"  onclick="setVitesse(50)"  style="padding:3px 7px;">×50</button>
+            <button class="cmd-btn" id="vbtn-100" onclick="setVitesse(100)" style="padding:3px 7px;">×100</button>
+            <button class="cmd-btn" id="vbtn-500" onclick="setVitesse(500)" style="padding:3px 7px;">×500</button>
+          </div>
+        </div>
+        <div class="cmd-item">
+          <div class="cmd-lbl">STANDBY sto</div>
+          <div class="cmd-ctrl" style="margin-top:4px;">
+            <button class="toggle-btn off" id="btn-stdby-sto" onclick="toggleMode('sto','standby')">INACTIF</button>
+          </div>
+        </div>
+      </div>
+      <button class="cmd-apply" onclick="applyCmd('sto')">Appliquer stockage</button>
+    </div>
+    <div style="margin-top:10px;border-top:1px solid var(--bdr);padding-top:10px;">
+      <div class="cmd-lbl" style="margin-bottom:6px;">Mode descente température</div>
+      <button class="toggle-btn off" id="btn-descente" onclick="toggleMode('sto','descente')" style="width:100%;">INACTIF — −1°C/jour</button>
+    </div>
+  </div>
+
+  <!-- ── COMMANDES HABITATION ── -->
+  <div class="card c-cmd">
+    <div class="ct">⚙ Commandes habitation</div>
+    <div class="cmd-section">
+      <div class="cmd-grid">
+        <div class="cmd-item">
+          <div class="cmd-lbl">T Zone 1 (°C)</div>
+          <div class="cmd-ctrl">
+            <button class="cmd-btn" onclick="adj('csg_z1',-0.5)">−</button>
+            <div class="cmd-val" id="v-csg-z1">20.0</div>
+            <button class="cmd-btn" onclick="adj('csg_z1',+0.5)">+</button>
+          </div>
+        </div>
+        <div class="cmd-item">
+          <div class="cmd-lbl">T Zone 2 (°C)</div>
+          <div class="cmd-ctrl">
+            <button class="cmd-btn" onclick="adj('csg_z2',-0.5)">−</button>
+            <div class="cmd-val" id="v-csg-z2">19.0</div>
+            <button class="cmd-btn" onclick="adj('csg_z2',+0.5)">+</button>
+          </div>
+        </div>
+        <div class="cmd-item">
+          <div class="cmd-lbl">T ECS (°C)</div>
+          <div class="cmd-ctrl">
+            <button class="cmd-btn" onclick="adj('csg_ecs',-1)">−</button>
+            <div class="cmd-val" id="v-csg-ecs">55</div>
+            <button class="cmd-btn" onclick="adj('csg_ecs',+1)">+</button>
+          </div>
+        </div>
+        <div class="cmd-item">
+          <div class="cmd-lbl">STANDBY hab</div>
+          <div class="cmd-ctrl" style="margin-top:4px;">
+            <button class="toggle-btn off" id="btn-stdby-hab" onclick="toggleMode('hab','standby')">INACTIF</button>
+          </div>
+        </div>
+      </div>
+      <button class="cmd-apply" onclick="applyCmd('hab')">Appliquer habitation</button>
+    </div>
+  </div>
+
+  <!-- ── HISTORIQUE COP (full width) ── -->
+  <div class="card c-geo c-full">
+    <div class="ct">📈 Historique COP + T_boucle (60 derniers points)</div>
+    <div class="row3">
+      <div>
+        <div class="mlbl" style="margin-bottom:6px;">COP froid PAC1+2</div>
+        <div class="spark-wrap" id="spark-copf"></div>
+        <div class="spark-lbl"><span>min</span><span id="sp-copf-cur">–</span><span>max</span></div>
+      </div>
+      <div>
+        <div class="mlbl" style="margin-bottom:6px;">COP chaud PAC3</div>
+        <div class="spark-wrap" id="spark-copc"></div>
+        <div class="spark-lbl"><span>min</span><span id="sp-copc-cur">–</span><span>max</span></div>
+      </div>
+      <div>
+        <div class="mlbl" style="margin-bottom:6px;">T_boucle géothermique</div>
+        <div class="spark-wrap" id="spark-tboucle"></div>
+        <div class="spark-lbl"><span>2°C</span><span id="sp-tboucle-cur">–</span><span>20°C</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>GeoFresh Opérateur — Données toutes les 30s — <a href="index.html" style="color:var(--ha);text-decoration:none;">Vue Client →</a></footer>
+<div id="toast"></div>
+</div>
+
+<script src="config.js"></script>
+<script>
+// ── CONFIG ────────────────────────────────────────────────
+const SB_URL = 'https://diqxglwsffrlfziymplm.supabase.co';
+const SB_KEY = (typeof window.GEOFRESH_KEY !== 'undefined')
+  ? window.GEOFRESH_KEY
+  : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcXhnbHdzZmZybGZ6aXltcGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODQwMjksImV4cCI6MjA5NDE2MDAyOX0.7sOo_xhhtISH9tQyJ7pg2Z3eXlDZfKZA5Xp6D7-Gs2w';
+const HDRS = {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY};
+const TARIF = 0.18; // €/kWh
+const P_MAX_INST = 50; // kW max pour la barre
+
+// ── ÉTAT LOCAL ────────────────────────────────────────────
+const CMD = {
+  csg_t: 4.0, csg_hr: 90.0, vitesse_sim: 1,
+  csg_z1: 20.0, csg_z2: 19.0, csg_ecs: 55.0,
+  standby_sto: false, standby_hab: false, descente: false
+};
+const HIST = { copf:[], copc:[], tboucle:[] };
+let kwh = { sto:0, hab:0, vent:0, pompe:0 };
+let sessionStart = Date.now();
+let lastPoll = null;
+
+// ── HORLOGE ───────────────────────────────────────────────
+setInterval(() => {
+  document.getElementById('clk').textContent = new Date().toLocaleTimeString('fr-FR');
+}, 1000);
+
+// ── FETCH DONNÉES ─────────────────────────────────────────
+async function fetchAll() {
+  try {
+    const [rSto, rHab, rExt, rCsg] = await Promise.all([
+      fetch(`${SB_URL}/rest/v1/stockage_readings?order=ts.desc&limit=1`, {headers:HDRS}),
+      fetch(`${SB_URL}/rest/v1/habitation_readings?order=ts.desc&limit=1`, {headers:HDRS}),
+      fetch(`${SB_URL}/rest/v1/conditions_externes?order=ts.desc&limit=1`, {headers:HDRS}),
+      fetch(`${SB_URL}/rest/v1/consignes?select=*`, {headers:HDRS}),
+    ]);
+    const [sto, hab, ext, csgs] = await Promise.all([
+      rSto.json(), rHab.json(), rExt.json(), rCsg.json()
+    ]);
+    updateUI(sto[0]||{}, hab[0]||{}, ext[0]||{}, csgs||[]);
+    document.getElementById('conn-lbl').textContent = 'EN LIGNE';
+    lastPoll = Date.now();
+  } catch(e) {
+    document.getElementById('conn-lbl').textContent = 'ERREUR';
+    console.error(e);
+  }
+}
+
+// ── MISE À JOUR UI ────────────────────────────────────────
+function updateUI(sto, hab, ext, csgs) {
+  const dt_h = 30 / 3600; // cycle 30s → heures
+
+  // ── STOCKAGE ──────────────────────────────────────────
+  const tSto = parseFloat(sto.t_stock ?? 0);
+  const csgT = parseFloat(sto.t_consigne ?? CMD.csg_t);
+  set('s-t', fmt1(tSto)+'<span class="u">°C</span>', tempClass(tSto, csgT, 1));
+  set('s-tcsg', `csg ${fmt1(csgT)}°C`);
+  set('s-batt', fmt1(sto.t_batterie??0)+'<span class="u">°C</span>');
+  const co2 = parseFloat(sto.co2_ppm??0);
+  const co2cl = co2>3500?'err':co2>2000?'warn':'ok';
+  set('s-co2', Math.round(co2)+'<span class="u">ppm</span>', co2cl);
+  set('s-co2st', co2>3500?'⚠ purge active':co2>2000?'élevé':'normal');
+  set('s-mode', sto.mode_actif??'–');
+
+  // PAC1/PAC2
+  const p1on = !!sto.pac1_on, p2on = !!sto.pac2_on;
+  const pacKw = parseFloat(sto.pac_kw??0);
+  setPac('s-p1', p1on, 'PAC1', p1on?'15 kW':'0 kW');
+  setPac('s-p2', p2on, 'PAC2', p2on?'15 kW':'0 kW');
+
+  const vv = parseFloat(sto.vitesse_ventil??0);
+  set('s-vent', vv>=1?'2 FANS':vv>=0.5?'1 FAN':'ARRÊT');
+  const fcOn = !!sto.registre_ouvert, co2On = !!sto.volet_co2_ouvert;
+  set('s-volets', `FC:${fcOn?'<span style="color:var(--sa)">OUV</span>':'FER'} CO2:${co2On?'<span style="color:var(--samb)">OUV</span>':'FER'}`);
+
+  const alSto = sto.alarme_active;
+  const alDiv = document.getElementById('s-alarm');
+  alDiv.className = 'alarm-row ' + (alSto ? (sto.niveau_alarme>=3?'crit':'warn') : 'ok');
+  alDiv.textContent = alSto ? '⚠ '+alSto : '✓ Aucune alarme';
+
+  // Puissance PAC élec
+  const tBoucle = parseFloat(sto.t_boucle ?? hab.t_boucle ?? 12);
+  const tBatt   = parseFloat(sto.t_batterie ?? -1);
+  const tDep    = parseFloat(hab.t_eau_dep ?? 40);
+  const copF = calcCopFroid(tBatt, tBoucle);
+  const copC = calcCopChaud(tBoucle, tDep);
+  const pElecSto  = (sto.pac_on && pacKw > 0) ? pacKw / Math.max(copF, 0.1) : 0;
+  const pElecHab  = (hab.pac_on && parseFloat(hab.pac_kw??0) > 0) ? parseFloat(hab.pac_kw??0) / Math.max(copC, 0.1) : 0;
+  const pVent     = vv >= 1 ? 4.4 : vv >= 0.5 ? 2.2 : 0;
+  const pPompe    = sto.pac_on ? 1.2 : 0;
+  const pTot      = pElecSto + pElecHab + pVent + pPompe;
+
+  // ── HABITATION ────────────────────────────────────────
+  const tZ1 = parseFloat(hab.t_int_z1??0);
+  const tZ2 = parseFloat(hab.t_int_z2??0);
+  const tEcs = parseFloat(hab.t_ecs??0);
+  set('h-z1', fmt1(tZ1)+'<span class="u">°C</span>', tempClass(tZ1,CMD.csg_z1,1));
+  set('h-z1csg', `csg ${CMD.csg_z1}°C`);
+  set('h-z2', fmt1(tZ2)+'<span class="u">°C</span>', tempClass(tZ2,CMD.csg_z2,1));
+  set('h-z2csg', `csg ${CMD.csg_z2}°C`);
+  const ecsCl = tEcs < 45 ? 'warn' : tEcs > 65 ? 'err' : 'ok';
+  set('h-ecs', fmt1(tEcs)+'<span class="u">°C</span>', ecsCl);
+  set('h-ecscsg', `csg ${CMD.csg_ecs}°C`);
+  setPac('h-p3', !!hab.pac_on, 'PAC3', fmt1(pElecHab)+' kW élec');
+  document.getElementById('h-p3kw').textContent = fmt1(parseFloat(hab.pac_kw??0))+' kW th';
+  set('h-mode', hab.mode_actif??'–');
+  set('h-tdep', fmt1(tDep)+'<span class="u">°C</span>');
+  const vc1 = !!hab.fancoil_z1_on, vc2 = !!hab.fancoil_z2_on;
+  set('h-vc', `Z1:${vc1?'<span style="color:var(--ha)">ON</span>':'OFF'} Z2:${vc2?'<span style="color:var(--ha)">ON</span>':'OFF'}`);
+  const alHab = hab.alarme_active;
+  const alDivH = document.getElementById('h-alarm');
+  alDivH.className = 'alarm-row ' + (alHab ? (hab.niveau_alarme>=3?'crit':'warn') : 'ok');
+  alDivH.textContent = alHab ? '⚠ '+alHab : '✓ Aucune alarme';
+
+  // ── BOUCLE GÉOTHERMIQUE ───────────────────────────────
+  const pInj = parseFloat(sto.p_inject_kw ?? (sto.pac_on ? pacKw*(1+1/Math.max(copF,0.1)) : 0));
+  const pPui = parseFloat(hab.p_puise_kw ?? (hab.pac_on ? parseFloat(hab.pac_kw??0)/Math.max(copC,0.1) : 0));
+  const bilan = pInj - pPui;
+  set('g-t', fmt1(tBoucle)+'<span class="u">°C</span>');
+  set('g-bilan', (bilan>=0?'+':'')+fmt1(bilan)+'<span class="u">kW</span>');
+  set('g-bilanst', bilan>0.5?'↑ boucle se réchauffe':bilan<-0.5?'↓ boucle se refroidit':'≈ stable');
+  set('g-inj', fmt1(pInj)+' kW');
+  set('g-pui', fmt1(pPui)+' kW');
+  set('g-copf', fmt2(copF));
+  set('g-copc', fmt2(copC));
+
+  // Voyant source
+  const src = sto.source_chaleur ?? (bilan>0.5?'BATIMENT':bilan<-0.5?'SOL':'EQUILIBRE');
+  const vDiv = document.getElementById('g-voyant');
+  vDiv.className = 'voyant ' + (src==='BATIMENT'?'bat':src==='SOL'?'sol':'eq');
+  document.getElementById('g-vico').textContent = src==='BATIMENT'?'🏗️':src==='SOL'?'🌍':'⚖️';
+  document.getElementById('g-vtit').textContent = src==='BATIMENT'?'BÂTIMENT PDT':src==='SOL'?'SOL GÉOTHERMIQUE':'ÉQUILIBRE';
+  document.getElementById('g-vsub').textContent = src==='BATIMENT'?'chaleur du stock alimente la boucle':src==='SOL'?'PAC3 puise dans le sol résiduel':'échanges équilibrés';
+
+  // ── ÉNERGIE ───────────────────────────────────────────
+  set('e-psto',  fmt1(pElecSto)+'<span class="u">kW</span>');
+  set('e-pvent', fmt1(pVent)+'<span class="u">kW</span>');
+  set('e-phab',  fmt1(pElecHab)+'<span class="u">kW</span>');
+  set('e-ppompe',fmt1(pPompe)+'<span class="u">kW</span>');
+  set('e-ptot',  fmt1(pTot)+'<span class="u">kW</span>');
+  document.getElementById('e-bar').style.width = Math.min(100, pTot/P_MAX_INST*100)+'%';
+
+  // Cumuls session
+  kwh.sto   += pElecSto  * dt_h;
+  kwh.hab   += pElecHab  * dt_h;
+  kwh.vent  += pVent     * dt_h;
+  kwh.pompe += pPompe    * dt_h;
+  const kwhTot = kwh.sto + kwh.hab + kwh.vent + kwh.pompe;
+  set('e-kwh-sto', fmt2(kwh.sto)+'<span class="u">kWh</span>');
+  set('e-kwh-hab', fmt2(kwh.hab)+'<span class="u">kWh</span>');
+  set('e-kwh-tot', fmt2(kwhTot)+'<span class="u">kWh</span>');
+  document.getElementById('e-cost').textContent = (kwhTot*TARIF).toFixed(2)+' €';
+
+  // ── MÉTÉO ─────────────────────────────────────────────
+  const tExt = parseFloat(ext.t_ext??0);
+  set('m-t',   (tExt>=0?'+':'')+fmt1(tExt)+'<span class="u">°C</span>', tExt<0?'err':'info');
+  set('m-hr',  fmt1(ext.hr_ext??0)+'<span class="u">%</span>', parseFloat(ext.hr_ext??0)>85?'warn':'ok');
+  set('m-ros', fmt1(ext.t_rosee??0)+'<span class="u">°C</span>');
+  set('m-vent',fmt1(ext.wind_speed??0)+'<span class="u">m/s</span>');
+
+  // Free cooling possible ?
+  const fcPoss = tExt < tSto-2 && parseFloat(ext.t_rosee??99) < tSto-0.5 && tExt > 0.5 && parseFloat(ext.hr_ext??100) < 85;
+  const fcDiv = document.getElementById('m-fc');
+  fcDiv.style.color = fcPoss ? 'var(--sa)' : 'var(--muted)';
+  fcDiv.style.borderColor = fcPoss ? 'rgba(168,216,92,.4)' : 'var(--bdr)';
+  fcDiv.textContent = fcPoss ? '✓ Conditions OK — free cooling possible' : '✗ Conditions non réunies';
+
+  // ── HISTORIQUES SPARK ─────────────────────────────────
+  HIST.copf.push(copF);   if(HIST.copf.length>60) HIST.copf.shift();
+  HIST.copc.push(copC);   if(HIST.copc.length>60) HIST.copc.shift();
+  HIST.tboucle.push(tBoucle); if(HIST.tboucle.length>60) HIST.tboucle.shift();
+  drawSpark('spark-copf',   HIST.copf,   1.5, 5.5, '#9B7FD4', 'sp-copf-cur',  fmt2(copF));
+  drawSpark('spark-copc',   HIST.copc,   1.5, 5.5, '#5BB8A0', 'sp-copc-cur',  fmt2(copC));
+  drawSpark('spark-tboucle',HIST.tboucle,2,   20,  '#E8A84A', 'sp-tboucle-cur',fmt1(tBoucle)+'°C');
+
+  // ── CONSIGNES DEPUIS SUPABASE ─────────────────────────
+  csgs.forEach(row => {
+    if(row.id === 'stockage') {
+      CMD.csg_t   = parseFloat(row.csg_t   ?? CMD.csg_t);
+      CMD.csg_hr  = parseFloat(row.csg_hr  ?? CMD.csg_hr);
+      CMD.vitesse_sim = parseInt(row.vitesse_sim ?? CMD.vitesse_sim);
+      CMD.standby_sto  = !!row.mode_standby;
+      CMD.descente     = !!row.mode_descente;
+      document.getElementById('v-csg-t').textContent  = CMD.csg_t;
+      document.getElementById('v-csg-hr').textContent = CMD.csg_hr;
+      setVitesse(CMD.vitesse_sim);
+      updToggle('btn-stdby-sto', CMD.standby_sto, 'ACTIF', 'INACTIF');
+      updToggle('btn-descente', CMD.descente, 'ACTIF — −1°C/jour', 'INACTIF — −1°C/jour');
+    }
+    if(row.id === 'habitation') {
+      CMD.csg_z1  = parseFloat(row.csg_z1  ?? CMD.csg_z1);
+      CMD.csg_z2  = parseFloat(row.csg_z2  ?? CMD.csg_z2);
+      CMD.csg_ecs = parseFloat(row.csg_ecs ?? CMD.csg_ecs);
+      CMD.standby_hab = !!row.mode_standby_hab;
+      document.getElementById('v-csg-z1').textContent  = CMD.csg_z1;
+      document.getElementById('v-csg-z2').textContent  = CMD.csg_z2;
+      document.getElementById('v-csg-ecs').textContent = CMD.csg_ecs;
+      updToggle('btn-stdby-hab', CMD.standby_hab, 'ACTIF', 'INACTIF');
+    }
+  });
+}
+
+// ── COMMANDES ─────────────────────────────────────────────
+const STEP = { csg_t:0.5, csg_hr:1, vitesse_sim:1, csg_z1:0.5, csg_z2:0.5, csg_ecs:1 };
+const EL   = { csg_t:'v-csg-t', csg_hr:'v-csg-hr', vitesse_sim:'v-vitesse',
+                csg_z1:'v-csg-z1', csg_z2:'v-csg-z2', csg_ecs:'v-csg-ecs' };
+const RANGE = { csg_t:[1,10], csg_hr:[70,99], vitesse_sim:[1,500],
+                csg_z1:[14,26], csg_z2:[14,26], csg_ecs:[45,65] };
+
+function setVitesse(v) {
+  CMD.vitesse_sim = v;
+  [1,5,50,100,500].forEach(x => {
+    const b = document.getElementById('vbtn-'+x);
+    if(b) b.className = 'cmd-btn' + (x===v?' active':'');
+  });
+}
+
+function adj(key, delta) {
+  const [mn, mx] = RANGE[key];
+  CMD[key] = Math.round((CMD[key] + delta) * 10) / 10;
+  CMD[key] = Math.max(mn, Math.min(mx, CMD[key]));
+  document.getElementById(EL[key]).textContent = CMD[key];
+}
+
+function toggleMode(side, mode) {
+  if(side==='sto' && mode==='standby') { CMD.standby_sto = !CMD.standby_sto; updToggle('btn-stdby-sto', CMD.standby_sto, 'ACTIF', 'INACTIF'); }
+  if(side==='hab' && mode==='standby') { CMD.standby_hab = !CMD.standby_hab; updToggle('btn-stdby-hab', CMD.standby_hab, 'ACTIF', 'INACTIF'); }
+  if(side==='sto' && mode==='descente') { CMD.descente = !CMD.descente; updToggle('btn-descente', CMD.descente, 'ACTIF — −1°C/jour', 'INACTIF — −1°C/jour'); }
+}
+
+async function applyCmd(side) {
+  let body, url;
+  if(side==='sto') {
+    body = { csg_t: CMD.csg_t, csg_hr: CMD.csg_hr, vitesse_sim: CMD.vitesse_sim,
+             mode_standby: CMD.standby_sto, mode_descente: CMD.descente,
+             updated_at: new Date().toISOString() };
+    url = `${SB_URL}/rest/v1/consignes?id=eq.stockage`;
+  } else {
+    body = { csg_z1: CMD.csg_z1, csg_z2: CMD.csg_z2, csg_ecs: CMD.csg_ecs,
+             mode_standby_hab: CMD.standby_hab, updated_at: new Date().toISOString() };
+    url = `${SB_URL}/rest/v1/consignes?id=eq.habitation`;
+  }
+  try {
+    await fetch(url, { method:'PATCH', headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'}, body:JSON.stringify(body) });
+    showToast('✓ Commande envoyée — ' + (side==='sto'?'Stockage':'Habitation'));
+  } catch(e) { showToast('✗ Erreur : ' + e.message); }
+}
+
+// ── HELPERS ───────────────────────────────────────────────
+function set(id, html, cls) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.innerHTML = html;
+  if(cls) el.className = el.className.replace(/\b(ok|warn|err|info|geo|enrg)\b/g,'').trim() + ' ' + cls;
+}
+function fmt1(v) { return parseFloat(v).toFixed(1); }
+function fmt2(v) { return parseFloat(v).toFixed(2); }
+function tempClass(t, csg, h) { return t>csg+h*2?'err':t>csg+h?'warn':t<csg-h*2?'err':'ok'; }
+function setPac(id, on, lbl, kw) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.className = 'pac-unit ' + (on?'on':'off');
+  el.querySelector('.pac-lbl').textContent = lbl;
+  el.querySelector('.pac-kw').textContent  = kw;
+}
+function updToggle(id, active, lblOn, lblOff) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.className = 'toggle-btn ' + (active?'on':'off');
+  el.textContent = active ? lblOn : lblOff;
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+function drawSpark(containerId, data, vmin, vmax, color, curId, curVal) {
+  const c = document.getElementById(containerId);
+  if(!c) return;
+  c.innerHTML = '';
+  const range = vmax - vmin || 1;
+  data.forEach(v => {
+    const pct = Math.max(0, Math.min(1, (v-vmin)/range));
+    const bar = document.createElement('div');
+    bar.className = 'spark-bar';
+    bar.style.height = (pct*100)+'%';
+    bar.style.background = color;
+    bar.style.opacity = '.7';
+    c.appendChild(bar);
+  });
+  document.getElementById(curId).textContent = curVal;
+}
+
+// ── COP calculé localement (même formule que simulateur v2) ──
+function calcCopFroid(tEvap, tBoucle) {
+  const Te = tEvap + 273.15;
+  const Tc = tBoucle + 8 + 273.15;
+  if(Tc <= Te) return 4.0;
+  return Math.min(5.0, Math.max(1.5, (Te/(Tc-Te))*0.45));
+}
+function calcCopChaud(tBoucle, tDep) {
+  const Te = tBoucle - 5 + 273.15;
+  const Tc = tDep + 5 + 273.15;
+  if(Tc <= Te) return 5.0;
+  return Math.min(5.5, Math.max(1.5, (Tc/(Tc-Te))*0.60));
+}
+
+// ── REALTIME CONSIGNES (sync avec index.html) ────────────────
+function connectRealtimeOpe() {
+  const ws = new WebSocket(`wss://diqxglwsffrlfziymplm.supabase.co/realtime/v1/websocket?apikey=${SB_KEY}&vsn=1.0.0`);
+  ws.onopen = () => {
+    ws.send(JSON.stringify({topic:'realtime:public:consignes',event:'phx_join',
+      payload:{config:{broadcast:{self:false},presence:{key:''},
+        postgres_changes:[{event:'UPDATE',schema:'public',table:'consignes'}]}},ref:'1'}));
+    setInterval(()=>ws.readyState===1&&ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:null})),25000);
+  };
+  ws.onmessage = evt => {
+    try {
+      const msg = JSON.parse(evt.data), rec = msg?.payload?.data?.record;
+      if(!rec || !rec.id) return;
+      // Mettre à jour CMD local sans écraser (évite boucle)
+      if(rec.id === 'stockage') {
+        if(rec.csg_t    != null){ CMD.csg_t    = parseFloat(rec.csg_t);    document.getElementById('v-csg-t').textContent  = CMD.csg_t; }
+        if(rec.csg_hr   != null){ CMD.csg_hr   = parseFloat(rec.csg_hr);   document.getElementById('v-csg-hr').textContent = CMD.csg_hr; }
+        if(rec.vitesse_sim != null){ CMD.vitesse_sim = parseInt(rec.vitesse_sim); setVitesse(CMD.vitesse_sim); }
+        if(rec.mode_standby != null){ CMD.standby_sto = !!rec.mode_standby; updToggle('btn-stdby-sto', CMD.standby_sto,'ACTIF','INACTIF'); }
+        if(rec.mode_descente != null){ CMD.descente = !!rec.mode_descente; updToggle('btn-descente', CMD.descente,'ACTIF — −1°C/jour','INACTIF — −1°C/jour'); }
+      }
+      if(rec.id === 'habitation') {
+        if(rec.csg_z1  != null){ CMD.csg_z1  = parseFloat(rec.csg_z1);  document.getElementById('v-csg-z1').textContent  = CMD.csg_z1; }
+        if(rec.csg_z2  != null){ CMD.csg_z2  = parseFloat(rec.csg_z2);  document.getElementById('v-csg-z2').textContent  = CMD.csg_z2; }
+        if(rec.csg_ecs != null){ CMD.csg_ecs = parseFloat(rec.csg_ecs); document.getElementById('v-csg-ecs').textContent = CMD.csg_ecs; }
+        if(rec.mode_standby_hab != null){ CMD.standby_hab = !!rec.mode_standby_hab; updToggle('btn-stdby-hab', CMD.standby_hab,'ACTIF','INACTIF'); }
+      }
+    } catch(e){}
+  };
+  ws.onclose = () => setTimeout(connectRealtimeOpe, 3000);
+}
+
+// ── DÉMARRAGE ─────────────────────────────────────────────
+fetchAll();
+setInterval(fetchAll, 30000);
+connectRealtimeOpe();
+</script>
+</body>
+</html>
