@@ -204,7 +204,7 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
   <div class="hdr-r">
     <div class="live"><div class="ldot"></div><span id="conn-lbl">CONNEXION…</span></div>
     <span id="clk">--:--:--</span>
-    <a class="back-btn" href="index.html">← Vue Client</a>
+    <a class="back-btn" href="index.html" onclick="if(document.referrer.includes('geofresh-dashboard')){history.back();return false;}">← Vue Client</a>
   </div>
 </header>
 
@@ -525,7 +525,7 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
 
 </div>
 
-<footer>GeoFresh Opérateur — Données toutes les 30s — <a href="index.html" style="color:var(--ha);text-decoration:none;">Vue Client →</a></footer>
+<footer>GeoFresh Opérateur — Données toutes les 30s — <a href="index.html" style="color:var(--ha);text-decoration:none;">Vue Client →</a> · <a href="operateur.html" style="color:var(--geo);text-decoration:none;">Opérateur →</a></footer>
 <div id="toast"></div>
 </div>
 
@@ -836,40 +836,96 @@ function calcCopChaud(tBoucle, tDep) {
   return Math.min(5.5, Math.max(1.5, (Tc/(Tc-Te))*0.60));
 }
 
-// ── REALTIME CONSIGNES (sync avec index.html) ────────────────
+// ── REALTIME COMPLET ──────────────────────────────────────────
+// Écoute INSERT sur readings + UPDATE sur consignes → mise à jour immédiate
+let _lastExt = {};
+
 function connectRealtimeOpe() {
   const ws = new WebSocket(`wss://diqxglwsffrlfziymplm.supabase.co/realtime/v1/websocket?apikey=${SB_KEY}&vsn=1.0.0`);
   ws.onopen = () => {
-    ws.send(JSON.stringify({topic:'realtime:public:consignes',event:'phx_join',
-      payload:{config:{broadcast:{self:false},presence:{key:''},
-        postgres_changes:[{event:'UPDATE',schema:'public',table:'consignes'}]}},ref:'1'}));
-    setInterval(()=>ws.readyState===1&&ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:null})),25000);
+    // Souscrire aux 4 tables en une seule connexion
+    const tables = [
+      'stockage_readings',
+      'habitation_readings',
+      'conditions_externes',
+      'consignes'
+    ];
+    tables.forEach((tbl, i) => {
+      const events = tbl === 'consignes'
+        ? [{event:'UPDATE', schema:'public', table:tbl}]
+        : [{event:'INSERT', schema:'public', table:tbl}];
+      ws.send(JSON.stringify({
+        topic: `realtime:public:${tbl}`,
+        event: 'phx_join',
+        payload: {
+          config: {
+            broadcast: {self: false},
+            presence: {key: ''},
+            postgres_changes: events
+          }
+        },
+        ref: String(i+1)
+      }));
+    });
+    // Heartbeat toutes les 25s
+    setInterval(() => {
+      if(ws.readyState === 1)
+        ws.send(JSON.stringify({topic:'phoenix', event:'heartbeat', payload:{}, ref:null}));
+    }, 25000);
+    document.getElementById('conn-lbl').textContent = 'EN LIGNE';
   };
+
   ws.onmessage = evt => {
     try {
-      const msg = JSON.parse(evt.data), rec = msg?.payload?.data?.record;
-      if(!rec || !rec.id) return;
-      // Mettre à jour CMD local sans écraser (évite boucle)
-      if(rec.id === 'stockage') {
-        if(rec.csg_t    != null){ CMD.csg_t    = parseFloat(rec.csg_t);    document.getElementById('v-csg-t').textContent  = CMD.csg_t; }
-        if(rec.csg_hr   != null){ CMD.csg_hr   = parseFloat(rec.csg_hr);   document.getElementById('v-csg-hr').textContent = CMD.csg_hr; }
-        if(rec.vitesse_sim != null){ CMD.vitesse_sim = parseInt(rec.vitesse_sim); setVitesse(CMD.vitesse_sim); }
-        if(rec.mode_standby != null){ CMD.standby_sto = !!rec.mode_standby; updToggle('btn-stdby-sto', CMD.standby_sto,'ACTIF','INACTIF'); }
-        if(rec.mode_descente != null){ CMD.descente = !!rec.mode_descente; updToggle('btn-descente', CMD.descente,'ACTIF — −1°C/jour','INACTIF — −1°C/jour'); }
+      const msg = JSON.parse(evt.data);
+      const rec = msg?.payload?.data?.record;
+      if(!rec) return;
+      const tbl = msg?.payload?.data?.table;
+
+      // ── Données capteurs → mise à jour UI immédiate ──
+      if(tbl === 'conditions_externes') {
+        _lastExt = rec;
+        // Météo
+        set('m-t',   (parseFloat(rec.t_ext??0)>=0?'+':'')+parseFloat(rec.t_ext??0).toFixed(1)+'<span class="u">°C</span>', parseFloat(rec.t_ext??0)<0?'err':'info');
+        set('m-hr',  parseFloat(rec.hr_ext??0).toFixed(1)+'<span class="u">%</span>');
+        set('m-ros', parseFloat(rec.t_rosee??0).toFixed(1)+'<span class="u">°C</span>');
+        set('m-vent',parseFloat(rec.wind_speed??0).toFixed(1)+'<span class="u">m/s</span>');
       }
-      if(rec.id === 'habitation') {
-        if(rec.csg_z1  != null){ CMD.csg_z1  = parseFloat(rec.csg_z1);  document.getElementById('v-csg-z1').textContent  = CMD.csg_z1; }
-        if(rec.csg_z2  != null){ CMD.csg_z2  = parseFloat(rec.csg_z2);  document.getElementById('v-csg-z2').textContent  = CMD.csg_z2; }
-        if(rec.csg_ecs != null){ CMD.csg_ecs = parseFloat(rec.csg_ecs); document.getElementById('v-csg-ecs').textContent = CMD.csg_ecs; }
-        if(rec.mode_standby_hab != null){ CMD.standby_hab = !!rec.mode_standby_hab; updToggle('btn-stdby-hab', CMD.standby_hab,'ACTIF','INACTIF'); }
+      else if(tbl === 'stockage_readings' || tbl === 'habitation_readings') {
+        // Relancer fetchAll pour mettre à jour tous les widgets d'un coup
+        // (évite de dupliquer toute la logique updateUI ici)
+        fetchAll();
       }
-    } catch(e){}
+
+      // ── Consignes → sync commandes ──
+      else if(tbl === 'consignes') {
+        if(rec.id === 'stockage') {
+          if(rec.csg_t    != null){ CMD.csg_t    = parseFloat(rec.csg_t);    document.getElementById('v-csg-t').textContent  = CMD.csg_t; }
+          if(rec.csg_hr   != null){ CMD.csg_hr   = parseFloat(rec.csg_hr);   document.getElementById('v-csg-hr').textContent = CMD.csg_hr; }
+          if(rec.vitesse_sim != null){ CMD.vitesse_sim = parseInt(rec.vitesse_sim); setVitesse(CMD.vitesse_sim); }
+          if(rec.mode_standby != null){ CMD.standby_sto = !!rec.mode_standby; updToggle('btn-stdby-sto', CMD.standby_sto,'ACTIF','INACTIF'); }
+          if(rec.mode_descente != null){ CMD.descente = !!rec.mode_descente; updToggle('btn-descente', CMD.descente,'ACTIF — −1°C/jour','INACTIF — −1°C/jour'); }
+        }
+        if(rec.id === 'habitation') {
+          if(rec.csg_z1  != null){ CMD.csg_z1  = parseFloat(rec.csg_z1);  document.getElementById('v-csg-z1').textContent  = CMD.csg_z1; }
+          if(rec.csg_z2  != null){ CMD.csg_z2  = parseFloat(rec.csg_z2);  document.getElementById('v-csg-z2').textContent  = CMD.csg_z2; }
+          if(rec.csg_ecs != null){ CMD.csg_ecs = parseFloat(rec.csg_ecs); document.getElementById('v-csg-ecs').textContent = CMD.csg_ecs; }
+          if(rec.mode_standby_hab != null){ CMD.standby_hab = !!rec.mode_standby_hab; updToggle('btn-stdby-hab', CMD.standby_hab,'ACTIF','INACTIF'); }
+        }
+      }
+    } catch(e) { console.warn('[RT]', e); }
   };
-  ws.onclose = () => setTimeout(connectRealtimeOpe, 3000);
+
+  ws.onerror = () => document.getElementById('conn-lbl').textContent = 'ERREUR';
+  ws.onclose = () => {
+    document.getElementById('conn-lbl').textContent = 'RECONNEXION…';
+    setTimeout(connectRealtimeOpe, 3000);
+  };
 }
 
 // ── DÉMARRAGE ─────────────────────────────────────────────
 fetchAll();
+// Polling de secours toutes les 30s (fallback si WS tombe)
 setInterval(fetchAll, 30000);
 connectRealtimeOpe();
 </script>
