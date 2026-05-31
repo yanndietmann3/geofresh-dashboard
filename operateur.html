@@ -412,6 +412,63 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
     </div>
   </div>
 
+  <!-- ── CONFIGURATION INSTALLATION ── -->
+  <div class="card" style="grid-column:span 2;border:1px solid rgba(155,127,212,.3);background:rgba(155,127,212,.04);">
+    <div class="ct" style="color:var(--geo);">⚙ Configuration installation</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:10px;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid var(--bdr);">
+        <span style="font-size:10px;color:var(--cream);">PAC Habitation</span>
+        <button class="toggle-btn" id="cfg-pac-hab" onclick="toggleCfg('module_pac_habitation')" style="font-size:9px;padding:3px 10px;">ON</button>
+      </div>
+
+      <div id="cfg-row-clim" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid var(--bdr);">
+        <span style="font-size:10px;color:var(--cream);">↳ Climatisation Z1/Z2</span>
+        <button class="toggle-btn" id="cfg-clim" onclick="toggleCfg('module_clim_maison')" style="font-size:9px;padding:3px 10px;">ON</button>
+      </div>
+
+      <div id="cfg-row-ecs" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid var(--bdr);">
+        <span style="font-size:10px;color:var(--cream);">↳ Gestion ECS</span>
+        <button class="toggle-btn" id="cfg-ecs" onclick="toggleCfg('module_ecs')" style="font-size:9px;padding:3px 10px;">ON</button>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid var(--bdr);">
+        <span style="font-size:10px;color:var(--cream);">Nb PAC stockage</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button class="cmd-btn" onclick="adjCfg('nb_pac_stockage',-1)" style="padding:2px 8px;">−</button>
+          <span id="cfg-nb-pac" style="font-size:12px;color:var(--geo);min-width:16px;text-align:center;">2</span>
+          <button class="cmd-btn" onclick="adjCfg('nb_pac_stockage',+1)" style="padding:2px 8px;">+</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── NOUVELLE SAISON ── -->
+  <div class="card" style="grid-column:span 2;border:1px solid rgba(212,168,50,.3);background:rgba(212,168,50,.04);">
+    <div class="ct" style="color:var(--samb);">📅 Saison</div>
+    <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:10px;">
+      <div>
+        <div style="font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:1px;">SAISON EN COURS</div>
+        <div id="saison-nom" style="font-size:14px;color:var(--cream);font-family:'Syne',sans-serif;font-weight:700;">–</div>
+      </div>
+      <div>
+        <div style="font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:1px;">DATE DÉBUT NOUVELLE SAISON</div>
+        <input type="date" id="inp-nouvelle-saison"
+          style="background:rgba(0,0,0,.3);border:1px solid rgba(212,168,50,.4);border-radius:6px;color:var(--cream);font-size:12px;padding:5px 8px;"/>
+      </div>
+      <div>
+        <div style="font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:1px;">NOM SAISON</div>
+        <input type="text" id="inp-saison-nom" placeholder="ex: Saison 2025-2026"
+          style="background:rgba(0,0,0,.3);border:1px solid rgba(212,168,50,.4);border-radius:6px;color:var(--cream);font-size:12px;padding:5px 8px;width:160px;"/>
+      </div>
+      <button onclick="nouvelleSaison()" style="padding:8px 18px;background:rgba(212,168,50,.15);border:1px solid rgba(212,168,50,.5);border-radius:8px;color:var(--samb);font-size:10px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;font-family:'DM Mono',monospace;">
+        🚀 Démarrer nouvelle saison
+      </button>
+    </div>
+    <div id="saison-confirm" style="display:none;margin-top:10px;padding:8px 12px;background:rgba(212,168,50,.1);border-radius:6px;font-size:10px;color:var(--samb);"></div>
+  </div>
+
   <!-- ── COMMANDES STOCKAGE ── -->
   <div class="card c-cmd">
     <div class="ct">⚙ Commandes stockage</div>
@@ -459,7 +516,7 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
   </div>
 
   <!-- ── COMMANDES HABITATION ── -->
-  <div class="card c-cmd">
+  <div class="card c-cmd" id="card-commandes-hab">
     <div class="ct">⚙ Commandes habitation</div>
     <div class="cmd-section">
       <div class="cmd-grid">
@@ -614,7 +671,8 @@ function updateUI(sto, hab, ext, csgs) {
   const copC = calcCopChaud(tBoucle, tDep);
   const pElecSto  = (sto.pac_on && pacKw > 0) ? pacKw / Math.max(copF, 0.1) : 0;
   const pElecHab  = (hab.pac_on && parseFloat(hab.pac_kw??0) > 0) ? parseFloat(hab.pac_kw??0) / Math.max(copC, 0.1) : 0;
-  const pVent     = vv >= 1 ? 4.4 : vv >= 0.5 ? 2.2 : 0;
+  const vDuty     = parseFloat(sto.ventil_duty??( sto.mode_actif==="VENTILATION CYCLIQUE" ? 0.25 : 1.0 ));
+  const pVent     = (vv >= 1 ? 4.4 : vv >= 0.5 ? 2.2 : 0) * vDuty;
   const pPompe    = sto.pac_on ? 1.2 : 0;
   const pTot      = pElecSto + pElecHab + pVent + pPompe;
 
@@ -918,8 +976,160 @@ function connectRealtimeOpe() {
   };
 }
 
+// ── CONFIG INSTALLATION ──────────────────────────────────────
+let CFG = {
+  module_pac_habitation: true,
+  module_clim_maison: true,
+  module_ecs: true,
+  nb_pac_stockage: 2,
+  date_debut_saison: '2024-09-01',
+  source_meteo: 'simulateur'
+};
+
+async function fetchConfig() {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/config_installation?select=cle,valeur`, {headers: HDRS});
+    const rows = await r.json();
+    rows.forEach(row => {
+      if(row.cle === 'module_pac_habitation') CFG.module_pac_habitation = row.valeur === 'true';
+      if(row.cle === 'module_clim_maison')    CFG.module_clim_maison    = row.valeur === 'true';
+      if(row.cle === 'module_ecs')            CFG.module_ecs            = row.valeur === 'true';
+      if(row.cle === 'nb_pac_stockage')       CFG.nb_pac_stockage       = parseInt(row.valeur);
+      if(row.cle === 'date_debut_saison')     CFG.date_debut_saison     = row.valeur;
+      if(row.cle === 'source_meteo')          CFG.source_meteo          = row.valeur;
+    });
+    updateCfgUI();
+  } catch(e) { console.warn('fetchConfig:', e); }
+}
+
+async function fetchSaison() {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/saisons?statut=eq.en_cours&order=created_at.desc&limit=1`, {headers: HDRS});
+    const rows = await r.json();
+    if(rows.length > 0) {
+      document.getElementById('saison-nom').textContent = rows[0].nom + ' (depuis ' + rows[0].date_debut + ')';
+    }
+  } catch(e) {}
+}
+
+function updateCfgUI() {
+  // Toggle PAC habitation
+  const btnPacHab = document.getElementById('cfg-pac-hab');
+  if(btnPacHab){
+    btnPacHab.textContent = CFG.module_pac_habitation ? 'ON' : 'OFF';
+    btnPacHab.className = 'toggle-btn ' + (CFG.module_pac_habitation ? '' : 'off');
+  }
+
+  // Sous-options clim et ECS : visibles seulement si PAC hab ON
+  const rowClim = document.getElementById('cfg-row-clim');
+  const rowEcs  = document.getElementById('cfg-row-ecs');
+  if(rowClim) rowClim.style.display = CFG.module_pac_habitation ? 'flex' : 'none';
+  if(rowEcs)  rowEcs.style.display  = CFG.module_pac_habitation ? 'flex' : 'none';
+
+  // Toggles clim et ECS
+  [['cfg-clim', CFG.module_clim_maison], ['cfg-ecs', CFG.module_ecs]].forEach(([id, val]) => {
+    const btn = document.getElementById(id);
+    if(!btn) return;
+    btn.textContent = val ? 'ON' : 'OFF';
+    btn.className = 'toggle-btn ' + (val ? '' : 'off');
+  });
+
+  // Nb PAC stockage
+  const nbPac = document.getElementById('cfg-nb-pac');
+  if(nbPac) nbPac.textContent = CFG.nb_pac_stockage;
+
+  // Commandes habitation : masquer si PAC hab OFF
+  const cardCmdHab = document.getElementById('card-commandes-hab');
+  if(cardCmdHab) cardCmdHab.style.display = CFG.module_pac_habitation ? '' : 'none';
+}
+
+async function toggleCfg(cle) {
+  const val = !CFG[cle];
+  CFG[cle] = val;
+  updateCfgUI();
+  try {
+    await fetch(`${SB_URL}/rest/v1/config_installation?cle=eq.${cle}`, {
+      method: 'PATCH',
+      headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+      body: JSON.stringify({valeur: String(val)})
+    });
+    showToast('Config sauvegardée');
+  } catch(e) { console.warn(e); }
+}
+
+async function adjCfg(cle, delta) {
+  const newVal = Math.max(1, Math.min(4, (CFG[cle] || 2) + delta));
+  CFG[cle] = newVal;
+  updateCfgUI();
+  try {
+    await fetch(`${SB_URL}/rest/v1/config_installation?cle=eq.${cle}`, {
+      method: 'PATCH',
+      headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+      body: JSON.stringify({valeur: String(newVal)})
+    });
+    showToast('Config sauvegardée');
+  } catch(e) {}
+}
+
+async function nouvelleSaison() {
+  const dateInput = document.getElementById('inp-nouvelle-saison').value;
+  const nomInput  = document.getElementById('inp-saison-nom').value.trim();
+  if(!dateInput) { showToast('Choisissez une date de début'); return; }
+  const nom = nomInput || 'Saison ' + dateInput.slice(0,4) + '-' + (parseInt(dateInput.slice(0,4))+1);
+  const id  = 'saison_' + dateInput.replace(/-/g,'_');
+
+  // Clôturer saison en cours
+  try {
+    await fetch(`${SB_URL}/rest/v1/saisons?statut=eq.en_cours`, {
+      method: 'PATCH',
+      headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+      body: JSON.stringify({statut: 'terminee', date_fin: new Date().toISOString().slice(0,10)})
+    });
+  } catch(e) {}
+
+  // Créer nouvelle saison
+  try {
+    await fetch(`${SB_URL}/rest/v1/saisons`, {
+      method: 'POST',
+      headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+      body: JSON.stringify({id, nom, date_debut: dateInput, statut: 'en_cours', config: CFG})
+    });
+  } catch(e) {}
+
+  // Mettre à jour date_debut_saison dans config_installation
+  try {
+    await fetch(`${SB_URL}/rest/v1/config_installation?cle=eq.date_debut_saison`, {
+      method: 'PATCH',
+      headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+      body: JSON.stringify({valeur: dateInput})
+    });
+  } catch(e) {}
+
+  // Remettre à zéro les cumuls dans consignes
+  try {
+    await fetch(`${SB_URL}/rest/v1/consignes?id=eq.stockage`, {
+      method: 'PATCH',
+      headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+      body: JSON.stringify({cumul_pac_sto_h: 0, vitesse_sim: 1})
+    });
+    await fetch(`${SB_URL}/rest/v1/consignes?id=eq.habitation`, {
+      method: 'PATCH',
+      headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+      body: JSON.stringify({cumul_pac_hab_h: 0})
+    });
+  } catch(e) {}
+
+  const conf = document.getElementById('saison-confirm');
+  conf.style.display = 'block';
+  conf.textContent = '✓ Nouvelle saison démarrée : ' + nom + ' — Cumuls remis à zéro — Le simulateur va recaler la météo sur ' + dateInput;
+  fetchSaison();
+  showToast('Nouvelle saison démarrée !');
+}
+
 // ── DÉMARRAGE ─────────────────────────────────────────────
 fetchAll();
+fetchConfig();
+fetchSaison();
 // Polling de secours toutes les 30s (fallback si WS tombe)
 setInterval(fetchAll, 30000);
 connectRealtimeOpe();
