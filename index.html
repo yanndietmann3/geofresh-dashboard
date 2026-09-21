@@ -9,11 +9,10 @@
 <script>
 const SUPABASE_URL = 'https://diqxglwsffrlfziymplm.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcXhnbHdzZmZybGZ6aXltcGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODQwMjksImV4cCI6MjA5NDE2MDAyOX0.7sOo_xhhtISH9tQyJ7pg2Z3eXlDZfKZA5Xp6D7-Gs2w';
-let _supa;
-document.addEventListener('DOMContentLoaded', () => {
-  _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  checkSession();
-});
+</script>
+<script>
+// _supa initialisé après chargement du CDN supabase-js
+const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 </script>
 <title>GeoFresh — Jumeau Numerique</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
@@ -2438,7 +2437,7 @@ function demoMode(){
 }
 
 if(SUPABASE_KEY==='VOTRE_ANON_KEY'){ demoMode(); }
-// Auth initialisée via DOMContentLoaded dans <head>
+checkSession();  // appelé après init complète
 </script>
 
 <!-- ── LOGIN ──────────────────────────────────────────────── -->
