@@ -3,8 +3,18 @@
 <head>
 <meta charset="UTF-8"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://diqxglwsffrlfziymplm.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcXhnbHdzZmZybGZ6aXltcGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODQwMjksImV4cCI6MjA5NDE2MDAyOX0.7sOo_xhhtISH9tQyJ7pg2Z3eXlDZfKZA5Xp6D7-Gs2w';
+let _supa;
+document.addEventListener('DOMContentLoaded', () => {
+  _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  checkSession();
+});
+</script>
 <title>GeoFresh — Jumeau Numerique</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
@@ -2144,11 +2154,8 @@ function drawHistChart(labels,data,bat){
 // ════════════════════════════════════════
 //  SUPABASE REALTIME
 // ════════════════════════════════════════
-const SUPABASE_URL='https://diqxglwsffrlfziymplm.supabase.co';
-const SUPABASE_URL = 'https://diqxglwsffrlfziymplm.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcXhnbHdzZmZybGZ6aXltcGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODQwMjksImV4cCI6MjA5NDE2MDAyOX0.7sOo_xhhtISH9tQyJ7pg2Z3eXlDZfKZA5Xp6D7-Gs2w';
+// SUPABASE_URL, SUPABASE_ANON_KEY, _supa définis dans <head>
 const SUPABASE_KEY = SUPABASE_ANON_KEY;
-const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let AUTH_TOKEN = null;
 let HDRS = {apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+SUPABASE_ANON_KEY, 'Content-Type':'application/json', Prefer:'return=minimal'};
 function refreshHDRS(){
@@ -2431,7 +2438,7 @@ function demoMode(){
 }
 
 if(SUPABASE_KEY==='VOTRE_ANON_KEY'){ demoMode(); }
-else{ checkSession(); }  // Auth gère l'init
+// Auth initialisée via DOMContentLoaded dans <head>
 </script>
 
 <!-- ── LOGIN ──────────────────────────────────────────────── -->
