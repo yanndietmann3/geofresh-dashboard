@@ -57,9 +57,44 @@ window.GEOFRESH_CONFIG = {
   dashboard: {
     refresh_ms:    5000,
     hist_points:    500,
-    version:       '2.2.0',
+    version:       '2.3.0',
+  },
+
+  // ── BRIQUES ──────────────────────────────────────────────────
+  // Vocabulaire unique (portail, vue client, vue opérateur)
+  briques: {
+    stockage_pdt: { emoji: '🥔', label: 'Stockage PDT' },
+    habitation:   { emoji: '🏠', label: 'Habitation' },
+    serre:        { emoji: '🌿', label: 'Serre' },
+    'séchoir':    { emoji: '💨', label: 'Séchoir' },
+  },
+
+  // ── RÔLES ────────────────────────────────────────────────────
+  roles: {
+    super_admin: 'Super Admin',
+    operator:    'Opérateur',
+    client:      'Client',
   },
 };
+
+// Libellé d'une brique : "🏠 Habitation"
+window.gfBriqueLabel = function(type, withEmoji = true) {
+  const b = window.GEOFRESH_CONFIG.briques[type];
+  if(!b) return type;
+  return withEmoji ? `${b.emoji} ${b.label}` : b.label;
+};
+
+// Rôle de l'utilisateur connecté ('super_admin' | 'operator' | 'client' | null)
+window.gfGetRole = async function(supa) {
+  const {data: {session}} = await supa.auth.getSession();
+  if(!session) return {session: null, role: null, profile: null};
+  const {data: profile} = await supa.from('profiles')
+    .select('role, nom, email').eq('id', session.user.id).single();
+  return {session, role: profile?.role || 'client', profile};
+};
+
+// Staff = peut piloter (super admin ou opérateur)
+window.gfIsStaff = role => role === 'super_admin' || role === 'operator';
 
 // Raccourcis globaux
 const C = window.GEOFRESH_CONFIG.colors;

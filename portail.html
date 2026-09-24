@@ -107,6 +107,8 @@ body{font-family:'Inter',sans-serif;background:var(--gf-bg);color:var(--gf-text)
 .statut-badge.inactif{background:var(--gf-card2);color:var(--gf-muted);}
 .alerte-badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(192,67,42,.1);color:var(--gf-err);display:flex;align-items:center;gap:4px;}
 .arrow-btn{font-size:18px;color:var(--gf-muted);}
+.view-link{font-size:11px;color:var(--gf-brun);text-decoration:none;padding:2px 8px;border-radius:12px;border:1px solid var(--gf-border);}
+.view-link:hover{background:var(--gf-card2);}
 
 /* ── RÉSUMÉ GLOBAL ── */
 .summary-section{margin-top:40px;}
@@ -351,11 +353,15 @@ async function initApp(session) {
 
   USER_ROLE = profile?.role || 'client';
   document.getElementById('user-name').textContent = profile?.nom || session.user.email.split('@')[0];
-  document.getElementById('user-role').textContent = USER_ROLE === 'super_admin' ? 'Super Admin' : USER_ROLE === 'operator' ? 'Opérateur' : 'Client';
+  document.getElementById('user-role').textContent = GEOFRESH_CONFIG.roles[USER_ROLE] || 'Client';
+  document.body.dataset.role = USER_ROLE;
 
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 
+  if(gfIsStaff(USER_ROLE)) {
+    document.querySelector('.page-title').textContent = 'Exploitations';
+  }
   if(USER_ROLE === 'super_admin') {
     document.getElementById('btn-add').style.display = 'flex';
     document.getElementById('stats-row').style.display = 'grid';
@@ -431,7 +437,7 @@ function renderList(exploits) {
 
     const briques = (e.briques || [])
       .sort((a,b) => a.ordre - b.ordre)
-      .map(b => `<span class="brique-tag ${b.actif ? b.type : 'off'}">${briquesEmoji[b.type] || '◆'} ${b.nom || b.type}</span>`)
+      .map(b => `<span class="brique-tag ${b.actif ? b.type : 'off'}" title="${b.nom || ''}">${gfBriqueLabel(b.type)}</span>`)
       .join('');
 
     const alerteBadge = hasAlerte
@@ -439,7 +445,7 @@ function renderList(exploits) {
 
     return `
     <div class="exploit-card ${hasAlerte ? 'alerte' : ''} ${e.statut !== 'actif' ? 'inactif' : ''}"
-      onclick="openExploitation('${e.id}')">
+      onclick="openExploitation('${e.id}')" title="${gfIsStaff(USER_ROLE) ? 'Ouvrir la vue opérateur' : 'Ouvrir le tableau de bord'}">
       <div class="exploit-icon">${e.statut === 'actif' ? '🌾' : '⏸'}</div>
       <div class="exploit-info">
         <div class="exploit-nom">${e.nom}</div>
@@ -463,18 +469,21 @@ function renderList(exploits) {
       <div class="exploit-right">
         <span class="statut-badge ${e.statut}">${e.statut}</span>
         ${alerteBadge}
+        ${gfIsStaff(USER_ROLE)
+          ? `<a class="view-link" href="index.html?exploitation_id=${e.id}" onclick="event.stopPropagation()">👁 Vue client</a>`
+          : ''}
         <span class="arrow-btn">→</span>
       </div>
     </div>`;
   }).join('');
 }
 
-const briquesEmoji = {stockage_pdt:'🥔', habitation:'🏠', serre:'🌿', séchoir:'💨'};
-
 function filterList() { renderList(ALL_EXPLOITS); }
 
+// Super admin / opérateur → pilotage ; client → vue client (lecture seule)
 function openExploitation(id) {
-  window.location.href = `operateur.html?exploitation_id=${id}`;
+  const page = gfIsStaff(USER_ROLE) ? 'operateur.html' : 'index.html';
+  window.location.href = `${page}?exploitation_id=${id}`;
 }
 
 // ── STATS GLOBALES ────────────────────────────────────────────
