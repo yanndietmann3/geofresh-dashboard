@@ -294,9 +294,6 @@ body{font-family:'Inter',sans-serif;background:var(--gf-bg);color:var(--gf-text)
         <label class="brique-check" onclick="toggleBrique(this,'serre')">
           <input type="checkbox" value="serre"/> 🌿 Serre
         </label>
-        <label class="brique-check" onclick="toggleBrique(this,'séchoir')">
-          <input type="checkbox" value="séchoir"/> 💨 Séchoir
-        </label>
       </div>
     </div>
     <div class="modal-actions">
@@ -541,7 +538,7 @@ async function createExploitation() {
       type,
       nom: type === 'stockage_pdt' ? `Stockage PDT ${capa}t` :
            type === 'habitation'   ? 'Maison agricole' :
-           type === 'serre'        ? 'Serre' : 'Séchoir',
+           'Serre',
       actif: true,
       ordre: i + 1
     }))

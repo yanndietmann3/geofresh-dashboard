@@ -66,7 +66,6 @@ window.GEOFRESH_CONFIG = {
     stockage_pdt: { emoji: '🥔', label: 'Stockage PDT' },
     habitation:   { emoji: '🏠', label: 'Habitation' },
     serre:        { emoji: '🌿', label: 'Serre' },
-    'séchoir':    { emoji: '💨', label: 'Séchoir' },
   },
 
   // ── RÔLES ────────────────────────────────────────────────────

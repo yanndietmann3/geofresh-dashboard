@@ -89,10 +89,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 /* ── PANELS ── */
 .tc{display:none;}
 .module-disabled{opacity:0.35;pointer-events:none;filter:grayscale(0.6);}
-/* ── Rôles : la vue client est en lecture seule ── */
+/* ── Rôles : le client modifie ses consignes, le pilotage reste au staff ── */
 body:not([data-role="super_admin"]):not([data-role="operator"]) .staff-only{display:none !important;}
-body:not([data-role="super_admin"]):not([data-role="operator"]) .csgbtn{pointer-events:none;}
-body:not([data-role="super_admin"]):not([data-role="operator"]) .csgbtn .ei{display:none;}
 .brique-off{display:none !important;}
 .role-chip{display:flex;align-items:center;gap:8px;padding:5px 12px;border-radius:14px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.2);color:var(--muted);font-family:'DM Mono',monospace;}
 .role-chip b{color:var(--cream);font-weight:500;}
@@ -748,7 +746,7 @@ canvas.hc{width:100%!important;height:180px!important;}
       <div><div class="sl">HR ext</div><div style="font-family:'Syne';font-size:18px;font-weight:700;" id="s-hr2">-- %</div></div>
       <div><div class="sl">T rosee</div><div style="font-family:'Syne';font-size:18px;font-weight:700;color:var(--sice);" id="s-tros2">-- °C</div></div>
     </div>
-    <div class="staff-only" style="margin-top:10px;">
+    <div style="margin-top:10px;">
       <button class="csgbtn" style="width:100%;justify-content:center;" onclick="openModal('sto','all')">
         ⚙ Toutes les consignes <span class="ei">✎</span>
       </button>
@@ -1238,7 +1236,6 @@ const MCFG = {
 };
 
 function openModal(src,key) {
-  if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
   const k=`${src}-${key}`, cfg=MCFG[k]; if(!cfg)return;
   mCtx={src,key,k};
   document.getElementById('m-title').textContent=cfg.t;
@@ -1250,7 +1247,6 @@ function closeModalOut(e){ if(e.target===document.getElementById('modal-ov')) cl
 function gv(id){ const el=document.getElementById('mf-'+id); return el?parseFloat(el.value):null; }
 
 function saveModal() {
-  if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
   const {src,key,k}=mCtx;
   if(k==='hab-z1')   { CSG.hab.z1=gv('hz1')??CSG.hab.z1; }
   if(k==='hab-z2')   { CSG.hab.z2=gv('hz2')??CSG.hab.z2; }
@@ -2551,13 +2547,14 @@ async function checkSession(){
 }
 
 // ── RÔLE + BRIQUES ────────────────────────────────────────────
-// Client : lecture seule (commandes masquées). Super admin / opérateur : commandes visibles.
+// Client : consignes modifiables, pilotage (STANDBY, MANU, vitesse, ESP32) masqué.
+// Super admin / opérateur : tout visible.
 async function initRole(){
   const {role} = await gfGetRole(_supa);
   USER_ROLE = role;
   document.body.dataset.role = role || '';
   document.getElementById('role-lbl').textContent =
-    gfIsStaff(role) ? GEOFRESH_CONFIG.roles[role] : 'Client · lecture seule';
+    GEOFRESH_CONFIG.roles[role] || 'Client';
   const lo = document.getElementById('lnk-operateur');
   if(lo) lo.href = `operateur.html?exploitation_id=${EXPLOIT_ID}`;
 

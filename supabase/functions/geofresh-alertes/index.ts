@@ -30,7 +30,6 @@ const BRIQUES: Record<string, string> = {
   stockage_pdt: '🥔 Stockage PDT',
   habitation:   '🏠 Habitation',
   serre:        '🌿 Serre',
-  'séchoir':    '💨 Séchoir',
 }
 
 type Alerte = { code: string; niveau: number; brique: string; message: string }

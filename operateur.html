@@ -440,7 +440,7 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
     </div>
   </div>
 
-  <!-- ── BRIQUES SANS CAPTEURS (serre, séchoir…) — générées ── -->
+  <!-- ── BRIQUES SANS CAPTEURS (serre) — générées ── -->
   <div id="briques-extra" style="display:contents;"></div>
 
   <!-- ── ALERTES & EMAILS ── -->
@@ -1325,7 +1325,7 @@ function applyBriques() {
     el.textContent = b?.nom ? '· ' + b.nom : '';
   });
 
-  // Briques sans capteurs raccordés (serre, séchoir…)
+  // Briques sans capteurs raccordés (serre)
   const known = ['stockage_pdt', 'habitation'];
   document.getElementById('briques-extra').innerHTML = BRIQUES
     .filter(b => b.actif && !known.includes(b.type))
