@@ -1107,6 +1107,7 @@ async function fetchLatest() {
   if(_fetchBusy || now - _lastFetchTs < FETCH_MIN_MS) return;  // throttle
   _fetchBusy = true;
   _lastFetchTs = now;
+  const EQ = `exploitation_id=eq.${EXPLOIT_ID}&`;
   try {
     const [hR,sR,eR] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?${EQ}order=ts.desc&limit=1`,{headers:HDRS}),
@@ -1117,7 +1118,7 @@ async function fetchLatest() {
     if(eD?.[0]){lastExt=eD[0];updateExt(lastExt);}
     if(hD?.[0]) updateHab({...hD[0],...lastExt});
     if(sD?.[0]) updateSto({...sD[0],...lastExt});
-  } catch(e){}
+  } catch(e){ console.warn('fetchLatest:', e); }
   finally { _fetchBusy = false; }
 }
 
@@ -2528,7 +2529,7 @@ async function doLogin() {
   const lb = document.getElementById('logout-btn');
   if(lb){ lb.style.display='flex'; document.getElementById('user-email').textContent=data.user.email.split('@')[0]; }
   await initRole();
-  loadConsignes(); fetchModuleConfig(); fetchInitial(); connectRealtime();
+  loadConsignes(); fetchModuleConfig(); fetchInitial(); connectRealtime(); startPolling();
     // Nom exploitation depuis URL
     fetch(`${SUPABASE_URL}/rest/v1/exploitations?id=eq.${EXPLOIT_ID}&select=nom`,{headers:HDRS})
       .then(r=>r.json()).then(d=>{if(d?.[0]){const el=document.getElementById('exploit-name-idx');if(el)el.textContent=d[0].nom;document.title='GeoFresh — '+d[0].nom;}}).catch(()=>{});
@@ -2550,7 +2551,7 @@ async function checkSession(){
     const lb=document.getElementById('logout-btn');
     if(lb){ lb.style.display='flex'; document.getElementById('user-email').textContent=data.session.user.email.split('@')[0]; }
     await initRole();
-    loadConsignes(); fetchModuleConfig(); fetchInitial(); connectRealtime();
+    loadConsignes(); fetchModuleConfig(); fetchInitial(); connectRealtime(); startPolling();
     // Nom exploitation depuis URL
     fetch(`${SUPABASE_URL}/rest/v1/exploitations?id=eq.${EXPLOIT_ID}&select=nom`,{headers:HDRS})
       .then(r=>r.json()).then(d=>{if(d?.[0]){const el=document.getElementById('exploit-name-idx');if(el)el.textContent=d[0].nom;document.title='GeoFresh — '+d[0].nom;}}).catch(()=>{});
@@ -2586,6 +2587,12 @@ async function initRole(){
     if(histSel) histSel.value = 'sto';
     switchTab(actives.has('stockage_pdt') ? 's' : 'e');
   }
+}
+
+// Rafraîchissement de secours toutes les 10 s (si le temps réel WebSocket coupe)
+function startPolling(){
+  if(_pollInterval) return;
+  _pollInterval = setInterval(fetchLatest, 10000);
 }
 
 checkSession();

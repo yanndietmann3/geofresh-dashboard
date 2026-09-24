@@ -1481,8 +1481,8 @@ async function saveAlertEmails() {
     }
   } catch(_) {}
 
-  // Polling de secours toutes les 30s (fallback si WS tombe)
-  setInterval(fetchAll, 30000);
+  // Polling de secours toutes les 10 s (fallback si WS tombe)
+  setInterval(fetchAll, 10000);
   setInterval(fetchAlarmes, 60000);
   connectRealtimeOpe();
 })();
