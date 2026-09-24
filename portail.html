@@ -393,7 +393,8 @@ async function enrichWithMetrics(exploits, hdrs) {
         fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?exploitation_id=eq.${e.id}&order=ts.desc&limit=1&select=t_stock,mode_actif,pac_on`, {headers: hdrs}),
         fetch(`${SUPABASE_URL}/rest/v1/alarmes_log?exploitation_id=eq.${e.id}&acquittee=eq.false&select=id`, {headers: hdrs})
       ]);
-      const [sto, alm] = await Promise.all([stoR.json(), almR.json()]);
+      const sto = stoR.ok ? await stoR.json() : [];
+      const alm = almR.ok ? await almR.json() : [];
       e._t_stock    = sto?.[0]?.t_stock ?? null;
       e._mode       = sto?.[0]?.mode_actif ?? null;
       e._pac_on     = sto?.[0]?.pac_on ?? false;
