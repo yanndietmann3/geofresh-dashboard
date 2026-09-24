@@ -160,6 +160,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .cmd-val{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--cream);min-width:50px;}
 .cmd-btn{padding:3px 9px;border-radius:6px;border:1px solid var(--bdr);background:rgba(160,114,74,0.05);
   font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;color:var(--muted);transition:all .2s;}
+.cmd-btn.active{background:rgba(176,122,30,.15);border-color:var(--samb);color:var(--samb);font-weight:600;}
 .cmd-btn:hover{background:rgba(45,32,23,0.05);color:var(--cream);}
 .cmd-apply{width:100%;margin-top:10px;padding:9px;border-radius:9px;border:none;cursor:pointer;
   font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
@@ -572,11 +573,11 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
         <div class="cmd-item">
           <div class="cmd-lbl">Vitesse sim</div>
           <div class="cmd-ctrl" style="flex-wrap:wrap;gap:4px;">
-            <button class="cmd-btn" id="vbtn-1"   onclick="setVitesse(1)"   style="padding:3px 7px;">×1</button>
-            <button class="cmd-btn" id="vbtn-5"   onclick="setVitesse(5)"   style="padding:3px 7px;">×5</button>
-            <button class="cmd-btn" id="vbtn-50"  onclick="setVitesse(50)"  style="padding:3px 7px;">×50</button>
-            <button class="cmd-btn" id="vbtn-100" onclick="setVitesse(100)" style="padding:3px 7px;">×100</button>
-            <button class="cmd-btn" id="vbtn-500" onclick="setVitesse(500)" style="padding:3px 7px;">×500</button>
+            <button class="cmd-btn" id="vbtn-1"   onclick="chooseVitesse(1)"   style="padding:3px 7px;">×1</button>
+            <button class="cmd-btn" id="vbtn-5"   onclick="chooseVitesse(5)"   style="padding:3px 7px;">×5</button>
+            <button class="cmd-btn" id="vbtn-50"  onclick="chooseVitesse(50)"  style="padding:3px 7px;">×50</button>
+            <button class="cmd-btn" id="vbtn-100" onclick="chooseVitesse(100)" style="padding:3px 7px;">×100</button>
+            <button class="cmd-btn" id="vbtn-500" onclick="chooseVitesse(500)" style="padding:3px 7px;">×500</button>
           </div>
         </div>
         <div class="cmd-item">
@@ -851,20 +852,20 @@ function updateUI(sto, hab, ext, csgs) {
   drawSpark('spark-tboucle',HIST.tboucle,2,   20,  '#A0724A', 'sp-tboucle-cur',fmt1(tBoucle)+'°C');
 
   // ── CONSIGNES DEPUIS SUPABASE ─────────────────────────
+  // Ne pas écraser une modification en cours (non appliquée) par le rafraîchissement
   csgs.forEach(row => {
-    if(row.id === 'stockage') {
+    if(row.id === 'stockage' && row.vitesse_sim != null) setVitesse(parseInt(row.vitesse_sim));
+    if(row.id === 'stockage' && !DIRTY.sto) {
       CMD.csg_t   = parseFloat(row.csg_t   ?? CMD.csg_t);
       CMD.csg_hr  = parseFloat(row.csg_hr  ?? CMD.csg_hr);
-      CMD.vitesse_sim = parseInt(row.vitesse_sim ?? CMD.vitesse_sim);
       CMD.standby_sto  = !!row.mode_standby;
       CMD.descente     = !!row.mode_descente;
       document.getElementById('v-csg-t').textContent  = CMD.csg_t;
       document.getElementById('v-csg-hr').textContent = CMD.csg_hr;
-      setVitesse(CMD.vitesse_sim);
       updToggle('btn-stdby-sto', CMD.standby_sto, 'ACTIF', 'INACTIF');
       updToggle('btn-descente', CMD.descente, 'ACTIF — −1°C/jour', 'INACTIF — −1°C/jour');
     }
-    if(row.id === 'habitation') {
+    if(row.id === 'habitation' && !DIRTY.hab) {
       CMD.csg_z1  = parseFloat(row.csg_z1  ?? CMD.csg_z1);
       CMD.csg_z2  = parseFloat(row.csg_z2  ?? CMD.csg_z2);
       CMD.csg_ecs = parseFloat(row.csg_ecs ?? CMD.csg_ecs);
@@ -892,7 +893,23 @@ function setVitesse(v) {
   });
 }
 
+// Modifications locales pas encore appliquées
+const DIRTY = { sto:false, hab:false };
+
+// Vitesse de simulation : appliquée tout de suite (pas besoin d'« Appliquer »)
+async function chooseVitesse(v) {
+  setVitesse(v);
+  try {
+    await fetch(`${SB_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`, {
+      method:'PATCH', headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({vitesse_sim: v, updated_at: new Date().toISOString()})
+    });
+    showToast(`✓ Vitesse simulation ×${v}`);
+  } catch(e) { showToast('✗ Erreur : ' + e.message); }
+}
+
 function adj(key, delta) {
+  DIRTY[['csg_z1','csg_z2','csg_ecs'].includes(key) ? 'hab' : 'sto'] = true;
   const [mn, mx] = RANGE[key];
   CMD[key] = Math.round((CMD[key] + delta) * 10) / 10;
   CMD[key] = Math.max(mn, Math.min(mx, CMD[key]));
@@ -900,6 +917,7 @@ function adj(key, delta) {
 }
 
 function toggleMode(side, mode) {
+  DIRTY[side] = true;
   if(side==='sto' && mode==='standby') { CMD.standby_sto = !CMD.standby_sto; updToggle('btn-stdby-sto', CMD.standby_sto, 'ACTIF', 'INACTIF'); }
   if(side==='hab' && mode==='standby') { CMD.standby_hab = !CMD.standby_hab; updToggle('btn-stdby-hab', CMD.standby_hab, 'ACTIF', 'INACTIF'); }
   if(side==='sto' && mode==='descente') { CMD.descente = !CMD.descente; updToggle('btn-descente', CMD.descente, 'ACTIF — −1°C/jour', 'INACTIF — −1°C/jour'); }
@@ -919,6 +937,7 @@ async function applyCmd(side) {
   }
   try {
     await fetch(url, { method:'PATCH', headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'}, body:JSON.stringify(body) });
+    DIRTY[side] = false;
     showToast('✓ Commande envoyée — ' + gfBriqueLabel(side==='sto'?'stockage_pdt':'habitation', false));
   } catch(e) { showToast('✗ Erreur : ' + e.message); }
 }

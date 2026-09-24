@@ -1077,15 +1077,25 @@ const SPEEDS = [
 // En mode rapide le Realtime WebSocket suffit, le polling n'est qu'un fallback
 let _speedIdx = 0;
 
+// Aligne le bouton vitesse + l'horloge simulée sur la vitesse enregistrée dans Supabase
+function syncSpeed(v) {
+  const idx = SPEEDS.findIndex(s => s.vitesse === parseInt(v));
+  if(idx < 0 || idx === _speedIdx) return;
+  _speedIdx = idx;
+  const s = SPEEDS[idx], btn = document.getElementById('speed-btn');
+  if(btn) { btn.className = btn.className.replace(/\b(normal|fast)\b/, s.cls); btn.textContent = s.label; }
+  if(_pollInterval) { clearInterval(_pollInterval); _pollInterval = setInterval(fetchLatest, Math.min(s.ms, 10000)); }
+}
+
 function toggleSpeed() {
   if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
   _speedIdx = (_speedIdx + 1) % SPEEDS.length;
   const s = SPEEDS[_speedIdx];
   const btn = document.getElementById('speed-btn');
-  btn.className = 'speed-btn ' + s.cls;
+  btn.className = 'speed-btn staff-only ' + s.cls;
   btn.textContent = s.label;
   if(_pollInterval) clearInterval(_pollInterval);
-  _pollInterval = setInterval(fetchLatest, s.ms);
+  _pollInterval = setInterval(fetchLatest, Math.min(s.ms, 10000));
   // Envoyer la vitesse au simulateur via Supabase
   if(SUPABASE_KEY!=='VOTRE_ANON_KEY') {
     fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`, {
@@ -1109,12 +1119,15 @@ async function fetchLatest() {
   _lastFetchTs = now;
   const EQ = `exploitation_id=eq.${EXPLOIT_ID}&`;
   try {
-    const [hR,sR,eR] = await Promise.all([
+    const [hR,sR,eR,cR] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?${EQ}order=ts.desc&limit=1`,{headers:HDRS}),
       fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?${EQ}order=ts.desc&limit=1`,{headers:HDRS}),
-      fetch(`${SUPABASE_URL}/rest/v1/conditions_externes?${EQ}order=ts.desc&limit=1`,{headers:HDRS})
+      fetch(`${SUPABASE_URL}/rest/v1/conditions_externes?${EQ}order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/consignes?${EQ}id=eq.stockage&select=id,vitesse_sim`,{headers:HDRS})
     ]);
     const [hD,sD,eD] = await Promise.all([hR.json(),sR.json(),eR.json()]);
+    const cD = await cR.json().catch(()=>[]);
+    if(cD?.[0]?.vitesse_sim != null) syncSpeed(cD[0].vitesse_sim);
     if(eD?.[0]){lastExt=eD[0];updateExt(lastExt);}
     if(hD?.[0]) updateHab({...hD[0],...lastExt});
     if(sD?.[0]) updateSto({...sD[0],...lastExt});
@@ -1314,6 +1327,7 @@ async function pushConsignes() {
 function applyConsignesRow(row) {
   if(!row || !row.id) return;
   if(row.id === 'stockage') {
+    if(row.vitesse_sim != null) syncSpeed(row.vitesse_sim);
     if(row.csg_t   != null) CSG.sto.t       = parseFloat(row.csg_t);
     if(row.hyst_t  != null) CSG.sto.hyst_t  = parseFloat(row.hyst_t);
     if(row.csg_hr  != null) CSG.sto.hr      = parseFloat(row.csg_hr);
@@ -1393,6 +1407,7 @@ async function loadConsignes() {
     const rows = await r.json();
     for(const row of rows) {
       if(row.id === 'stockage') {
+        if(row.vitesse_sim != null) syncSpeed(row.vitesse_sim);
         CSG.sto.t      = parseFloat(row.csg_t   || CSG.sto.t);
         CSG.sto.hyst_t = parseFloat(row.hyst_t  || CSG.sto.hyst_t);
         CSG.sto.hr     = parseFloat(row.csg_hr  || CSG.sto.hr);
