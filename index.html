@@ -5,7 +5,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
 const SUPABASE_URL = 'https://diqxglwsffrlfziymplm.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcXhnbHdzZmZybGZ6aXltcGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODQwMjksImV4cCI6MjA5NDE2MDAyOX0.7sOo_xhhtISH9tQyJ7pg2Z3eXlDZfKZA5Xp6D7-Gs2w';
@@ -397,6 +397,7 @@ canvas.hc{width:100%!important;height:180px!important;}
   </div>
 
   <div class="hdr-r">
+    <a href="portail.html" style="display:flex;align-items:center;gap:6px;padding:5px 13px;border-radius:14px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border:1px solid rgba(106,175,53,.4);background:rgba(106,175,53,.08);color:#6AAF35;text-decoration:none;font-family:'DM Mono',monospace;">← Portail</a>
     <a href="operateur.html" style="display:flex;align-items:center;gap:6px;padding:5px 13px;border-radius:14px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border:1px solid rgba(155,127,212,.55);background:rgba(155,127,212,.14);color:#B8A0E8;text-decoration:none;font-family:'DM Mono',monospace;font-weight:600;" title="Panneau opérateur">⚙ Opérateur</a>
     <div class="live"><div class="ldot"></div>Temps reel</div>
     <button class="speed-btn normal" id="speed-btn" onclick="toggleSpeed()" title="Accélérer le rafraîchissement">
@@ -1035,6 +1036,9 @@ async function checkSession() {
     document.getElementById('logout-btn').style.display = 'flex';
     document.getElementById('user-email').textContent = data.session.user.email.split('@')[0];
     loadConsignes(); fetchModuleConfig(); fetchInitial(); connectRealtime();
+    // Nom exploitation depuis URL
+    fetch(`${SUPABASE_URL}/rest/v1/exploitations?id=eq.${EXPLOIT_ID}&select=nom`,{headers:HDRS})
+      .then(r=>r.json()).then(d=>{if(d?.[0]){const el=document.getElementById('exploit-name-idx');if(el)el.textContent=d[0].nom;document.title='GeoFresh — '+d[0].nom;}}).catch(()=>{});
   }
 }
 
@@ -1079,9 +1083,9 @@ async function fetchLatest() {
   _lastFetchTs = now;
   try {
     const [hR,sR,eR] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?order=ts.desc&limit=1`,{headers:HDRS}),
-      fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?order=ts.desc&limit=1`,{headers:HDRS}),
-      fetch(`${SUPABASE_URL}/rest/v1/conditions_externes?order=ts.desc&limit=1`,{headers:HDRS})
+      fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?${EQ}order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?${EQ}order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/conditions_externes?${EQ}order=ts.desc&limit=1`,{headers:HDRS})
     ]);
     const [hD,sD,eD] = await Promise.all([hR.json(),sR.json(),eR.json()]);
     if(eD?.[0]){lastExt=eD[0];updateExt(lastExt);}
@@ -1319,7 +1323,7 @@ let MODULE_CFG = {pac_hab: true, clim: true, ecs: true};
 async function fetchModuleConfig() {
   if(SUPABASE_KEY==='VOTRE_ANON_KEY') return;
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/config_installation?select=cle,valeur`, {headers:HDRS});
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/config_installation?exploitation_id=eq.${EXPLOIT_ID}&select=cle,valeur`, {headers:HDRS});
     const rows = await r.json();
     rows.forEach(row => {
       if(row.cle==='module_pac_habitation') MODULE_CFG.pac_hab = row.valeur==='true';
@@ -1356,7 +1360,7 @@ function applyModuleConfig() {
 async function loadConsignes() {
   if(SUPABASE_KEY==='VOTRE_ANON_KEY') return;
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/consignes?select=*`, { headers: HDRS });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&select=*`, { headers: HDRS });
     const rows = await r.json();
     for(const row of rows) {
       if(row.id === 'stockage') {
@@ -2153,22 +2157,30 @@ function drawHistChart(labels,data,bat){
 // ════════════════════════════════════════
 //  SUPABASE REALTIME
 // ════════════════════════════════════════
-// SUPABASE_URL, SUPABASE_ANON_KEY, _supa définis dans <head>
+// Config depuis config.js (SUPABASE_URL, SUPABASE_ANON_KEY, _supa)
 const SUPABASE_KEY = SUPABASE_ANON_KEY;
+
+// ── Exploitation courante ─────────────────────────────────────
+const _paramsIdx = new URLSearchParams(window.location.search);
+const EXPLOIT_ID = _paramsIdx.get('exploitation_id') || '00000000-0000-0000-0000-000000000001';
 let AUTH_TOKEN = null;
 let HDRS = {apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+SUPABASE_ANON_KEY, 'Content-Type':'application/json', Prefer:'return=minimal'};
 function refreshHDRS(){
   const t = AUTH_TOKEN || SUPABASE_ANON_KEY;
   HDRS = {apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+t, 'Content-Type':'application/json', Prefer:'return=minimal'};
 }
+
+// Constantes physiques depuis config.js
+const CFG_PHYS = window.GEOFRESH_CONFIG?.physique || {};
 let lastExt={};
 
 async function fetchInitial(){
   try{
+    const EQ=`exploitation_id=eq.${EXPLOIT_ID}&`;
     const [hR,sR,eR]=await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?order=ts.desc&limit=1`,{headers:HDRS}),
-      fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?order=ts.desc&limit=1`,{headers:HDRS}),
-      fetch(`${SUPABASE_URL}/rest/v1/conditions_externes?order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?${EQ}order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?${EQ}order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/conditions_externes?${EQ}order=ts.desc&limit=1`,{headers:HDRS}),
     ]);
     const [hD,sD,eD]=await Promise.all([hR.json(),sR.json(),eR.json()]);
     if(eD?.[0]){lastExt=eD[0];updateExt(lastExt);}
@@ -2485,6 +2497,9 @@ async function doLogin() {
   const lb = document.getElementById('logout-btn');
   if(lb){ lb.style.display='flex'; document.getElementById('user-label').textContent=data.user.email.split('@')[0]; }
   loadConsignes(); fetchModuleConfig(); fetchInitial(); connectRealtime();
+    // Nom exploitation depuis URL
+    fetch(`${SUPABASE_URL}/rest/v1/exploitations?id=eq.${EXPLOIT_ID}&select=nom`,{headers:HDRS})
+      .then(r=>r.json()).then(d=>{if(d?.[0]){const el=document.getElementById('exploit-name-idx');if(el)el.textContent=d[0].nom;document.title='GeoFresh — '+d[0].nom;}}).catch(()=>{});
 }
 
 async function doLogout(){
@@ -2502,6 +2517,9 @@ async function checkSession(){
     const lb=document.getElementById('logout-btn');
     if(lb){ lb.style.display='flex'; document.getElementById('user-label').textContent=data.session.user.email.split('@')[0]; }
     loadConsignes(); fetchModuleConfig(); fetchInitial(); connectRealtime();
+    // Nom exploitation depuis URL
+    fetch(`${SUPABASE_URL}/rest/v1/exploitations?id=eq.${EXPLOIT_ID}&select=nom`,{headers:HDRS})
+      .then(r=>r.json()).then(d=>{if(d?.[0]){const el=document.getElementById('exploit-name-idx');if(el)el.textContent=d[0].nom;document.title='GeoFresh — '+d[0].nom;}}).catch(()=>{});
   }
   // Sinon login-screen reste visible
 }
