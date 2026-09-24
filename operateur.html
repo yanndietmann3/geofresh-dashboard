@@ -198,12 +198,14 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
     <div class="brand-txt">
       <div class="name">Geo<em>Fresh</em></div>
       <div class="sub">Panneau Opérateur</div>
+      <div id="exploit-name-hdr" style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px;"></div>
     </div>
     <div class="op-badge">⚙ Opérateur</div>
   </div>
   <div class="hdr-r">
     <div class="live"><div class="ldot"></div><span id="conn-lbl">CONNEXION…</span></div>
     <span id="clk">--:--:--</span>
+    <a class="back-btn" href="portail.html" style="margin-right:6px;">← Portail</a>
     <a class="back-btn" href="index.html" onclick="if(document.referrer.includes('geofresh-dashboard')){history.back();return false;}">← Vue Client</a>
   </div>
 </header>
@@ -432,6 +434,25 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
         <button class="toggle-btn" id="cfg-ecs" onclick="toggleCfg('module_ecs')" style="font-size:9px;padding:3px 10px;">ON</button>
       </div>
 
+      <!-- Source données météo/capteurs -->
+      <div style="grid-column:span 2;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid var(--bdr);">
+        <div>
+          <span style="font-size:10px;color:var(--cream);">Source données</span>
+          <div id="esp32-status" style="font-size:9px;color:var(--muted);margin-top:2px;">Vérification ESP32...</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button id="btn-src-sim" onclick="setSource('simulateur')"
+            style="padding:4px 10px;border-radius:6px;font-size:9px;letter-spacing:1px;cursor:pointer;font-family:'DM Mono',monospace;border:1px solid rgba(168,216,92,.4);background:rgba(168,216,92,.15);color:var(--sa);">
+            SIMULATEUR
+          </button>
+          <button id="btn-src-esp" onclick="setSource('esp32')"
+            style="padding:4px 10px;border-radius:6px;font-size:9px;letter-spacing:1px;font-family:'DM Mono',monospace;border:1px solid rgba(66,97,74,.4);background:rgba(66,97,74,.1);color:var(--muted);cursor:not-allowed;"
+            disabled title="ESP32 non connecté">
+            ESP32
+          </button>
+        </div>
+      </div>
+
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid var(--bdr);">
         <span style="font-size:10px;color:var(--cream);">Nb PAC stockage</span>
         <div style="display:flex;align-items:center;gap:6px;">
@@ -583,14 +604,26 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
 <div id="toast"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
 // ── CONFIG ────────────────────────────────────────────────
-const SB_URL = 'https://diqxglwsffrlfziymplm.supabase.co';
-const SB_KEY = (typeof window.GEOFRESH_KEY !== 'undefined')
-  ? window.GEOFRESH_KEY
-  : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcXhnbHdzZmZybGZ6aXltcGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODQwMjksImV4cCI6MjA5NDE2MDAyOX0.7sOo_xhhtISH9tQyJ7pg2Z3eXlDZfKZA5Xp6D7-Gs2w';
-const HDRS = {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY};
+// Config depuis config.js
+const SB_URL = window.GEOFRESH_CONFIG?.supabase?.url || 'https://diqxglwsffrlfziymplm.supabase.co';
+const SB_KEY = window.GEOFRESH_CONFIG?.supabase?.anonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcXhnbHdzZmZybGZ6aXltcGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODQwMjksImV4cCI6MjA5NDE2MDAyOX0.7sOo_xhhtISH9tQyJ7pg2Z3eXlDZfKZA5Xp6D7-Gs2w';
+let AUTH_TOKEN_OPE = null;
+let HDRS = {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json'};
+function refreshHDRS_OPE(token) {
+  AUTH_TOKEN_OPE = token;
+  HDRS = {'apikey': SB_KEY, 'Authorization': 'Bearer ' + (token || SB_KEY), 'Content-Type': 'application/json'};
+}
+
+// ── Exploitation courante ─────────────────────────────────────
+const _params = new URLSearchParams(window.location.search);
+const EXPLOIT_ID = _params.get('exploitation_id') || '00000000-0000-0000-0000-000000000001';
+const _supa_ope  = window.supabase.createClient(SB_URL, SB_KEY);
 const TARIF = 0.18; // €/kWh
 const P_MAX_INST = 50; // kW max pour la barre
 
@@ -612,12 +645,13 @@ setInterval(() => {
 
 // ── FETCH DONNÉES ─────────────────────────────────────────
 async function fetchAll() {
+  const EQ = `exploitation_id=eq.${EXPLOIT_ID}&`;
   try {
     const [rSto, rHab, rExt, rCsg] = await Promise.all([
-      fetch(`${SB_URL}/rest/v1/stockage_readings?order=ts.desc&limit=1`, {headers:HDRS}),
-      fetch(`${SB_URL}/rest/v1/habitation_readings?order=ts.desc&limit=1`, {headers:HDRS}),
-      fetch(`${SB_URL}/rest/v1/conditions_externes?order=ts.desc&limit=1`, {headers:HDRS}),
-      fetch(`${SB_URL}/rest/v1/consignes?select=*`, {headers:HDRS}),
+      fetch(`${SB_URL}/rest/v1/stockage_readings?${EQ}order=ts.desc&limit=1`, {headers:HDRS}),
+      fetch(`${SB_URL}/rest/v1/habitation_readings?${EQ}order=ts.desc&limit=1`, {headers:HDRS}),
+      fetch(`${SB_URL}/rest/v1/conditions_externes?${EQ}order=ts.desc&limit=1`, {headers:HDRS}),
+      fetch(`${SB_URL}/rest/v1/consignes?${EQ}select=*`, {headers:HDRS}),
     ]);
     const [sto, hab, ext, csgs] = await Promise.all([
       rSto.json(), rHab.json(), rExt.json(), rCsg.json()
@@ -819,11 +853,11 @@ async function applyCmd(side) {
     body = { csg_t: CMD.csg_t, csg_hr: CMD.csg_hr, vitesse_sim: CMD.vitesse_sim,
              mode_standby: CMD.standby_sto, mode_descente: CMD.descente,
              updated_at: new Date().toISOString() };
-    url = `${SB_URL}/rest/v1/consignes?id=eq.stockage`;
+    url = `${SB_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`;
   } else {
     body = { csg_z1: CMD.csg_z1, csg_z2: CMD.csg_z2, csg_ecs: CMD.csg_ecs,
              mode_standby_hab: CMD.standby_hab, updated_at: new Date().toISOString() };
-    url = `${SB_URL}/rest/v1/consignes?id=eq.habitation`;
+    url = `${SB_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.habitation`;
   }
   try {
     await fetch(url, { method:'PATCH', headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'}, body:JSON.stringify(body) });
@@ -986,9 +1020,89 @@ let CFG = {
   source_meteo: 'simulateur'
 };
 
+// ── VÉRIFICATION ESP32 ───────────────────────────────────────
+async function checkESP32() {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/conditions_externes?order=ts.desc&limit=1&select=ts`, {headers: HDRS});
+    const rows = await r.json();
+    const statusEl = document.getElementById('esp32-status');
+    const btnEsp   = document.getElementById('btn-src-esp');
+    const btnSim   = document.getElementById('btn-src-sim');
+    if(!rows || rows.length === 0) {
+      if(statusEl) statusEl.textContent = 'ESP32 : aucune donnée';
+      disableESP32Btn(btnEsp);
+      return;
+    }
+    const lastTs = new Date(rows[0].ts);
+    const diffMin = (Date.now() - lastTs.getTime()) / 60000;
+    if(diffMin > 5) {
+      if(statusEl) statusEl.innerHTML = `ESP32 : hors ligne <span style="color:var(--rd)">●</span> (${Math.round(diffMin)}min)`;
+      disableESP32Btn(btnEsp);
+      // Forcer retour simulateur si source=esp32
+      if(CFG.source_meteo === 'esp32') setSource('simulateur', true);
+    } else {
+      if(statusEl) statusEl.innerHTML = `ESP32 : connecté <span style="color:var(--sa)">●</span> (${Math.round(diffMin)}min)`;
+      enableESP32Btn(btnEsp);
+    }
+    // Mettre à jour apparence boutons selon source active
+    updateSourceBtns();
+  } catch(e) {}
+}
+
+function disableESP32Btn(btn) {
+  if(!btn) return;
+  btn.disabled = true;
+  btn.style.cursor = 'not-allowed';
+  btn.style.color = 'var(--muted)';
+  btn.style.borderColor = 'rgba(66,97,74,.3)';
+  btn.style.background = 'rgba(66,97,74,.05)';
+  btn.title = 'ESP32 non connecté';
+}
+
+function enableESP32Btn(btn) {
+  if(!btn) return;
+  btn.disabled = false;
+  btn.style.cursor = 'pointer';
+  btn.title = 'Utiliser les capteurs physiques';
+}
+
+function updateSourceBtns() {
+  const isSim = CFG.source_meteo !== 'esp32';
+  const btnSim = document.getElementById('btn-src-sim');
+  const btnEsp = document.getElementById('btn-src-esp');
+  if(btnSim) {
+    btnSim.style.background = isSim ? 'rgba(168,216,92,.2)' : 'rgba(0,0,0,.2)';
+    btnSim.style.borderColor = isSim ? 'rgba(168,216,92,.6)' : 'rgba(66,97,74,.3)';
+    btnSim.style.color = isSim ? 'var(--sa)' : 'var(--muted)';
+  }
+  if(btnEsp && !btnEsp.disabled) {
+    btnEsp.style.background = !isSim ? 'rgba(168,216,92,.2)' : 'rgba(0,0,0,.2)';
+    btnEsp.style.borderColor = !isSim ? 'rgba(168,216,92,.6)' : 'rgba(66,97,74,.3)';
+    btnEsp.style.color = !isSim ? 'var(--sa)' : 'var(--muted)';
+  }
+}
+
+async function setSource(val, silent=false) {
+  CFG.source_meteo = val;
+  updateSourceBtns();
+  if(!silent) {
+    try {
+      await fetch(`${SB_URL}/rest/v1/config_installation?exploitation_id=eq.${EXPLOIT_ID}&cle=eq.source_meteo`, {
+        method: 'PATCH',
+        headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+        body: JSON.stringify({valeur: val})
+      });
+      showToast(val === 'esp32' ? 'Source : capteurs ESP32' : 'Source : simulateur');
+    } catch(e) {}
+  }
+}
+
+// Vérifier ESP32 toutes les 60s
+setInterval(checkESP32, 60000);
+
 async function fetchConfig() {
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/config_installation?select=cle,valeur`, {headers: HDRS});
+    const r = await fetch(`${SB_URL}/rest/v1/config_installation?exploitation_id=eq.${EXPLOIT_ID}&select=cle,valeur`, {headers: HDRS});
     const rows = await r.json();
     rows.forEach(row => {
       if(row.cle === 'module_pac_habitation') CFG.module_pac_habitation = row.valeur === 'true';
@@ -1004,7 +1118,7 @@ async function fetchConfig() {
 
 async function fetchSaison() {
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/saisons?statut=eq.en_cours&order=created_at.desc&limit=1`, {headers: HDRS});
+    const r = await fetch(`${SB_URL}/rest/v1/saisons?exploitation_id=eq.${EXPLOIT_ID}&statut=eq.en_cours&order=created_at.desc&limit=1`, {headers: HDRS});
     const rows = await r.json();
     if(rows.length > 0) {
       document.getElementById('saison-nom').textContent = rows[0].nom + ' (depuis ' + rows[0].date_debut + ')';
@@ -1048,7 +1162,7 @@ async function toggleCfg(cle) {
   CFG[cle] = val;
   updateCfgUI();
   try {
-    await fetch(`${SB_URL}/rest/v1/config_installation?cle=eq.${cle}`, {
+    await fetch(`${SB_URL}/rest/v1/config_installation?exploitation_id=eq.${EXPLOIT_ID}&cle=eq.${cle}`, {
       method: 'PATCH',
       headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
       body: JSON.stringify({valeur: String(val)})
@@ -1062,7 +1176,7 @@ async function adjCfg(cle, delta) {
   CFG[cle] = newVal;
   updateCfgUI();
   try {
-    await fetch(`${SB_URL}/rest/v1/config_installation?cle=eq.${cle}`, {
+    await fetch(`${SB_URL}/rest/v1/config_installation?exploitation_id=eq.${EXPLOIT_ID}&cle=eq.${cle}`, {
       method: 'PATCH',
       headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
       body: JSON.stringify({valeur: String(newVal)})
@@ -1098,7 +1212,7 @@ async function nouvelleSaison() {
 
   // Mettre à jour date_debut_saison dans config_installation
   try {
-    await fetch(`${SB_URL}/rest/v1/config_installation?cle=eq.date_debut_saison`, {
+    await fetch(`${SB_URL}/rest/v1/config_installation?exploitation_id=eq.${EXPLOIT_ID}&cle=eq.date_debut_saison`, {
       method: 'PATCH',
       headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
       body: JSON.stringify({valeur: dateInput})
@@ -1130,6 +1244,19 @@ async function nouvelleSaison() {
 fetchAll();
 fetchConfig();
 fetchSaison();
+checkESP32();
+// Charger nom exploitation
+(async()=>{
+  try{
+    const r = await fetch(`${SB_URL}/rest/v1/exploitations?id=eq.${EXPLOIT_ID}&select=nom,adresse`,{headers:HDRS});
+    const d = await r.json();
+    if(d?.[0]){
+      const el = document.getElementById('exploit-name-hdr');
+      if(el) el.textContent = d[0].nom + (d[0].adresse ? ' — ' + d[0].adresse : '');
+      document.title = 'GeoFresh — ' + d[0].nom;
+    }
+  }catch(_){}
+})();
 // Polling de secours toutes les 30s (fallback si WS tombe)
 setInterval(fetchAll, 30000);
 connectRealtimeOpe();
