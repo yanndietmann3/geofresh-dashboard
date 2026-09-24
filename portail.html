@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>GeoFresh — Portail</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--gf-bg);color:var(--gf-text);min-height:100vh;}
+
+/* ── HEADER ── */
+.hdr{
+  background:#fff;
+  border-bottom:2px solid var(--gf-border);
+  padding:0 32px;
+  height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 1px 8px rgba(160,114,74,.08);
+}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-text{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;}
+.logo-geo{color:var(--gf-vert);}
+.logo-fresh{color:var(--gf-brun);}
+.logo-badge{font-size:9px;letter-spacing:2px;color:var(--gf-muted);font-family:'DM Mono',monospace;text-transform:uppercase;margin-top:2px;}
+.hdr-right{display:flex;align-items:center;gap:16px;}
+.user-chip{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:20px;background:var(--gf-card2);border:1px solid var(--gf-border);}
+.user-name{font-size:13px;font-weight:500;color:var(--gf-text2);}
+.user-role{font-size:10px;font-family:'DM Mono',monospace;color:var(--gf-vert);text-transform:uppercase;letter-spacing:1px;}
+.btn-logout{padding:6px 14px;border-radius:8px;border:1px solid var(--gf-border);background:transparent;color:var(--gf-text2);font-size:13px;cursor:pointer;transition:all .15s;}
+.btn-logout:hover{background:var(--gf-err);color:#fff;border-color:var(--gf-err);}
+
+/* ── MAIN ── */
+.main{max-width:1100px;margin:0 auto;padding:40px 24px;}
+.page-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--gf-text);margin-bottom:4px;}
+.page-sub{font-size:14px;color:var(--gf-muted);margin-bottom:32px;}
+
+/* ── STATS GLOBALES (super admin) ── */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px;}
+.stat-card{background:#fff;border:1px solid var(--gf-border);border-radius:12px;padding:20px 24px;display:flex;flex-direction:column;gap:4px;}
+.stat-val{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:var(--gf-vert);}
+.stat-lbl{font-size:12px;color:var(--gf-muted);text-transform:uppercase;letter-spacing:1px;}
+
+/* ── TOOLBAR ── */
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+.toolbar-left{display:flex;align-items:center;gap:12px;}
+.search-box{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--gf-border);border-radius:8px;padding:8px 14px;}
+.search-box input{border:none;outline:none;font-size:13px;color:var(--gf-text);background:transparent;width:200px;}
+.search-box input::placeholder{color:var(--gf-muted);}
+.btn-add{display:flex;align-items:center;gap:8px;padding:9px 18px;border-radius:8px;background:var(--gf-vert);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;}
+.btn-add:hover{background:#5a9e2f;}
+
+/* ── LISTE EXPLOITATIONS ── */
+.exploit-list{display:flex;flex-direction:column;gap:12px;}
+.exploit-card{
+  background:#fff;
+  border:1px solid var(--gf-border);
+  border-radius:14px;
+  padding:20px 24px;
+  display:flex;align-items:center;gap:20px;
+  cursor:pointer;
+  transition:all .15s;
+  text-decoration:none;
+  color:inherit;
+  position:relative;
+  overflow:hidden;
+}
+.exploit-card::before{
+  content:'';
+  position:absolute;left:0;top:0;bottom:0;width:4px;
+  background:var(--gf-vert);
+  border-radius:4px 0 0 4px;
+}
+.exploit-card:hover{box-shadow:0 4px 20px rgba(106,175,53,.12);border-color:var(--gf-vert);transform:translateY(-1px);}
+.exploit-card.alerte::before{background:var(--gf-err);}
+.exploit-card.inactif{opacity:.6;}
+.exploit-card.inactif::before{background:var(--gf-muted);}
+
+.exploit-icon{width:44px;height:44px;border-radius:10px;background:var(--gf-card2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.exploit-info{flex:1;min-width:0;}
+.exploit-nom{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gf-text);margin-bottom:3px;}
+.exploit-adresse{font-size:12px;color:var(--gf-muted);}
+.exploit-briques{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.brique-tag{padding:2px 10px;border-radius:20px;font-size:10px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px;}
+.brique-tag.stockage_pdt{background:rgba(106,175,53,.12);color:var(--gf-vert);}
+.brique-tag.habitation{background:rgba(160,114,74,.12);color:var(--gf-brun);}
+.brique-tag.serre{background:rgba(91,138,154,.12);color:var(--gf-geo);}
+.brique-tag.off{background:var(--gf-card2);color:var(--gf-muted);}
+
+.exploit-metrics{display:flex;gap:24px;align-items:center;flex-shrink:0;}
+.metric-item{text-align:center;}
+.metric-val{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--gf-text);}
+.metric-lbl{font-size:10px;color:var(--gf-muted);text-transform:uppercase;letter-spacing:.5px;}
+.metric-val.ok{color:var(--gf-ok);}
+.metric-val.warn{color:var(--gf-warn);}
+.metric-val.err{color:var(--gf-err);}
+
+.exploit-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;}
+.statut-badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.statut-badge.actif{background:rgba(106,175,53,.12);color:var(--gf-vert);}
+.statut-badge.inactif{background:var(--gf-card2);color:var(--gf-muted);}
+.alerte-badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(192,67,42,.1);color:var(--gf-err);display:flex;align-items:center;gap:4px;}
+.arrow-btn{font-size:18px;color:var(--gf-muted);}
+
+/* ── RÉSUMÉ GLOBAL ── */
+.summary-section{margin-top:40px;}
+.section-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gf-text);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+.summary-card{background:#fff;border:1px solid var(--gf-border);border-radius:12px;padding:18px 20px;}
+.summary-card-title{font-size:11px;color:var(--gf-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
+.summary-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--gf-card2);}
+.summary-row:last-child{border-bottom:none;}
+.summary-key{font-size:12px;color:var(--gf-text2);}
+.summary-val{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:var(--gf-text);}
+
+/* ── MODALE AJOUT ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(45,32,23,.4);z-index:200;display:none;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:#fff;border-radius:16px;padding:32px;width:480px;max-width:95vw;box-shadow:0 8px 40px rgba(45,32,23,.15);}
+.modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--gf-text);margin-bottom:24px;}
+.form-group{margin-bottom:16px;}
+.form-label{display:block;font-size:11px;font-weight:600;color:var(--gf-text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.form-input{width:100%;padding:10px 14px;border:1.5px solid var(--gf-border);border-radius:8px;font-size:14px;color:var(--gf-text);background:#fff;outline:none;transition:border .15s;}
+.form-input:focus{border-color:var(--gf-vert);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.brique-checks{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
+.brique-check{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1.5px solid var(--gf-border);cursor:pointer;font-size:12px;transition:all .15s;}
+.brique-check input{display:none;}
+.brique-check.checked{border-color:var(--gf-vert);background:rgba(106,175,53,.08);color:var(--gf-vert);font-weight:600;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;}
+.btn-cancel{padding:9px 18px;border-radius:8px;border:1.5px solid var(--gf-border);background:transparent;color:var(--gf-text2);font-size:13px;cursor:pointer;}
+.btn-submit{padding:9px 20px;border-radius:8px;background:var(--gf-vert);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;}
+
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;z-index:9999;background:var(--gf-bg);display:flex;align-items:center;justify-content:center;}
+.login-box{width:380px;background:#fff;border:1.5px solid var(--gf-border);border-radius:20px;padding:40px 36px;box-shadow:0 8px 40px rgba(45,32,23,.1);}
+.login-logo{text-align:center;margin-bottom:32px;}
+.login-logo .logo-text{font-size:28px;}
+.login-tagline{font-size:11px;color:var(--gf-muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+.login-label{display:block;font-size:11px;font-weight:600;color:var(--gf-text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.login-input{width:100%;padding:11px 14px;border:1.5px solid var(--gf-border);border-radius:8px;font-size:14px;color:var(--gf-text);outline:none;margin-bottom:14px;transition:border .15s;}
+.login-input:focus{border-color:var(--gf-vert);}
+.login-btn{width:100%;padding:12px;background:var(--gf-vert);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:4px;}
+.login-btn:hover{background:#5a9e2f;}
+.login-err{display:none;margin-top:12px;padding:10px 14px;background:rgba(192,67,42,.08);border:1px solid rgba(192,67,42,.25);border-radius:8px;color:var(--gf-err);font-size:12px;text-align:center;}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--gf-muted);}
+.empty-state-icon{font-size:48px;margin-bottom:16px;}
+.empty-state-text{font-size:14px;}
+
+@media(max-width:640px){
+  .exploit-metrics{display:none;}
+  .main{padding:20px 16px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ─────────────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="logo-text"><span class="logo-geo">Geo</span><span class="logo-fresh">Fresh</span></div>
+      <div class="login-tagline">Supervision géothermique</div>
+    </div>
+    <label class="login-label">Email</label>
+    <input id="l-email" class="login-input" type="email" placeholder="votre@email.fr" autocomplete="email"/>
+    <label class="login-label">Mot de passe</label>
+    <input id="l-pwd" class="login-input" type="password" placeholder="••••••••"
+      onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="login-btn" id="l-btn" onclick="doLogin()">Connexion</button>
+    <div class="login-err" id="l-err"></div>
+  </div>
+</div>
+
+<!-- ── APP ───────────────────────────────────────────────────── -->
+<div id="app" style="display:none;">
+
+  <!-- Header -->
+  <header class="hdr">
+    <div class="logo">
+      <div>
+        <div class="logo-text"><span class="logo-geo">Geo</span><span class="logo-fresh">Fresh</span></div>
+        <div class="logo-badge">Portail de supervision</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="user-chip">
+        <div>
+          <div class="user-name" id="user-name">—</div>
+          <div class="user-role" id="user-role">—</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <!-- Titre -->
+    <div class="page-title">Mes exploitations</div>
+    <div class="page-sub" id="page-sub">Chargement...</div>
+
+    <!-- Stats globales (super admin) -->
+    <div class="stats-row" id="stats-row" style="display:none;">
+      <div class="stat-card">
+        <div class="stat-val" id="st-total">—</div>
+        <div class="stat-lbl">Exploitations</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="st-actives">—</div>
+        <div class="stat-lbl">Actives</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="st-alertes" style="color:var(--gf-err)">—</div>
+        <div class="stat-lbl">Alertes actives</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="st-clients">—</div>
+        <div class="stat-lbl">Clients</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="search-box">
+          <span style="color:var(--gf-muted);">🔍</span>
+          <input id="search-input" type="text" placeholder="Rechercher une exploitation..."
+            oninput="filterList()"/>
+        </div>
+      </div>
+      <button class="btn-add" id="btn-add" style="display:none;" onclick="openModal()">
+        + Nouvelle exploitation
+      </button>
+    </div>
+
+    <!-- Liste -->
+    <div class="exploit-list" id="exploit-list">
+      <div class="empty-state">
+        <div class="empty-state-icon">🌾</div>
+        <div class="empty-state-text">Chargement des exploitations...</div>
+      </div>
+    </div>
+
+    <!-- Résumé global (super admin) -->
+    <div class="summary-section" id="summary-section" style="display:none;">
+      <div class="section-title">📊 Résumé global</div>
+      <div class="summary-grid" id="summary-grid"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── MODALE AJOUT EXPLOITATION ────────────────────────────── -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title">Nouvelle exploitation</div>
+    <div class="form-group">
+      <label class="form-label">Nom de l'exploitation *</label>
+      <input id="f-nom" class="form-input" type="text" placeholder="Ex: GAEC Dupont — Fruges"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Adresse</label>
+      <input id="f-adresse" class="form-input" type="text" placeholder="Ville, département"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Capacité stockage (t)</label>
+        <input id="f-capa" class="form-input" type="number" placeholder="500" min="0"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nb PAC</label>
+        <input id="f-pac" class="form-input" type="number" placeholder="3" min="1" max="10"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Briques actives</label>
+      <div class="brique-checks" id="brique-checks">
+        <label class="brique-check checked" onclick="toggleBrique(this,'stockage_pdt')">
+          <input type="checkbox" value="stockage_pdt" checked/> 🥔 Stockage PDT
+        </label>
+        <label class="brique-check" onclick="toggleBrique(this,'habitation')">
+          <input type="checkbox" value="habitation"/> 🏠 Habitation
+        </label>
+        <label class="brique-check" onclick="toggleBrique(this,'serre')">
+          <input type="checkbox" value="serre"/> 🌿 Serre
+        </label>
+        <label class="brique-check" onclick="toggleBrique(this,'séchoir')">
+          <input type="checkbox" value="séchoir"/> 💨 Séchoir
+        </label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-submit" onclick="createExploitation()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── AUTH ──────────────────────────────────────────────────────
+let AUTH_TOKEN = null;
+let USER_ROLE  = null;
+let USER_ID    = null;
+let ALL_EXPLOITS = [];
+
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pwd   = document.getElementById('l-pwd').value;
+  const btn   = document.getElementById('l-btn');
+  const err   = document.getElementById('l-err');
+  btn.textContent = 'Connexion...'; btn.disabled = true; err.style.display = 'none';
+
+  const {data, error} = await _supa.auth.signInWithPassword({email, password: pwd});
+  if(error) {
+    err.textContent = error.message.includes('Invalid') ? 'Email ou mot de passe incorrect' : error.message;
+    err.style.display = 'block'; btn.textContent = 'Connexion'; btn.disabled = false; return;
+  }
+  await initApp(data.session);
+}
+
+async function doLogout() {
+  await _supa.auth.signOut();
+  AUTH_TOKEN = null; USER_ROLE = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+async function checkSession() {
+  const {data} = await _supa.auth.getSession();
+  if(data?.session) await initApp(data.session);
+}
+
+async function initApp(session) {
+  AUTH_TOKEN = session.access_token;
+  USER_ID    = session.user.id;
+
+  // Charger le profil
+  const {data: profile} = await _supa
+    .from('profiles')
+    .select('role, nom, email')
+    .eq('id', USER_ID)
+    .single();
+
+  USER_ROLE = profile?.role || 'client';
+  document.getElementById('user-name').textContent = profile?.nom || session.user.email.split('@')[0];
+  document.getElementById('user-role').textContent = USER_ROLE === 'super_admin' ? 'Super Admin' : USER_ROLE === 'operator' ? 'Opérateur' : 'Client';
+
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
+  if(USER_ROLE === 'super_admin') {
+    document.getElementById('btn-add').style.display = 'flex';
+    document.getElementById('stats-row').style.display = 'grid';
+    document.getElementById('summary-section').style.display = 'block';
+  }
+
+  await loadExploitations();
+}
+
+// ── EXPLOITATIONS ─────────────────────────────────────────────
+async function loadExploitations() {
+  const hdrs = {apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + AUTH_TOKEN};
+
+  // Charger exploitations + briques
+  const {data: exploits} = await _supa
+    .from('exploitations')
+    .select('*, briques(type, nom, actif, ordre), exploitation_users(role)')
+    .order('nom');
+
+  if(!exploits) return;
+  ALL_EXPLOITS = exploits;
+
+  // Charger dernières données pour chaque exploitation
+  await enrichWithMetrics(exploits, hdrs);
+
+  renderList(exploits);
+  if(USER_ROLE === 'super_admin') renderStats(exploits);
+}
+
+async function enrichWithMetrics(exploits, hdrs) {
+  // Pour chaque exploitation, récupérer la dernière T stock et les alarmes
+  await Promise.all(exploits.map(async (e) => {
+    try {
+      const [stoR, almR] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?exploitation_id=eq.${e.id}&order=ts.desc&limit=1&select=t_stock,mode_actif,pac_on`, {headers: hdrs}),
+        fetch(`${SUPABASE_URL}/rest/v1/alarmes_log?exploitation_id=eq.${e.id}&acquittee=eq.false&select=id`, {headers: hdrs})
+      ]);
+      const [sto, alm] = await Promise.all([stoR.json(), almR.json()]);
+      e._t_stock    = sto?.[0]?.t_stock ?? null;
+      e._mode       = sto?.[0]?.mode_actif ?? null;
+      e._pac_on     = sto?.[0]?.pac_on ?? false;
+      e._nb_alertes = Array.isArray(alm) ? alm.length : 0;
+    } catch(_) {
+      e._t_stock = null; e._nb_alertes = 0;
+    }
+  }));
+}
+
+function renderList(exploits) {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const filtered = exploits.filter(e =>
+    e.nom.toLowerCase().includes(q) || (e.adresse||'').toLowerCase().includes(q)
+  );
+
+  document.getElementById('page-sub').textContent =
+    `${filtered.length} exploitation${filtered.length > 1 ? 's' : ''}`;
+
+  if(filtered.length === 0) {
+    document.getElementById('exploit-list').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🌾</div>
+        <div class="empty-state-text">Aucune exploitation trouvée</div>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('exploit-list').innerHTML = filtered.map(e => {
+    const hasAlerte = e._nb_alertes > 0;
+    const t = e._t_stock !== null ? parseFloat(e._t_stock) : null;
+    const tClass = t === null ? '' : t > 8 ? 'err' : t < 2 ? 'err' : t > 6 ? 'warn' : 'ok';
+    const tStr = t !== null ? t.toFixed(1) + '°C' : '--';
+
+    const briques = (e.briques || [])
+      .sort((a,b) => a.ordre - b.ordre)
+      .map(b => `<span class="brique-tag ${b.actif ? b.type : 'off'}">${briquesEmoji[b.type] || '◆'} ${b.nom || b.type}</span>`)
+      .join('');
+
+    const alerteBadge = hasAlerte
+      ? `<div class="alerte-badge">⚠ ${e._nb_alertes} alerte${e._nb_alertes > 1 ? 's' : ''}</div>` : '';
+
+    return `
+    <div class="exploit-card ${hasAlerte ? 'alerte' : ''} ${e.statut !== 'actif' ? 'inactif' : ''}"
+      onclick="openExploitation('${e.id}')">
+      <div class="exploit-icon">${e.statut === 'actif' ? '🌾' : '⏸'}</div>
+      <div class="exploit-info">
+        <div class="exploit-nom">${e.nom}</div>
+        <div class="exploit-adresse">${e.adresse || '—'} · ${e.capacite_pdt || 0}t · ${e.nb_pac || 0} PAC</div>
+        <div class="exploit-briques">${briques}</div>
+      </div>
+      <div class="exploit-metrics">
+        <div class="metric-item">
+          <div class="metric-val ${tClass}">${tStr}</div>
+          <div class="metric-lbl">T Stock</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val ${e._pac_on ? 'ok' : ''}">${e._pac_on ? 'ON' : 'OFF'}</div>
+          <div class="metric-lbl">PAC</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val" style="font-size:12px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e._mode || '—'}</div>
+          <div class="metric-lbl">Mode</div>
+        </div>
+      </div>
+      <div class="exploit-right">
+        <span class="statut-badge ${e.statut}">${e.statut}</span>
+        ${alerteBadge}
+        <span class="arrow-btn">→</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+const briquesEmoji = {stockage_pdt:'🥔', habitation:'🏠', serre:'🌿', séchoir:'💨'};
+
+function filterList() { renderList(ALL_EXPLOITS); }
+
+function openExploitation(id) {
+  window.location.href = `operateur.html?exploitation_id=${id}`;
+}
+
+// ── STATS GLOBALES ────────────────────────────────────────────
+async function renderStats(exploits) {
+  document.getElementById('st-total').textContent   = exploits.length;
+  document.getElementById('st-actives').textContent = exploits.filter(e => e.statut === 'actif').length;
+  document.getElementById('st-alertes').textContent = exploits.reduce((s, e) => s + (e._nb_alertes||0), 0);
+
+  // Compter les clients uniques
+  const {data: users} = await _supa.from('exploitation_users').select('user_id').neq('role','super_admin');
+  const uniq = new Set((users||[]).map(u => u.user_id));
+  document.getElementById('st-clients').textContent = uniq.size;
+
+  // Résumé par exploitation
+  document.getElementById('summary-grid').innerHTML = exploits.slice(0,6).map(e => `
+    <div class="summary-card">
+      <div class="summary-card-title">${e.nom}</div>
+      <div class="summary-row"><span class="summary-key">T Stock</span><span class="summary-val">${e._t_stock ? parseFloat(e._t_stock).toFixed(1)+'°C' : '--'}</span></div>
+      <div class="summary-row"><span class="summary-key">PAC</span><span class="summary-val">${e._pac_on ? '🟢 ON' : '⚪ OFF'}</span></div>
+      <div class="summary-row"><span class="summary-key">Mode</span><span class="summary-val" style="font-size:11px;">${e._mode || '--'}</span></div>
+      <div class="summary-row"><span class="summary-key">Alertes</span><span class="summary-val" style="${e._nb_alertes>0?'color:var(--gf-err)':''}"> ${e._nb_alertes || 0}</span></div>
+    </div>`).join('');
+}
+
+// ── MODALE AJOUT ──────────────────────────────────────────────
+function openModal()  { document.getElementById('modal-overlay').classList.add('open'); }
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+function toggleBrique(el, type) {
+  el.classList.toggle('checked');
+  el.querySelector('input').checked = el.classList.contains('checked');
+}
+
+async function createExploitation() {
+  const nom    = document.getElementById('f-nom').value.trim();
+  if(!nom) { alert('Le nom est obligatoire'); return; }
+  const adresse = document.getElementById('f-adresse').value.trim();
+  const capa   = parseInt(document.getElementById('f-capa').value) || 0;
+  const nbPac  = parseInt(document.getElementById('f-pac').value) || 3;
+  const briques = [...document.querySelectorAll('#brique-checks input:checked')].map(i => i.value);
+
+  // Créer l'exploitation
+  const {data: exploit, error} = await _supa
+    .from('exploitations')
+    .insert({nom, adresse, capacite_pdt: capa, nb_pac: nbPac})
+    .select()
+    .single();
+
+  if(error) { alert('Erreur : ' + error.message); return; }
+
+  // Créer les briques
+  await _supa.from('briques').insert(
+    briques.map((type, i) => ({
+      exploitation_id: exploit.id,
+      type,
+      nom: type === 'stockage_pdt' ? `Stockage PDT ${capa}t` :
+           type === 'habitation'   ? 'Maison agricole' :
+           type === 'serre'        ? 'Serre' : 'Séchoir',
+      actif: true,
+      ordre: i + 1
+    }))
+  );
+
+  // Lier au super admin
+  await _supa.from('exploitation_users').insert({
+    exploitation_id: exploit.id,
+    user_id: USER_ID,
+    role: 'super_admin'
+  });
+
+  closeModal();
+  await loadExploitations();
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+checkSession();
+</script>
+</body>
+</html>
