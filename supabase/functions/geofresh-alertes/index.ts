@@ -225,5 +225,8 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, msg: 'Archive déclenchée' })
   }
 
-  return json({ ok: true, version: '2.0', actions: ['check_alertes', 'test_email', 'archive'] })
+  // Diagnostic : la clé Resend est-elle visible ? (ne révèle pas la clé)
+  return json({ ok: true, version: '2.0', actions: ['check_alertes', 'test_email', 'archive'],
+    resend_configured: !!RESEND_KEY, resend_key_prefix: RESEND_KEY ? RESEND_KEY.slice(0, 3) : null,
+    secrets_resend: Object.keys(Deno.env.toObject()).filter(k => /resend|alert/i.test(k)) })
 })
