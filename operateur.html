@@ -943,7 +943,7 @@ function updToggle(id, active, lblOn, lblOff) {
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  setTimeout(() => t.classList.remove('show'), 6000);
 }
 function drawSpark(containerId, data, vmin, vmax, color, curId, curVal) {
   const c = document.getElementById(containerId);
@@ -1412,7 +1412,12 @@ async function testEmail() {
   showToast('Envoi en cours…');
   const {data, error} = await _supa_ope.functions.invoke('geofresh-alertes',
     {body: {action: 'test_email', exploitation_id: EXPLOIT_ID}});
-  if(error) { showToast('✗ ' + error.message); return; }
+  if(error) {
+    // Réponse non-2xx : lire le message renvoyé par la fonction
+    const detail = await error.context?.json?.().catch(() => null);
+    showToast('✗ ' + (detail?.error || error.message));
+    return;
+  }
   showToast(data?.sent ? `✉ Email envoyé à ${data.to.join(', ')}` : '✗ ' + (data?.error || 'échec'));
 }
 

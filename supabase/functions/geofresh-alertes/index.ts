@@ -34,8 +34,15 @@ const BRIQUES: Record<string, string> = {
 
 type Alerte = { code: string; niveau: number; brique: string; message: string }
 
+// CORS : le bouton "Email de test" appelle la fonction depuis GitHub Pages
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
 // ── Règles ───────────────────────────────────────────────────
 function minutesDepuis(ts: string) {
@@ -191,6 +198,7 @@ async function estStaff(sb: SupabaseClient, req: Request) {
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   const sb = createClient(SUPABASE_URL, SERVICE_KEY)
   const body = await req.json().catch(() => ({}))
   const action = body.action || 'info'
