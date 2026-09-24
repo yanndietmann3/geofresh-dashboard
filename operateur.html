@@ -179,13 +179,41 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
   background:rgba(107,175,94,.2);border:1px solid rgba(107,175,94,.5);color:var(--sa);}
 #toast.show{transform:translateY(0);opacity:1;}
 
+/* ── BRIQUES DYNAMIQUES ── */
+.brique-sub{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:none;color:var(--muted);font-weight:400;}
+.brique-off{display:none !important;}
+.c-extra{border:1px dashed rgba(255,255,255,.18);}
+.c-extra .ct::before{background:var(--muted);}
+.extra-msg{font-size:10px;color:var(--muted);line-height:1.6;}
+.c-adm{border:1px solid rgba(155,127,212,.3);background:rgba(155,127,212,.04);}
+.c-adm .ct::before{background:var(--geo);}
+.brq-list{display:flex;flex-direction:column;gap:8px;}
+.brq-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid var(--bdr);}
+.brq-name{font-size:11px;color:var(--cream);}
+.brq-nom{font-size:9px;color:var(--muted);}
+body:not([data-role="super_admin"]) .sa-only{display:none !important;}
+
+/* ── ALERTES ── */
+.c-alr{border:1px solid rgba(196,82,42,.3);}
+.c-alr::before{background:linear-gradient(90deg,#8A2A1A,var(--serr),transparent);}
+.c-alr .ct::before{background:var(--serr);}
+.alr-list{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;}
+.alr-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;border:1px solid var(--bdr);background:rgba(0,0,0,.2);font-size:10px;}
+.alr-item.n3{border-color:rgba(196,82,42,.5);color:#FF8A6A;}
+.alr-item.n2{border-color:rgba(212,168,50,.4);color:var(--samb);}
+.alr-msg{flex:1;}
+.alr-ts{font-size:8px;color:var(--muted);white-space:nowrap;}
+.alr-empty{font-size:10px;color:var(--sa);padding:8px 10px;border:1px solid rgba(168,216,92,.3);border-radius:8px;background:rgba(168,216,92,.05);}
+.alr-input{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--bdr);border-radius:6px;color:var(--cream);font-family:'DM Mono',monospace;font-size:11px;padding:6px 8px;}
+.alr-hint{font-size:8px;color:var(--muted);margin-top:4px;line-height:1.5;}
+
 /* ── FOOTER ── */
 footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var(--muted);
   border-top:1px solid var(--bdr);margin-top:6px;}
 </style>
 </head>
 <body>
-<div class="shell">
+<div class="shell" id="shell" style="visibility:hidden;">
 
 <!-- HEADER -->
 <header>
@@ -200,13 +228,13 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
       <div class="sub">Panneau Opérateur</div>
       <div id="exploit-name-hdr" style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px;"></div>
     </div>
-    <div class="op-badge">⚙ Opérateur</div>
+    <div class="op-badge" id="op-badge">⚙ Opérateur</div>
   </div>
   <div class="hdr-r">
     <div class="live"><div class="ldot"></div><span id="conn-lbl">CONNEXION…</span></div>
     <span id="clk">--:--:--</span>
     <a class="back-btn" href="portail.html" style="margin-right:6px;">← Portail</a>
-    <a class="back-btn" href="index.html" onclick="if(document.referrer.includes('geofresh-dashboard')){history.back();return false;}">← Vue Client</a>
+    <a class="back-btn" id="lnk-client" href="index.html">👁 Vue client</a>
   </div>
 </header>
 
@@ -214,8 +242,8 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
 <div class="main">
 
   <!-- ── STOCKAGE PAC1/PAC2 ── -->
-  <div class="card c-sto">
-    <div class="ct">⚡ Stockage PDT — PAC1 + PAC2</div>
+  <div class="card c-sto" data-brique="stockage_pdt">
+    <div class="ct">🥔 Stockage PDT <span class="brique-sub" data-brique-nom="stockage_pdt"></span></div>
     <div class="row3">
       <div class="metric">
         <div class="mlbl">T_stock</div>
@@ -233,10 +261,8 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
         <div class="msub" id="s-co2st">normal</div>
       </div>
     </div>
-    <div class="pac-row" style="margin-top:12px;" id="s-pac-row">
-      <div class="pac-unit off" id="s-p1"><div class="pac-dot"></div><div class="pac-lbl">PAC1</div><div class="pac-kw">0 kW</div></div>
-      <div class="pac-unit off" id="s-p2"><div class="pac-dot"></div><div class="pac-lbl">PAC2</div><div class="pac-kw">0 kW</div></div>
-    </div>
+    <!-- PAC stockage : générées selon nb_pac_stockage -->
+    <div class="pac-row" style="margin-top:12px;" id="s-pac-row"></div>
     <div class="row3" style="margin-top:10px;">
       <div class="metric">
         <div class="mlbl">Mode</div>
@@ -255,8 +281,8 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
   </div>
 
   <!-- ── HABITATION PAC3 ── -->
-  <div class="card c-hab">
-    <div class="ct">🏠 Habitation — PAC3</div>
+  <div class="card c-hab" data-brique="habitation">
+    <div class="ct">🏠 Habitation <span class="brique-sub" data-brique-nom="habitation"></span></div>
     <div class="row3">
       <div class="metric">
         <div class="mlbl">Zone 1</div>
@@ -275,7 +301,7 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
       </div>
     </div>
     <div class="pac-row" style="margin-top:12px;">
-      <div class="pac-unit off" id="h-p3"><div class="pac-dot"></div><div class="pac-lbl">PAC3</div><div class="pac-kw" id="h-p3kw">0 kW</div></div>
+      <div class="pac-unit off" id="h-p3"><div class="pac-dot"></div><div class="pac-lbl lbl-pac-hab">PAC3</div><div class="pac-kw" id="h-p3kw">0 kW</div></div>
     </div>
     <div class="row3" style="margin-top:10px;">
       <div class="metric">
@@ -311,12 +337,12 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
     </div>
     <div class="flux-row">
       <div class="flux-box">
-        <div class="flux-lbl">P_inject (PAC1+2 → boucle)</div>
+        <div class="flux-lbl">P_inject (<span class="lbl-pac-sto">PAC1+2</span> → boucle)</div>
         <div class="flux-val inj" id="g-inj">– kW</div>
       </div>
-      <div class="flux-arrow">⇌</div>
-      <div class="flux-box">
-        <div class="flux-lbl">P_puise (boucle → PAC3)</div>
+      <div class="flux-arrow" data-brique="habitation">⇌</div>
+      <div class="flux-box" data-brique="habitation">
+        <div class="flux-lbl">P_puise (boucle → <span class="lbl-pac-hab">PAC3</span>)</div>
         <div class="flux-val pui" id="g-pui">– kW</div>
       </div>
     </div>
@@ -329,11 +355,11 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
     </div>
     <div class="row2" style="margin-top:10px;">
       <div class="metric">
-        <div class="mlbl">COP froid (PAC1+2)</div>
+        <div class="mlbl">COP froid (<span class="lbl-pac-sto">PAC1+2</span>)</div>
         <div class="mval geo" id="g-copf">–</div>
       </div>
-      <div class="metric">
-        <div class="mlbl">COP chaud (PAC3)</div>
+      <div class="metric" data-brique="habitation">
+        <div class="mlbl">COP chaud (<span class="lbl-pac-hab">PAC3</span>)</div>
         <div class="mval geo" id="g-copc">–</div>
       </div>
     </div>
@@ -344,15 +370,15 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
     <div class="ct">⚡ Puissances instantanées</div>
     <div class="row4">
       <div class="metric">
-        <div class="mlbl">PAC1+2 élec</div>
+        <div class="mlbl"><span class="lbl-pac-sto">PAC1+2</span> élec</div>
         <div class="mval enrg" id="e-psto">–<span class="u">kW</span></div>
       </div>
       <div class="metric">
         <div class="mlbl">Ventilation</div>
         <div class="mval enrg" id="e-pvent">–<span class="u">kW</span></div>
       </div>
-      <div class="metric">
-        <div class="mlbl">PAC3 élec</div>
+      <div class="metric" data-brique="habitation">
+        <div class="mlbl"><span class="lbl-pac-hab">PAC3</span> élec</div>
         <div class="mval enrg" id="e-phab">–<span class="u">kW</span></div>
       </div>
       <div class="metric">
@@ -372,11 +398,11 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
       <div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Cumuls session</div>
       <div class="row3">
         <div class="metric">
-          <div class="mlbl">kWh PAC1+2</div>
+          <div class="mlbl">kWh <span class="lbl-pac-sto">PAC1+2</span></div>
           <div class="mval enrg" id="e-kwh-sto" style="font-size:16px;">0.0<span class="u">kWh</span></div>
         </div>
-        <div class="metric">
-          <div class="mlbl">kWh PAC3</div>
+        <div class="metric" data-brique="habitation">
+          <div class="mlbl">kWh <span class="lbl-pac-hab">PAC3</span></div>
           <div class="mval enrg" id="e-kwh-hab" style="font-size:16px;">0.0<span class="u">kWh</span></div>
         </div>
         <div class="metric">
@@ -414,13 +440,39 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
     </div>
   </div>
 
+  <!-- ── BRIQUES SANS CAPTEURS (serre) — générées ── -->
+  <div id="briques-extra" style="display:contents;"></div>
+
+  <!-- ── ALERTES & EMAILS ── -->
+  <div class="card c-alr">
+    <div class="ct">🔔 Alertes <span class="brique-sub" id="alr-count"></span></div>
+    <div class="alr-list" id="alr-list"><div class="alr-empty">Chargement…</div></div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="toggle-btn off" onclick="acquitterTout()" style="flex:1;">✓ Tout acquitter</button>
+      <button class="toggle-btn off" onclick="testEmail()" style="flex:1;">✉ Email de test</button>
+    </div>
+    <div style="margin-top:12px;border-top:1px solid var(--bdr);padding-top:10px;">
+      <div class="mlbl" style="margin-bottom:6px;">Destinataires des emails d'alerte</div>
+      <input class="alr-input" id="alr-emails" type="text" placeholder="Vide = utilisateurs de l'exploitation"/>
+      <div class="alr-hint">Séparés par des virgules. Vide = tous les utilisateurs liés à l'exploitation + super admins.</div>
+      <button class="cmd-apply sa-only" onclick="saveAlertEmails()" style="margin-top:8px;">Enregistrer destinataires</button>
+    </div>
+  </div>
+
+  <!-- ── BRIQUES (super admin) ── -->
+  <div class="card c-adm sa-only">
+    <div class="ct">🧩 Briques de l'exploitation</div>
+    <div class="brq-list" id="brq-list"><div class="extra-msg">Chargement…</div></div>
+    <div class="alr-hint" style="margin-top:8px;">Désactiver une brique la masque dans la vue opérateur, la vue client et le portail.</div>
+  </div>
+
   <!-- ── CONFIGURATION INSTALLATION ── -->
   <div class="card" style="grid-column:span 2;border:1px solid rgba(155,127,212,.3);background:rgba(155,127,212,.04);">
     <div class="ct" style="color:var(--geo);">⚙ Configuration installation</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:10px;">
 
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid var(--bdr);">
-        <span style="font-size:10px;color:var(--cream);">PAC Habitation</span>
+      <div data-brique="habitation" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid var(--bdr);">
+        <span style="font-size:10px;color:var(--cream);">🏠 PAC Habitation</span>
         <button class="toggle-btn" id="cfg-pac-hab" onclick="toggleCfg('module_pac_habitation')" style="font-size:9px;padding:3px 10px;">ON</button>
       </div>
 
@@ -453,8 +505,8 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
         </div>
       </div>
 
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid var(--bdr);">
-        <span style="font-size:10px;color:var(--cream);">Nb PAC stockage</span>
+      <div data-brique="stockage_pdt" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid var(--bdr);">
+        <span style="font-size:10px;color:var(--cream);">🥔 Nb PAC Stockage PDT</span>
         <div style="display:flex;align-items:center;gap:6px;">
           <button class="cmd-btn" onclick="adjCfg('nb_pac_stockage',-1)" style="padding:2px 8px;">−</button>
           <span id="cfg-nb-pac" style="font-size:12px;color:var(--geo);min-width:16px;text-align:center;">2</span>
@@ -491,8 +543,8 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
   </div>
 
   <!-- ── COMMANDES STOCKAGE ── -->
-  <div class="card c-cmd">
-    <div class="ct">⚙ Commandes stockage</div>
+  <div class="card c-cmd" data-brique="stockage_pdt">
+    <div class="ct">⚙ Commandes 🥔 Stockage PDT</div>
     <div class="cmd-section">
       <div class="cmd-grid">
         <div class="cmd-item">
@@ -528,7 +580,7 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
           </div>
         </div>
       </div>
-      <button class="cmd-apply" onclick="applyCmd('sto')">Appliquer stockage</button>
+      <button class="cmd-apply" onclick="applyCmd('sto')">Appliquer Stockage PDT</button>
     </div>
     <div style="margin-top:10px;border-top:1px solid var(--bdr);padding-top:10px;">
       <div class="cmd-lbl" style="margin-bottom:6px;">Mode descente température</div>
@@ -538,7 +590,7 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
 
   <!-- ── COMMANDES HABITATION ── -->
   <div class="card c-cmd" id="card-commandes-hab">
-    <div class="ct">⚙ Commandes habitation</div>
+    <div class="ct">⚙ Commandes 🏠 Habitation</div>
     <div class="cmd-section">
       <div class="cmd-grid">
         <div class="cmd-item">
@@ -572,7 +624,7 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
           </div>
         </div>
       </div>
-      <button class="cmd-apply" onclick="applyCmd('hab')">Appliquer habitation</button>
+      <button class="cmd-apply" onclick="applyCmd('hab')">Appliquer Habitation</button>
     </div>
   </div>
 
@@ -581,12 +633,12 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
     <div class="ct">📈 Historique COP + T_boucle (60 derniers points)</div>
     <div class="row3">
       <div>
-        <div class="mlbl" style="margin-bottom:6px;">COP froid PAC1+2</div>
+        <div class="mlbl" style="margin-bottom:6px;">COP froid <span class="lbl-pac-sto">PAC1+2</span></div>
         <div class="spark-wrap" id="spark-copf"></div>
         <div class="spark-lbl"><span>min</span><span id="sp-copf-cur">–</span><span>max</span></div>
       </div>
-      <div>
-        <div class="mlbl" style="margin-bottom:6px;">COP chaud PAC3</div>
+      <div data-brique="habitation">
+        <div class="mlbl" style="margin-bottom:6px;">COP chaud <span class="lbl-pac-hab">PAC3</span></div>
         <div class="spark-wrap" id="spark-copc"></div>
         <div class="spark-lbl"><span>min</span><span id="sp-copc-cur">–</span><span>max</span></div>
       </div>
@@ -600,12 +652,10 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
 
 </div>
 
-<footer>GeoFresh Opérateur — Données toutes les 30s — <a href="index.html" style="color:var(--ha);text-decoration:none;">Vue Client →</a> · <a href="operateur.html" style="color:var(--geo);text-decoration:none;">Opérateur →</a></footer>
+<footer>GeoFresh Opérateur — Données toutes les 30s — <a id="lnk-client-foot" href="index.html" style="color:var(--ha);text-decoration:none;">Vue client →</a> · <a href="portail.html" style="color:var(--geo);text-decoration:none;">Portail →</a></footer>
 <div id="toast"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
@@ -681,11 +731,13 @@ function updateUI(sto, hab, ext, csgs) {
   set('s-co2st', co2>3500?'⚠ purge active':co2>2000?'élevé':'normal');
   set('s-mode', sto.mode_actif??'–');
 
-  // PAC1/PAC2
-  const p1on = !!sto.pac1_on, p2on = !!sto.pac2_on;
+  // PAC stockage (PAC1..N selon nb_pac_stockage)
   const pacKw = parseFloat(sto.pac_kw??0);
-  setPac('s-p1', p1on, 'PAC1', p1on?'15 kW':'0 kW');
-  setPac('s-p2', p2on, 'PAC2', p2on?'15 kW':'0 kW');
+  const pKwUnit = window.GEOFRESH_CONFIG?.physique?.p_pac_kw ?? 15;
+  for(let i = 1; i <= nbPacSto(); i++) {
+    const on = !!(sto['pac'+i+'_on'] ?? (i === 1 && sto.pac_on));
+    setPac('s-p'+i, on, 'PAC'+i, on ? pKwUnit+' kW' : '0 kW');
+  }
 
   const vv = parseFloat(sto.vitesse_ventil??0);
   set('s-vent', vv>=1?'2 VENTILATEURS':vv>=0.5?'1 VENTILATEUR':'ARRÊT');
@@ -861,7 +913,7 @@ async function applyCmd(side) {
   }
   try {
     await fetch(url, { method:'PATCH', headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'}, body:JSON.stringify(body) });
-    showToast('✓ Commande envoyée — ' + (side==='sto'?'Stockage':'Habitation'));
+    showToast('✓ Commande envoyée — ' + gfBriqueLabel(side==='sto'?'stockage_pdt':'habitation', false));
   } catch(e) { showToast('✗ Erreur : ' + e.message); }
 }
 
@@ -969,6 +1021,7 @@ function connectRealtimeOpe() {
       const rec = msg?.payload?.data?.record;
       if(!rec) return;
       const tbl = msg?.payload?.data?.table;
+      if(rec.exploitation_id && rec.exploitation_id !== EXPLOIT_ID) return;
 
       // ── Données capteurs → mise à jour UI immédiate ──
       if(tbl === 'conditions_externes') {
@@ -1023,7 +1076,7 @@ let CFG = {
 // ── VÉRIFICATION ESP32 ───────────────────────────────────────
 async function checkESP32() {
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/conditions_externes?order=ts.desc&limit=1&select=ts`, {headers: HDRS});
+    const r = await fetch(`${SB_URL}/rest/v1/conditions_externes?exploitation_id=eq.${EXPLOIT_ID}&order=ts.desc&limit=1&select=ts`, {headers: HDRS});
     const rows = await r.json();
     const statusEl = document.getElementById('esp32-status');
     const btnEsp   = document.getElementById('btn-src-esp');
@@ -1134,11 +1187,12 @@ function updateCfgUI() {
     btnPacHab.className = 'toggle-btn ' + (CFG.module_pac_habitation ? '' : 'off');
   }
 
-  // Sous-options clim et ECS : visibles seulement si PAC hab ON
+  // Sous-options clim et ECS : visibles seulement si brique Habitation + PAC hab ON
+  const habOn  = hasBrique('habitation') && CFG.module_pac_habitation;
   const rowClim = document.getElementById('cfg-row-clim');
   const rowEcs  = document.getElementById('cfg-row-ecs');
-  if(rowClim) rowClim.style.display = CFG.module_pac_habitation ? 'flex' : 'none';
-  if(rowEcs)  rowEcs.style.display  = CFG.module_pac_habitation ? 'flex' : 'none';
+  if(rowClim) rowClim.style.display = habOn ? 'flex' : 'none';
+  if(rowEcs)  rowEcs.style.display  = habOn ? 'flex' : 'none';
 
   // Toggles clim et ECS
   [['cfg-clim', CFG.module_clim_maison], ['cfg-ecs', CFG.module_ecs]].forEach(([id, val]) => {
@@ -1151,10 +1205,11 @@ function updateCfgUI() {
   // Nb PAC stockage
   const nbPac = document.getElementById('cfg-nb-pac');
   if(nbPac) nbPac.textContent = CFG.nb_pac_stockage;
+  renderPacRow();
 
   // Commandes habitation : masquer si PAC hab OFF
   const cardCmdHab = document.getElementById('card-commandes-hab');
-  if(cardCmdHab) cardCmdHab.style.display = CFG.module_pac_habitation ? '' : 'none';
+  if(cardCmdHab) cardCmdHab.style.display = habOn ? '' : 'none';
 }
 
 async function toggleCfg(cle) {
@@ -1194,7 +1249,7 @@ async function nouvelleSaison() {
 
   // Clôturer saison en cours
   try {
-    await fetch(`${SB_URL}/rest/v1/saisons?statut=eq.en_cours`, {
+    await fetch(`${SB_URL}/rest/v1/saisons?exploitation_id=eq.${EXPLOIT_ID}&statut=eq.en_cours`, {
       method: 'PATCH',
       headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
       body: JSON.stringify({statut: 'terminee', date_fin: new Date().toISOString().slice(0,10)})
@@ -1206,7 +1261,7 @@ async function nouvelleSaison() {
     await fetch(`${SB_URL}/rest/v1/saisons`, {
       method: 'POST',
       headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
-      body: JSON.stringify({id, nom, date_debut: dateInput, statut: 'en_cours', config: CFG})
+      body: JSON.stringify({id: id + '_' + EXPLOIT_ID.slice(0,8), nom, date_debut: dateInput, statut: 'en_cours', config: CFG, exploitation_id: EXPLOIT_ID})
     });
   } catch(e) {}
 
@@ -1221,12 +1276,12 @@ async function nouvelleSaison() {
 
   // Remettre à zéro les cumuls dans consignes
   try {
-    await fetch(`${SB_URL}/rest/v1/consignes?id=eq.stockage`, {
+    await fetch(`${SB_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`, {
       method: 'PATCH',
       headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
       body: JSON.stringify({cumul_pac_sto_h: 0, vitesse_sim: 1})
     });
-    await fetch(`${SB_URL}/rest/v1/consignes?id=eq.habitation`, {
+    await fetch(`${SB_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.habitation`, {
       method: 'PATCH',
       headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
       body: JSON.stringify({cumul_pac_hab_h: 0})
@@ -1240,26 +1295,186 @@ async function nouvelleSaison() {
   showToast('Nouvelle saison démarrée !');
 }
 
+// ── BRIQUES DYNAMIQUES ───────────────────────────────────────
+// Chaque carte porte data-brique="<type>" : masquée si la brique est absente ou inactive
+let BRIQUES = [];
+let USER_ROLE = null;
+
+function hasBrique(type) {
+  return BRIQUES.some(b => b.type === type && b.actif);
+}
+function nbPacSto() {
+  const b = BRIQUES.find(x => x.type === 'stockage_pdt');
+  return Math.max(1, Math.min(4, parseInt(CFG.nb_pac_stockage || b?.config?.nb_pac || 2)));
+}
+
+async function loadBriques() {
+  const {data, error} = await _supa_ope.from('briques')
+    .select('id, type, nom, actif, config, ordre')
+    .eq('exploitation_id', EXPLOIT_ID).order('ordre');
+  if(error) { console.warn('loadBriques:', error.message); return; }
+  BRIQUES = data || [];
+  applyBriques();
+}
+
+function applyBriques() {
+  document.querySelectorAll('[data-brique]').forEach(el =>
+    el.classList.toggle('brique-off', !hasBrique(el.dataset.brique)));
+  document.querySelectorAll('[data-brique-nom]').forEach(el => {
+    const b = BRIQUES.find(x => x.type === el.dataset.briqueNom);
+    el.textContent = b?.nom ? '· ' + b.nom : '';
+  });
+
+  // Briques sans capteurs raccordés (serre)
+  const known = ['stockage_pdt', 'habitation'];
+  document.getElementById('briques-extra').innerHTML = BRIQUES
+    .filter(b => b.actif && !known.includes(b.type))
+    .map(b => `
+    <div class="card c-extra">
+      <div class="ct">${gfBriqueLabel(b.type)} <span class="brique-sub">${b.nom ? '· ' + b.nom : ''}</span></div>
+      <div class="extra-msg">Brique déclarée — pas encore de capteurs raccordés.<br/>Les mesures apparaîtront ici dès la mise en service.</div>
+    </div>`).join('');
+
+  renderBriquesAdmin();
+  updateCfgUI();
+}
+
+function renderPacRow() {
+  const row = document.getElementById('s-pac-row');
+  if(!row) return;
+  const n = nbPacSto();
+  if(row.children.length !== n) {
+    row.innerHTML = Array.from({length: n}, (_, i) =>
+      `<div class="pac-unit off" id="s-p${i+1}"><div class="pac-dot"></div><div class="pac-lbl">PAC${i+1}</div><div class="pac-kw">0 kW</div></div>`
+    ).join('');
+  }
+  const lblSto = n === 1 ? 'PAC1' : n === 2 ? 'PAC1+2' : `PAC1–${n}`;
+  document.querySelectorAll('.lbl-pac-sto').forEach(el => el.textContent = lblSto);
+  document.querySelectorAll('.lbl-pac-hab').forEach(el => el.textContent = 'PAC' + (n + 1));
+}
+
+function renderBriquesAdmin() {
+  const el = document.getElementById('brq-list');
+  if(!el) return;
+  if(!BRIQUES.length) { el.innerHTML = '<div class="extra-msg">Aucune brique — à créer depuis le portail.</div>'; return; }
+  el.innerHTML = BRIQUES.map(b => `
+    <div class="brq-row">
+      <div>
+        <div class="brq-name">${gfBriqueLabel(b.type)}</div>
+        <div class="brq-nom">${b.nom || ''}</div>
+      </div>
+      <button class="toggle-btn ${b.actif ? 'on' : 'off'}" onclick="toggleBrique('${b.id}')">${b.actif ? 'ACTIVE' : 'INACTIVE'}</button>
+    </div>`).join('');
+}
+
+async function toggleBrique(id) {
+  const b = BRIQUES.find(x => x.id === id);
+  if(!b) return;
+  const {error} = await _supa_ope.from('briques').update({actif: !b.actif}).eq('id', id);
+  if(error) { showToast('✗ ' + error.message); return; }
+  b.actif = !b.actif;
+  applyBriques();
+  showToast(`${gfBriqueLabel(b.type)} ${b.actif ? 'activée' : 'désactivée'}`);
+}
+
+// ── ALERTES ─────────────────────────────────────────────────
+function esc(t) { return String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function fetchAlarmes() {
+  const {data, error} = await _supa_ope.from('alarmes_log')
+    .select('id, ts, source, niveau, message')
+    .eq('exploitation_id', EXPLOIT_ID).eq('acquittee', false)
+    .order('ts', {ascending: false}).limit(30);
+  const el = document.getElementById('alr-list');
+  if(error) { el.innerHTML = `<div class="alr-empty">${esc(error.message)}</div>`; return; }
+  document.getElementById('alr-count').textContent = data.length ? `· ${data.length} active${data.length > 1 ? 's' : ''}` : '';
+  el.innerHTML = data.length ? data.map(a => `
+    <div class="alr-item n${a.niveau || 1}">
+      <div class="alr-msg">${a.niveau >= 3 ? '🚨' : '⚠'} ${esc(a.message)}</div>
+      <div class="alr-ts">${new Date(a.ts).toLocaleString('fr-FR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</div>
+      <button class="cmd-btn" onclick="acquitter('${a.id}')" title="Acquitter">✓</button>
+    </div>`).join('')
+    : '<div class="alr-empty">✓ Aucune alerte active</div>';
+}
+
+async function acquitter(id) {
+  const q = _supa_ope.from('alarmes_log')
+    .update({acquittee: true, acquittee_ts: new Date().toISOString()})
+    .eq('exploitation_id', EXPLOIT_ID).eq('acquittee', false);
+  const {error} = await (id ? q.eq('id', id) : q);
+  if(error) { showToast('✗ ' + error.message); return; }
+  showToast(id ? 'Alerte acquittée' : 'Alertes acquittées');
+  fetchAlarmes();
+}
+function acquitterTout() { acquitter(null); }
+
+async function testEmail() {
+  showToast('Envoi en cours…');
+  const {data, error} = await _supa_ope.functions.invoke('geofresh-alertes',
+    {body: {action: 'test_email', exploitation_id: EXPLOIT_ID}});
+  if(error) { showToast('✗ ' + error.message); return; }
+  showToast(data?.sent ? `✉ Email envoyé à ${data.to.join(', ')}` : '✗ ' + (data?.error || 'échec'));
+}
+
+let EXPLOIT_CFG = {};
+async function loadAlertEmails() {
+  const {data} = await _supa_ope.from('exploitations').select('config').eq('id', EXPLOIT_ID).single();
+  EXPLOIT_CFG = data?.config || {};
+  document.getElementById('alr-emails').value = (EXPLOIT_CFG.alertes_emails || []).join(', ');
+  document.getElementById('alr-emails').disabled = USER_ROLE !== 'super_admin';
+}
+async function saveAlertEmails() {
+  const emails = document.getElementById('alr-emails').value
+    .split(/[,;\s]+/).map(e => e.trim()).filter(e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
+  const config = {...EXPLOIT_CFG, alertes_emails: emails};
+  const {error} = await _supa_ope.from('exploitations').update({config}).eq('id', EXPLOIT_ID);
+  if(error) { showToast('✗ ' + error.message); return; }
+  EXPLOIT_CFG = config;
+  document.getElementById('alr-emails').value = emails.join(', ');
+  showToast('Destinataires enregistrés');
+}
+
 // ── DÉMARRAGE ─────────────────────────────────────────────
-fetchAll();
-fetchConfig();
-fetchSaison();
-checkESP32();
-// Charger nom exploitation
-(async()=>{
-  try{
-    const r = await fetch(`${SB_URL}/rest/v1/exploitations?id=eq.${EXPLOIT_ID}&select=nom,adresse`,{headers:HDRS});
+// Vue réservée au super admin et aux opérateurs ; un client est renvoyé vers sa vue.
+(async function initOperateur() {
+  const {session, role} = await gfGetRole(_supa_ope);
+  if(!session) { location.replace('portail.html'); return; }
+  if(!gfIsStaff(role)) { location.replace(`index.html?exploitation_id=${EXPLOIT_ID}`); return; }
+
+  USER_ROLE = role;
+  document.body.dataset.role = role;
+  refreshHDRS_OPE(session.access_token);
+  _supa_ope.auth.onAuthStateChange((_evt, s) => { if(s) refreshHDRS_OPE(s.access_token); });
+
+  document.getElementById('op-badge').textContent = '⚙ ' + GEOFRESH_CONFIG.roles[role];
+  ['lnk-client', 'lnk-client-foot'].forEach(id =>
+    document.getElementById(id).href = `index.html?exploitation_id=${EXPLOIT_ID}`);
+  document.getElementById('shell').style.visibility = 'visible';
+
+  await fetchConfig();
+  await loadBriques();
+  fetchAll();
+  fetchSaison();
+  checkESP32();
+  fetchAlarmes();
+  loadAlertEmails();
+
+  // Charger nom exploitation
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/exploitations?id=eq.${EXPLOIT_ID}&select=nom,adresse`, {headers: HDRS});
     const d = await r.json();
-    if(d?.[0]){
+    if(d?.[0]) {
       const el = document.getElementById('exploit-name-hdr');
       if(el) el.textContent = d[0].nom + (d[0].adresse ? ' — ' + d[0].adresse : '');
       document.title = 'GeoFresh — ' + d[0].nom;
     }
-  }catch(_){}
+  } catch(_) {}
+
+  // Polling de secours toutes les 30s (fallback si WS tombe)
+  setInterval(fetchAll, 30000);
+  setInterval(fetchAlarmes, 60000);
+  connectRealtimeOpe();
 })();
-// Polling de secours toutes les 30s (fallback si WS tombe)
-setInterval(fetchAll, 30000);
-connectRealtimeOpe();
 </script>
 </body>
 </html>
