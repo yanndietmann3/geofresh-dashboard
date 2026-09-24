@@ -89,6 +89,13 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 /* ── PANELS ── */
 .tc{display:none;}
 .module-disabled{opacity:0.35;pointer-events:none;filter:grayscale(0.6);}
+/* ── Rôles : le client modifie ses consignes, le pilotage reste au staff ── */
+body:not([data-role="super_admin"]):not([data-role="operator"]) .staff-only{display:none !important;}
+.brique-off{display:none !important;}
+.role-chip{display:flex;align-items:center;gap:8px;padding:5px 12px;border-radius:14px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.2);color:var(--muted);font-family:'DM Mono',monospace;}
+.role-chip b{color:var(--cream);font-weight:500;}
+.role-chip button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 0 0 4px;}
+.role-chip button:hover{color:#FF8A6A;}
 .tab-disabled{opacity:0.4;}
 .tc.active{display:block;}
 #ph{padding:20px 26px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:13px;}
@@ -398,9 +405,14 @@ canvas.hc{width:100%!important;height:180px!important;}
 
   <div class="hdr-r">
     <a href="portail.html" style="display:flex;align-items:center;gap:6px;padding:5px 13px;border-radius:14px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border:1px solid rgba(106,175,53,.4);background:rgba(106,175,53,.08);color:#6AAF35;text-decoration:none;font-family:'DM Mono',monospace;">← Portail</a>
-    <a href="operateur.html" style="display:flex;align-items:center;gap:6px;padding:5px 13px;border-radius:14px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border:1px solid rgba(155,127,212,.55);background:rgba(155,127,212,.14);color:#B8A0E8;text-decoration:none;font-family:'DM Mono',monospace;font-weight:600;" title="Panneau opérateur">⚙ Opérateur</a>
+    <a class="staff-only" id="lnk-operateur" href="operateur.html" style="display:flex;align-items:center;gap:6px;padding:5px 13px;border-radius:14px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border:1px solid rgba(155,127,212,.55);background:rgba(155,127,212,.14);color:#B8A0E8;text-decoration:none;font-family:'DM Mono',monospace;font-weight:600;" title="Panneau opérateur">⚙ Opérateur</a>
+    <div class="role-chip" id="logout-btn" style="display:none;">
+      <span id="exploit-name-idx"></span>
+      <span><b id="user-email">—</b> · <span id="role-lbl">Client</span></span>
+      <button onclick="doLogout()" title="Déconnexion">⏻</button>
+    </div>
     <div class="live"><div class="ldot"></div>Temps reel</div>
-    <button class="speed-btn normal" id="speed-btn" onclick="toggleSpeed()" title="Accélérer le rafraîchissement">
+    <button class="speed-btn normal staff-only" id="speed-btn" onclick="toggleSpeed()" title="Accélérer le rafraîchissement">
       ▶ Temps réel
     </button>
     <div class="sim-clock">
@@ -411,7 +423,7 @@ canvas.hc{width:100%!important;height:180px!important;}
       <div class="sim-speed-lbl" id="sim-speed-lbl">×1</div>
     </div>
     <div id="clk">--:--:--</div>
-    <button class="beta-btn beta-off" id="beta-btn" onclick="toggleBeta()" title="Basculer mode ESP32 reel / Simulateur">
+    <button class="beta-btn beta-off staff-only" id="beta-btn" onclick="toggleBeta()" title="Basculer mode ESP32 reel / Simulateur">
       <div class="beta-dot"></div><span id="beta-label">NUMERIQUE</span>
     </button>
     <div class="esp32-status" id="esp32-status">Simulateur actif</div>
@@ -420,12 +432,12 @@ canvas.hc{width:100%!important;height:180px!important;}
 
 <!-- ══ TABS ═══════════════════════════════════════════════ -->
 <div class="tabbar">
-  <button class="tb ah" id="tbh">
-    🏠 Habitation — PAC Sol/Sol
+  <button class="tb ah" id="tbh" data-brique="habitation">
+    🏠 Habitation
     <span class="tbdg tok" id="badge-h">OK</span>
   </button>
-  <button class="tb" id="tbs">
-    🥔 Batiment Stockage — Pommes de Terre
+  <button class="tb" id="tbs" data-brique="stockage_pdt">
+    🥔 Stockage PDT
     <span class="tbdg tok" id="badge-s">OK</span>
   </button>
   <button class="tb" id="tbx">
@@ -441,10 +453,11 @@ canvas.hc{width:100%!important;height:180px!important;}
 ══════════════════════════════════════════════════════ -->
 <div class="tc active ch" id="ph">
   <!-- Bannière module désactivé -->
-  <div id="hab-disabled-banner" style="display:none;margin-bottom:16px;padding:12px 16px;background:rgba(66,97,74,.15);border:1px solid rgba(66,97,74,.4);border-radius:10px;color:var(--muted);font-size:11px;text-align:center;">⊘ Module Habitation désactivé — <a href="operateur.html" style="color:var(--sa);text-decoration:none;">Activer dans le panneau Opérateur →</a></div>
+  <div id="hab-disabled-banner" style="display:none;margin-bottom:16px;padding:12px 16px;background:rgba(66,97,74,.15);border:1px solid rgba(66,97,74,.4);border-radius:10px;color:var(--muted);font-size:11px;text-align:center;">⊘ Module Habitation désactivé<span class="staff-only"> — </span><a class="staff-only" href="operateur.html" style="color:var(--sa);text-decoration:none;">Activer dans le panneau Opérateur →</a></div>
 
   <!-- Zone 1 -->
-  <div class="card" id="card-z1z2"jour</div>
+  <div class="card" id="card-hab-clim">
+    <div class="ct">Zone 1 — Séjour</div>
     <div class="mbig" id="h-z1">--<span class="u">°C</span></div>
     <button class="csgbtn" onclick="openModal('hab','z1')" id="h-csgz1-btn">Csg : -- °C <span class="ei">✎</span></button>
     <div style="margin-top:10px;">
@@ -516,7 +529,7 @@ canvas.hc{width:100%!important;height:180px!important;}
       <div><div class="pact" id="h-pact">PAC OFF</div><div class="pacd" id="h-pacd">En attente</div></div>
     </div>
     <!-- Bouton STANDBY habitation -->
-    <div class="mode-btns" style="margin-top:8px;">
+    <div class="mode-btns staff-only" style="margin-top:8px;">
       <div class="mode-btn" id="h-btn-standby" onclick="toggleStandbyHab()" title="PAC OFF — zones dérivent vers T_ext">
         ⏸ STANDBY
       </div>
@@ -525,7 +538,7 @@ canvas.hc{width:100%!important;height:180px!important;}
       </div>
     </div>
     <!-- Switch AUTO / MANU -->
-    <div class="sw-wrap" style="margin-top:10px;">
+    <div class="sw-wrap staff-only" style="margin-top:10px;">
       <span class="sw-lbl">Mode</span>
       <label class="sw" title="Basculer Auto/Manu">
         <input type="checkbox" id="h-sw-manu" onchange="toggleManu('hab')"/>
@@ -635,7 +648,7 @@ canvas.hc{width:100%!important;height:180px!important;}
     <div class="ct">Mode & Actionneurs</div>
     <div class="mbdg mbs-AUTO" id="s-mode">INIT</div>
     <!-- Boutons STANDBY et DESCENTE -->
-    <div class="mode-btns">
+    <div class="mode-btns staff-only">
       <div class="mode-btn" id="btn-standby" onclick="toggleModeStockage('standby')" title="PAC OFF — ventilation cyclique seule">
         ⏸ STANDBY
       </div>
@@ -657,7 +670,7 @@ canvas.hc{width:100%!important;height:180px!important;}
     </div>
 
     <!-- Switch AUTO / MANU -->
-    <div class="sw-wrap">
+    <div class="sw-wrap staff-only">
       <span class="sw-lbl">Mode</span>
       <label class="sw" title="Basculer Auto/Manu">
         <input type="checkbox" id="s-sw-manu" onchange="toggleManu('sto')"/>
@@ -780,8 +793,8 @@ canvas.hc{width:100%!important;height:180px!important;}
 <div class="tc" id="phistory">
   <div class="hist-toolbar">
     <select class="hist-select" id="hist-bat" onchange="loadHistory()">
-      <option value="hab">🏠 Habitation — PAC Sol/Sol</option>
-      <option value="sto">🥔 Batiment de Stockage</option>
+      <option value="hab">🏠 Habitation</option>
+      <option value="sto">🥔 Stockage PDT</option>
     </select>
     <span class="hist-range-lbl">Periode :</span>
     <select class="hist-select" id="hist-range" onchange="loadHistory()">
@@ -1053,6 +1066,7 @@ const SPEEDS = [
 let _speedIdx = 0;
 
 function toggleSpeed() {
+  if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
   _speedIdx = (_speedIdx + 1) % SPEEDS.length;
   const s = SPEEDS[_speedIdx];
   const btn = document.getElementById('speed-btn');
@@ -1062,7 +1076,7 @@ function toggleSpeed() {
   _pollInterval = setInterval(fetchLatest, s.ms);
   // Envoyer la vitesse au simulateur via Supabase
   if(SUPABASE_KEY!=='VOTRE_ANON_KEY') {
-    fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.stockage`, {
+    fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`, {
       method:'PATCH',
       headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'},
       body: JSON.stringify({vitesse_sim: s.vitesse, updated_at: new Date().toISOString()})
@@ -1126,6 +1140,7 @@ switchTab('h');
 //  SWITCH AUTO / MANU
 // ════════════════════════════════════════
 function toggleManu(src) {
+  if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
   const on = document.getElementById(src==='hab'?'h-sw-manu':'s-sw-manu').checked;
   MANU[src==='hab'?'hab':'sto'].on = on;
   const lbl = document.getElementById(src==='hab'?'h-sw-lbl':'s-sw-lbl');
@@ -1136,6 +1151,7 @@ function toggleManu(src) {
 }
 
 function toggleCmd(src, cmd) {
+  if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
   const side = src==='hab' ? 'hab' : 'sto';
   const m = MANU[side];
   m[cmd] = !m[cmd];
@@ -1190,7 +1206,7 @@ async function pushManuCmd(side) {
     ? { mode_manu_hab:true,  manu_pac_hab:m.pac,   manu_vc1:m.vc1, manu_vc2:m.vc2 }
     : { mode_manu_sto:true,  manu_pac_sto:m.pac,   manu_volet:m.volet, manu_ventil:m.vent };
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.${side==='hab'?'habitation':'stockage'}`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.${side==='hab'?'habitation':'stockage'}`, {
       method:'PATCH',
       headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'},
       body: JSON.stringify({...patch, updated_at: new Date().toISOString()})
@@ -1251,7 +1267,7 @@ async function pushConsignes() {
   if(SUPABASE_KEY==='VOTRE_ANON_KEY') return;
   try {
     // Stockage
-    await fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.stockage`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`, {
       method: 'PATCH',
       headers: { ...HDRS, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
       body: JSON.stringify({
@@ -1263,7 +1279,7 @@ async function pushConsignes() {
       })
     });
     // Habitation
-    await fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.habitation`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.habitation`, {
       method: 'PATCH',
       headers: { ...HDRS, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
       body: JSON.stringify({
@@ -1399,6 +1415,7 @@ async function loadConsignes() {
 let _betaActif = false;
 
 async function toggleBeta() {
+  if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
   _betaActif = !_betaActif;
   const btn = document.getElementById('beta-btn');
   const status = document.getElementById('esp32-status');
@@ -1845,6 +1862,7 @@ let _modeStockage = 'auto';  // 'auto' | 'standby' | 'descente'
 
 // ── STANDBY HABITATION ───────────────────────────────────────
 async function toggleStandbyHab(mode) {
+  if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
   const isStandby = mode !== 'auto' && document.getElementById('h-btn-standby').className.includes('active');
   const newStandby = mode === 'auto' ? false : !isStandby;
   document.getElementById('h-btn-standby').className = 'mode-btn' + (newStandby?' active-standby':'');
@@ -1855,7 +1873,7 @@ async function toggleStandbyHab(mode) {
   else if(!newStandby && swManu && swManu.checked){ swManu.checked=false; toggleManu('hab'); }
   if(SUPABASE_KEY!=='VOTRE_ANON_KEY') {
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.habitation`, {
+      await fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.habitation`, {
         method:'PATCH',
         headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'},
         body: JSON.stringify({mode_standby_hab: newStandby, updated_at: new Date().toISOString()})
@@ -1865,6 +1883,7 @@ async function toggleStandbyHab(mode) {
 }
 
 async function toggleModeStockage(mode) {
+  if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
   _modeStockage = mode;
   // Boutons
   document.getElementById('btn-standby').className = 'mode-btn' + (mode==='standby'?' active-standby':'');
@@ -1896,7 +1915,7 @@ async function toggleModeStockage(mode) {
   document.getElementById('btn-pr').className = 'mode-btn' + (mode==='pr'?' active-pr':'');
   if(SUPABASE_KEY!=='VOTRE_ANON_KEY') {
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/consignes?id=eq.stockage`, {
+      await fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`, {
         method:'PATCH',
         headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'},
         body: JSON.stringify({
@@ -1958,9 +1977,9 @@ async function loadEnergie() {
   try {
     // Cumuls PAC depuis consignes
     const [rCsg, rSto, rHab] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/consignes?select=id,cumul_pac_sto_h,cumul_pac_hab_h`,{headers:HDRS}),
-      fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?select=cop_boucle,pac_kw,pac_on&order=ts.desc&limit=1`,{headers:HDRS}),
-      fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?select=cop_boucle,pac_kw,pac_on&order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&select=id,cumul_pac_sto_h,cumul_pac_hab_h`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?exploitation_id=eq.${EXPLOIT_ID}&select=cop_boucle,pac_kw,pac_on&order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?exploitation_id=eq.${EXPLOIT_ID}&select=cop_boucle,pac_kw,pac_on&order=ts.desc&limit=1`,{headers:HDRS}),
     ]);
     const [dCsg, dSto, dHab] = await Promise.all([rCsg.json(), rSto.json(), rHab.json()]);
 
@@ -2063,7 +2082,7 @@ async function loadHistory(){
   if(!data.length) data = histData[bat];
 
   document.getElementById('hist-chart-title').textContent =
-    `Evolution temperature — ${bat==='hab'?'Habitation':'Stockage'} — ${range}`;
+    `Evolution temperature — ${gfBriqueLabel(bat==='hab'?'habitation':'stockage_pdt', false)} — ${range}`;
 
   if(!data.length){
     document.getElementById('hist-empty').style.display='block';
@@ -2164,6 +2183,7 @@ const SUPABASE_KEY = SUPABASE_ANON_KEY;
 const _paramsIdx = new URLSearchParams(window.location.search);
 const EXPLOIT_ID = _paramsIdx.get('exploitation_id') || '00000000-0000-0000-0000-000000000001';
 let AUTH_TOKEN = null;
+let USER_ROLE = null;   // 'super_admin' | 'operator' | 'client'
 let HDRS = {apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+SUPABASE_ANON_KEY, 'Content-Type':'application/json', Prefer:'return=minimal'};
 function refreshHDRS(){
   const t = AUTH_TOKEN || SUPABASE_ANON_KEY;
@@ -2449,7 +2469,6 @@ function demoMode(){
 }
 
 if(SUPABASE_KEY==='VOTRE_ANON_KEY'){ demoMode(); }
-checkSession();  // appelé après init complète
 </script>
 
 <!-- ── LOGIN ──────────────────────────────────────────────── -->
@@ -2495,7 +2514,8 @@ async function doLogin() {
   refreshHDRS();
   document.getElementById('login-screen').style.display='none';
   const lb = document.getElementById('logout-btn');
-  if(lb){ lb.style.display='flex'; document.getElementById('user-label').textContent=data.user.email.split('@')[0]; }
+  if(lb){ lb.style.display='flex'; document.getElementById('user-email').textContent=data.user.email.split('@')[0]; }
+  await initRole();
   loadConsignes(); fetchModuleConfig(); fetchInitial(); connectRealtime();
     // Nom exploitation depuis URL
     fetch(`${SUPABASE_URL}/rest/v1/exploitations?id=eq.${EXPLOIT_ID}&select=nom`,{headers:HDRS})
@@ -2504,7 +2524,8 @@ async function doLogin() {
 
 async function doLogout(){
   await _supa.auth.signOut();
-  AUTH_TOKEN=null; refreshHDRS();
+  AUTH_TOKEN=null; USER_ROLE=null; refreshHDRS();
+  delete document.body.dataset.role;
   document.getElementById('login-screen').style.display='flex';
   const lb=document.getElementById('logout-btn'); if(lb) lb.style.display='none';
 }
@@ -2515,7 +2536,8 @@ async function checkSession(){
     AUTH_TOKEN=data.session.access_token; refreshHDRS();
     document.getElementById('login-screen').style.display='none';
     const lb=document.getElementById('logout-btn');
-    if(lb){ lb.style.display='flex'; document.getElementById('user-label').textContent=data.session.user.email.split('@')[0]; }
+    if(lb){ lb.style.display='flex'; document.getElementById('user-email').textContent=data.session.user.email.split('@')[0]; }
+    await initRole();
     loadConsignes(); fetchModuleConfig(); fetchInitial(); connectRealtime();
     // Nom exploitation depuis URL
     fetch(`${SUPABASE_URL}/rest/v1/exploitations?id=eq.${EXPLOIT_ID}&select=nom`,{headers:HDRS})
@@ -2523,6 +2545,38 @@ async function checkSession(){
   }
   // Sinon login-screen reste visible
 }
+
+// ── RÔLE + BRIQUES ────────────────────────────────────────────
+// Client : consignes modifiables, pilotage (STANDBY, MANU, vitesse, ESP32) masqué.
+// Super admin / opérateur : tout visible.
+async function initRole(){
+  const {role} = await gfGetRole(_supa);
+  USER_ROLE = role;
+  document.body.dataset.role = role || '';
+  document.getElementById('role-lbl').textContent =
+    GEOFRESH_CONFIG.roles[role] || 'Client';
+  const lo = document.getElementById('lnk-operateur');
+  if(lo) lo.href = `operateur.html?exploitation_id=${EXPLOIT_ID}`;
+
+  // Onglets selon les briques actives (mêmes libellés que le portail)
+  const {data: briques} = await _supa.from('briques')
+    .select('type, actif').eq('exploitation_id', EXPLOIT_ID);
+  if(!briques || !briques.length) return;
+  const actives = new Set(briques.filter(b => b.actif).map(b => b.type));
+  document.querySelectorAll('[data-brique]').forEach(el =>
+    el.classList.toggle('brique-off', !actives.has(el.dataset.brique)));
+  const histSel = document.getElementById('hist-bat');
+  [['hab','habitation'], ['sto','stockage_pdt']].forEach(([v, type]) => {
+    const opt = histSel?.querySelector(`option[value="${v}"]`);
+    if(opt) opt.hidden = !actives.has(type);
+  });
+  if(!actives.has('habitation')) {
+    if(histSel) histSel.value = 'sto';
+    switchTab(actives.has('stockage_pdt') ? 's' : 'e');
+  }
+}
+
+checkSession();
 </script>
 </body>
 </html>
