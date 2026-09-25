@@ -1,0 +1,14 @@
+/* ================================================================
+   GeoFresh — Styles communs aux 3 pages
+   Les couleurs (--gf-*) viennent de config.js (colors).
+   ================================================================ */
+
+/* Logo d'origine (fond transparent) */
+.logo-img{display:block;width:auto;}
+
+/* Briques : élément d'un bâtiment absent ou inactif */
+.brique-off{display:none !important;}
+
+/* Rôles : le client modifie ses consignes, le pilotage reste au staff */
+body:not([data-role="super_admin"]):not([data-role="operator"]) .staff-only{display:none !important;}
+body:not([data-role="super_admin"]) .sa-only{display:none !important;}
