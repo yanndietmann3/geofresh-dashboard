@@ -1384,7 +1384,32 @@ function renderBriquesAdmin() {
         <div class="brq-nom">${b.nom || ''}</div>
       </div>
       <button class="toggle-btn ${b.actif ? 'on' : 'off'}" onclick="toggleBrique('${b.id}')">${b.actif ? 'ACTIVE' : 'INACTIVE'}</button>
-    </div>`).join('');
+    </div>`).join('') + ajoutBriqueHtml();
+}
+
+// Ajouter un bâtiment absent (ex. une maison ajoutée plus tard → PAC3 activée automatiquement)
+function ajoutBriqueHtml() {
+  const manquants = Object.keys(GEOFRESH_CONFIG.briques).filter(t => !BRIQUES.some(b => b.type === t));
+  if(!manquants.length) return '';
+  return `<div class="brq-row">
+      <select id="brq-new" class="alr-input" style="width:auto;flex:1;">
+        ${manquants.map(t => `<option value="${t}">${gfBriqueLabel(t)}</option>`).join('')}
+      </select>
+      <button class="toggle-btn off" onclick="ajouterBrique()">+ AJOUTER</button>
+    </div>`;
+}
+
+async function ajouterBrique() {
+  const type = document.getElementById('brq-new').value;
+  const noms = {stockage_pdt: 'Stockage PDT', habitation: 'Maison agricole', serre: 'Serre'};
+  const {error} = await _supa_ope.from('briques').insert({
+    exploitation_id: EXPLOIT_ID, type, nom: noms[type] || type, actif: true,
+    ordre: BRIQUES.length + 1,
+  });
+  if(error) { showToast('✗ ' + error.message); return; }
+  showToast(`${gfBriqueLabel(type)} ajouté`);
+  await fetchConfig();
+  await loadBriques();
 }
 
 async function toggleBrique(id) {
@@ -1393,6 +1418,7 @@ async function toggleBrique(id) {
   const {error} = await _supa_ope.from('briques').update({actif: !b.actif}).eq('id', id);
   if(error) { showToast('✗ ' + error.message); return; }
   b.actif = !b.actif;
+  await fetchConfig();   // la brique Habitation active/coupe la PAC3 (module_pac_habitation)
   applyBriques();
   showToast(`${gfBriqueLabel(b.type)} ${b.actif ? 'activée' : 'désactivée'}`);
 }
