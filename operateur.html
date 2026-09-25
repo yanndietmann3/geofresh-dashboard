@@ -4,218 +4,10 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>GeoFresh — Panneau Opérateur</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥔</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
-<style>
-:root {
-  --bg:#F5F0E8; --cream:#2D2017; --muted:#7A6352;
-  --panel:#FFFFFF; --bdr:#E2D9CC;
-  --ha:#2F8A74; --hd:#2A6E60; --hbr:rgba(47,138,116,0.26);
-  --sa:#5A9E2F; --sd:#4E8F2A; --sbr:rgba(90,158,47,0.26);
-  --samb:#B07A1E; --serr:#C0432A; --sice:#5E8FB0;
-  --geo:#5B8A9A; --geobr:rgba(91,138,154,0.26);
-  --enrg:#A0724A; --enrgbr:rgba(160,114,74,0.26);
-}
-*{margin:0;padding:0;box-sizing:border-box;}
-/* DA GeoFresh — fond clair (mêmes couleurs que le portail / config.js) */
-.card{box-shadow:0 1px 8px rgba(160,114,74,.08);}
-header{box-shadow:0 1px 8px rgba(160,114,74,.08);}
-body::before{display:none;}
-.logo-svg{width:38px;height:38px;flex-shrink:0;}
-body{background:var(--bg);color:var(--cream);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden;}
-body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-  background:radial-gradient(ellipse 55% 40% at 5% 5%,rgba(47,138,116,0.084) 0%,transparent 55%),
-             radial-gradient(ellipse 45% 50% at 95% 95%,rgba(91,138,154,0.08) 0%,transparent 55%);}
-.shell{position:relative;z-index:1;min-height:100vh;}
-
-/* ── HEADER ── */
-header{display:flex;align-items:center;justify-content:space-between;padding:12px 26px;
-  border-bottom:1px solid var(--bdr);background:rgba(255,255,255,1);
-  backdrop-filter:blur(18px);position:sticky;top:0;z-index:300;}
-.brand{display:flex;align-items:center;gap:12px;}
-.brand-txt .name{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;letter-spacing:-.5px;color:#6AAF35;}
-.brand-txt .name em{color:#A0724A;font-style:normal;}
-.brand-txt .sub{font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-top:1px;}
-.op-badge{padding:4px 14px;border-radius:14px;font-size:9px;letter-spacing:2px;text-transform:uppercase;
-  font-family:'Syne',sans-serif;font-weight:700;
-  background:rgba(91,138,154,0.15);border:1px solid rgba(91,138,154,0.5);color:var(--geo);}
-.hdr-r{display:flex;align-items:center;gap:12px;}
-.back-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:14px;
-  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
-  border:1px solid rgba(47,138,116,0.3);background:rgba(47,138,116,0.06);color:var(--ha);
-  text-decoration:none;font-family:'DM Mono',monospace;transition:all .2s;}
-.back-btn:hover{background:rgba(47,138,116,0.12);}
-.live{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:16px;
-  font-size:9px;letter-spacing:2px;text-transform:uppercase;
-  background:rgba(90,158,47,0.09);border:1px solid rgba(90,158,47,0.3);color:var(--sa);}
-.ldot{width:6px;height:6px;border-radius:50%;background:var(--sa);animation:pu 1.8s ease-in-out infinite;}
-#clk{font-size:11px;color:var(--muted);letter-spacing:1px;}
-@keyframes pu{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.65)}}
-
-/* ── GRID PRINCIPAL ── */
-.main{padding:20px 26px;display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  grid-template-rows:auto auto auto;
-  gap:14px;}
-
-/* ── CARDS ── */
-.card{border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;
-  transition:border-color .3s;background:var(--panel);}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
-
-.c-sto{border:1px solid var(--sbr);}
-.c-sto::before{background:linear-gradient(90deg,var(--sd),var(--sa),transparent);}
-.c-hab{border:1px solid var(--hbr);}
-.c-hab::before{background:linear-gradient(90deg,var(--hd),var(--ha),transparent);}
-.c-geo{border:1px solid var(--geobr);}
-.c-geo::before{background:linear-gradient(90deg,#3F6B7A,var(--geo),transparent);}
-.c-enrg{border:1px solid var(--enrgbr);}
-.c-enrg::before{background:linear-gradient(90deg,#8A5A30,var(--enrg),transparent);}
-.c-cmd{border:1px solid rgba(176,122,30,0.26);}
-.c-cmd::before{background:linear-gradient(90deg,#8A6010,var(--samb),transparent);}
-.c-full{grid-column:1/-1;}
-.c-half{grid-column:span 2;}
-
-.ct{font-family:'Syne',sans-serif;font-size:9px;font-weight:600;letter-spacing:3px;
-  text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
-.ct::before{content:'';display:inline-block;width:4px;height:4px;border-radius:50%;}
-.c-sto .ct::before{background:var(--sa);}
-.c-hab .ct::before{background:var(--ha);}
-.c-geo .ct::before{background:var(--geo);}
-.c-enrg .ct::before{background:var(--enrg);}
-.c-cmd .ct::before{background:var(--samb);}
-
-/* ── MÉTRIQUES ── */
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
-.row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;}
-.metric{display:flex;flex-direction:column;gap:3px;}
-.mlbl{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
-.mval{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-1px;}
-.mval .u{font-size:10px;font-weight:400;color:var(--muted);}
-.mval.ok{color:var(--sa);}
-.mval.warn{color:var(--samb);}
-.mval.err{color:#C0432A;}
-.mval.info{color:var(--ha);}
-.mval.geo{color:var(--geo);}
-.mval.enrg{color:var(--enrg);}
-.msub{font-size:9px;color:var(--muted);}
-
-/* ── PAC STATUS ── */
-.pac-row{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;}
-.pac-unit{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;
-  border:1px solid var(--bdr);background:rgba(160,114,74,0.05);transition:all .3s;min-width:80px;}
-.pac-unit.on{border-color:rgba(90,158,47,0.55);background:rgba(90,158,47,0.1);}
-.pac-unit.off{opacity:.5;}
-.pac-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:all .3s;}
-.pac-unit.on .pac-dot{background:var(--sa);box-shadow:0 0 6px var(--sa);}
-.pac-lbl{font-size:9px;letter-spacing:1px;text-transform:uppercase;}
-.pac-unit.on .pac-lbl{color:var(--sa);}
-.pac-unit.off .pac-lbl{color:var(--muted);}
-.pac-kw{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;margin-left:auto;}
-.pac-unit.on .pac-kw{color:var(--sa);}
-
-/* ── GBAR ── */
-.gbar{height:5px;border-radius:3px;background:rgba(45,32,23,0.07);overflow:hidden;margin-top:4px;}
-.gfill{height:100%;border-radius:3px;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
-.gfill.ok{background:linear-gradient(90deg,var(--sd),var(--sa));}
-.gfill.warn{background:linear-gradient(90deg,#8A5A20,var(--samb));}
-.gfill.err{background:linear-gradient(90deg,#A03020,#C0432A);}
-.gfill.geo{background:linear-gradient(90deg,#3F6B7A,var(--geo));}
-.gfill.enrg{background:linear-gradient(90deg,#8A5A30,var(--enrg));}
-
-/* ── VOYANT SOURCE ── */
-.voyant{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;
-  border:1px solid;transition:all .5s;margin-top:8px;}
-.voyant.bat{border-color:rgba(160,114,74,0.5);background:rgba(160,114,74,0.08);}
-.voyant.sol{border-color:rgba(58,127,160,0.5);background:rgba(58,127,160,0.08);}
-.voyant.eq{border-color:rgba(90,158,47,0.4);background:rgba(90,158,47,0.06);}
-.voyant-ico{font-size:20px;}
-.voyant-txt .vt{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;}
-.voyant.bat .voyant-txt .vt{color:var(--enrg);}
-.voyant.sol .voyant-txt .vt{color:#3A7FA0;}
-.voyant.eq .voyant-txt .vt{color:var(--sa);}
-.voyant-txt .vs{font-size:9px;color:var(--muted);letter-spacing:.5px;}
-
-/* ── BILAN FLUX ── */
-.flux-row{display:flex;align-items:center;gap:8px;margin-top:8px;}
-.flux-box{flex:1;text-align:center;padding:8px;border-radius:8px;background:rgba(160,114,74,0.05);border:1px solid var(--bdr);}
-.flux-lbl{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
-.flux-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;}
-.flux-val.inj{color:var(--enrg);}
-.flux-val.pui{color:var(--ha);}
-.flux-arrow{font-size:20px;color:var(--muted);}
-
-/* ── HISTORIQUE SPARKLINE ── */
-.spark-wrap{display:flex;align-items:flex-end;gap:2px;height:40px;margin-top:8px;}
-.spark-bar{flex:1;border-radius:2px 2px 0 0;min-width:3px;transition:height .5s;}
-.spark-lbl{font-size:7px;color:var(--muted);display:flex;justify-content:space-between;margin-top:3px;}
-
-/* ── COMMANDES ── */
-.cmd-section{margin-top:10px;}
-.cmd-title{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
-.cmd-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.cmd-item{display:flex;flex-direction:column;gap:4px;}
-.cmd-lbl{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
-.cmd-ctrl{display:flex;align-items:center;gap:6px;}
-.cmd-val{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--cream);min-width:50px;}
-.cmd-btn{padding:3px 9px;border-radius:6px;border:1px solid var(--bdr);background:rgba(160,114,74,0.05);
-  font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;color:var(--muted);transition:all .2s;}
-.cmd-btn:hover{background:rgba(45,32,23,0.05);color:var(--cream);}
-.cmd-apply{width:100%;margin-top:10px;padding:9px;border-radius:9px;border:none;cursor:pointer;
-  font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
-  background:rgba(176,122,30,0.18);border:1px solid rgba(176,122,30,0.5);color:var(--samb);
-  transition:all .2s;}
-.cmd-apply:hover{background:rgba(176,122,30,0.28);}
-.cmd-apply:active{transform:scale(.97);}
-.toggle-btn{padding:5px 14px;border-radius:8px;border:1px solid;cursor:pointer;
-  font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;transition:all .2s;}
-.toggle-btn.off{background:rgba(160,114,74,0.05);border-color:var(--bdr);color:var(--muted);}
-.toggle-btn.on{background:rgba(176,122,30,0.15);border-color:rgba(176,122,30,0.6);color:var(--samb);}
-
-/* ── ALARME ── */
-.alarm-row{padding:8px 12px;border-radius:8px;border:1px solid;font-size:10px;margin-top:8px;}
-.alarm-row.ok{border-color:rgba(90,158,47,0.3);background:rgba(90,158,47,0.05);color:var(--sa);}
-.alarm-row.warn{border-color:rgba(176,122,30,0.4);background:rgba(176,122,30,0.08);color:var(--samb);}
-.alarm-row.crit{border-color:rgba(192,67,42,0.5);background:rgba(192,67,42,0.1);color:#C0432A;animation:pu 1s infinite;}
-
-/* ── TOAST ── */
-#toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:10px;
-  font-size:11px;letter-spacing:.5px;z-index:999;transition:all .3s;transform:translateY(60px);opacity:0;
-  background:rgba(90,158,47,0.2);border:1px solid rgba(90,158,47,0.5);color:var(--sa);}
-#toast.show{transform:translateY(0);opacity:1;}
-
-/* ── BRIQUES DYNAMIQUES ── */
-.brique-sub{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:none;color:var(--muted);font-weight:400;}
-.brique-off{display:none !important;}
-.c-extra{border:1px dashed rgba(45,32,23,0.18);}
-.c-extra .ct::before{background:var(--muted);}
-.extra-msg{font-size:10px;color:var(--muted);line-height:1.6;}
-.c-adm{border:1px solid rgba(91,138,154,0.3);background:rgba(91,138,154,0.04);}
-.c-adm .ct::before{background:var(--geo);}
-.brq-list{display:flex;flex-direction:column;gap:8px;}
-.brq-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:rgba(160,114,74,0.05);border-radius:8px;border:1px solid var(--bdr);}
-.brq-name{font-size:11px;color:var(--cream);}
-.brq-nom{font-size:9px;color:var(--muted);}
-body:not([data-role="super_admin"]) .sa-only{display:none !important;}
-
-/* ── ALERTES ── */
-.c-alr{border:1px solid rgba(192,67,42,0.3);}
-.c-alr::before{background:linear-gradient(90deg,#A03020,var(--serr),transparent);}
-.c-alr .ct::before{background:var(--serr);}
-.alr-list{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;}
-.alr-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;border:1px solid var(--bdr);background:rgba(160,114,74,0.05);font-size:10px;}
-.alr-item.n3{border-color:rgba(192,67,42,0.5);color:#C0432A;}
-.alr-item.n2{border-color:rgba(176,122,30,0.4);color:var(--samb);}
-.alr-msg{flex:1;}
-.alr-ts{font-size:8px;color:var(--muted);white-space:nowrap;}
-.alr-empty{font-size:10px;color:var(--sa);padding:8px 10px;border:1px solid rgba(90,158,47,0.3);border-radius:8px;background:rgba(90,158,47,0.05);}
-.alr-input{width:100%;background:rgba(160,114,74,0.075);border:1px solid var(--bdr);border-radius:6px;color:var(--cream);font-family:'DM Mono',monospace;font-size:11px;padding:6px 8px;}
-.alr-hint{font-size:8px;color:var(--muted);margin-top:4px;line-height:1.5;}
-
-/* ── FOOTER ── */
-footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var(--muted);
-  border-top:1px solid var(--bdr);margin-top:6px;}
-</style>
+<link rel="stylesheet" href="css/geofresh.css"/>
+<link rel="stylesheet" href="css/vue-operateur.css"/>
 </head>
 <body>
 <div class="shell" id="shell" style="visibility:hidden;">
@@ -223,14 +15,8 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
 <!-- HEADER -->
 <header>
   <div class="brand">
-    <svg class="logo-svg" viewBox="0 0 40 40" fill="none" aria-label="GeoFresh">
-      <path d="M9 17V10a3 3 0 0 1 3-3h16a3 3 0 0 1 3 3v3" stroke="#6AAF35" stroke-width="3" stroke-linecap="round"/>
-      <path d="M26 12.5h10l-5 6.5z" fill="#6AAF35"/>
-      <path d="M31 23v7a3 3 0 0 1-3 3H12a3 3 0 0 1-3-3v-3" stroke="#A0724A" stroke-width="3" stroke-linecap="round"/>
-      <path d="M4 27.5h10l-5-6.5z" fill="#A0724A"/>
-    </svg>
+    <img class="logo-img" src="img/logo-geofresh.png" alt="GeoFresh" style="height:40px;width:auto;display:block;"/>
     <div class="brand-txt">
-      <div class="name">Geo<em>Fresh</em></div>
       <div class="sub">Panneau Opérateur</div>
       <div id="exploit-name-hdr" style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:2px;"></div>
     </div>
@@ -286,45 +72,8 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
     <div id="s-alarm" class="alarm-row ok" style="margin-top:10px;">✓ Aucune alarme</div>
   </div>
 
-  <!-- ── HABITATION PAC3 ── -->
-  <div class="card c-hab" data-brique="habitation">
-    <div class="ct">🏠 Habitation <span class="brique-sub" data-brique-nom="habitation"></span></div>
-    <div class="row3">
-      <div class="metric">
-        <div class="mlbl">Zone 1</div>
-        <div class="mval info" id="h-z1">–<span class="u">°C</span></div>
-        <div class="msub" id="h-z1csg">csg –°C</div>
-      </div>
-      <div class="metric">
-        <div class="mlbl">Zone 2</div>
-        <div class="mval info" id="h-z2">–<span class="u">°C</span></div>
-        <div class="msub" id="h-z2csg">csg –°C</div>
-      </div>
-      <div class="metric">
-        <div class="mlbl">ECS</div>
-        <div class="mval" id="h-ecs">–<span class="u">°C</span></div>
-        <div class="msub" id="h-ecscsg">csg –°C</div>
-      </div>
-    </div>
-    <div class="pac-row" style="margin-top:12px;">
-      <div class="pac-unit off" id="h-p3"><div class="pac-dot"></div><div class="pac-lbl lbl-pac-hab">PAC3</div><div class="pac-kw" id="h-p3kw">0 kW</div></div>
-    </div>
-    <div class="row3" style="margin-top:10px;">
-      <div class="metric">
-        <div class="mlbl">Mode</div>
-        <div style="font-size:10px;font-weight:600;color:var(--ha);margin-top:2px;" id="h-mode">–</div>
-      </div>
-      <div class="metric">
-        <div class="mlbl">T_eau dep</div>
-        <div class="mval info" id="h-tdep" style="font-size:16px;">–<span class="u">°C</span></div>
-      </div>
-      <div class="metric">
-        <div class="mlbl">VC Z1 / Z2</div>
-        <div style="font-size:9px;margin-top:4px;" id="h-vc">–</div>
-      </div>
-    </div>
-    <div id="h-alarm" class="alarm-row ok" style="margin-top:10px;">✓ Aucune alarme</div>
-  </div>
+  <!-- Brique Habitation (js/briques/habitation.js) : état maison + PAC3 -->
+  <div id="slot-habitation-etat" style="display:contents;"></div>
 
   <!-- ── BOUCLE GÉOTHERMIQUE ── -->
   <div class="card c-geo">
@@ -465,11 +214,11 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
     </div>
   </div>
 
-  <!-- ── BRIQUES (super admin) ── -->
+  <!-- ── BÂTIMENTS À CHAUFFER (briques, super admin) ── -->
   <div class="card c-adm sa-only">
-    <div class="ct">🧩 Briques de l'exploitation</div>
+    <div class="ct">🏗️ Bâtiments à chauffer</div>
     <div class="brq-list" id="brq-list"><div class="extra-msg">Chargement…</div></div>
-    <div class="alr-hint" style="margin-top:8px;">Désactiver une brique la masque dans la vue opérateur, la vue client et le portail.</div>
+    <div class="alr-hint" style="margin-top:8px;">Désactiver un bâtiment le masque dans la vue opérateur, la vue client et le portail.</div>
   </div>
 
   <!-- ── CONFIGURATION INSTALLATION ── -->
@@ -572,11 +321,11 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
         <div class="cmd-item">
           <div class="cmd-lbl">Vitesse sim</div>
           <div class="cmd-ctrl" style="flex-wrap:wrap;gap:4px;">
-            <button class="cmd-btn" id="vbtn-1"   onclick="setVitesse(1)"   style="padding:3px 7px;">×1</button>
-            <button class="cmd-btn" id="vbtn-5"   onclick="setVitesse(5)"   style="padding:3px 7px;">×5</button>
-            <button class="cmd-btn" id="vbtn-50"  onclick="setVitesse(50)"  style="padding:3px 7px;">×50</button>
-            <button class="cmd-btn" id="vbtn-100" onclick="setVitesse(100)" style="padding:3px 7px;">×100</button>
-            <button class="cmd-btn" id="vbtn-500" onclick="setVitesse(500)" style="padding:3px 7px;">×500</button>
+            <button class="cmd-btn" id="vbtn-1"   onclick="chooseVitesse(1)"   style="padding:3px 7px;">×1</button>
+            <button class="cmd-btn" id="vbtn-5"   onclick="chooseVitesse(5)"   style="padding:3px 7px;">×5</button>
+            <button class="cmd-btn" id="vbtn-50"  onclick="chooseVitesse(50)"  style="padding:3px 7px;">×50</button>
+            <button class="cmd-btn" id="vbtn-100" onclick="chooseVitesse(100)" style="padding:3px 7px;">×100</button>
+            <button class="cmd-btn" id="vbtn-500" onclick="chooseVitesse(500)" style="padding:3px 7px;">×500</button>
           </div>
         </div>
         <div class="cmd-item">
@@ -594,45 +343,8 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
     </div>
   </div>
 
-  <!-- ── COMMANDES HABITATION ── -->
-  <div class="card c-cmd" id="card-commandes-hab">
-    <div class="ct">⚙ Commandes 🏠 Habitation</div>
-    <div class="cmd-section">
-      <div class="cmd-grid">
-        <div class="cmd-item">
-          <div class="cmd-lbl">T Zone 1 (°C)</div>
-          <div class="cmd-ctrl">
-            <button class="cmd-btn" onclick="adj('csg_z1',-0.5)">−</button>
-            <div class="cmd-val" id="v-csg-z1">20.0</div>
-            <button class="cmd-btn" onclick="adj('csg_z1',+0.5)">+</button>
-          </div>
-        </div>
-        <div class="cmd-item">
-          <div class="cmd-lbl">T Zone 2 (°C)</div>
-          <div class="cmd-ctrl">
-            <button class="cmd-btn" onclick="adj('csg_z2',-0.5)">−</button>
-            <div class="cmd-val" id="v-csg-z2">19.0</div>
-            <button class="cmd-btn" onclick="adj('csg_z2',+0.5)">+</button>
-          </div>
-        </div>
-        <div class="cmd-item">
-          <div class="cmd-lbl">T ECS (°C)</div>
-          <div class="cmd-ctrl">
-            <button class="cmd-btn" onclick="adj('csg_ecs',-1)">−</button>
-            <div class="cmd-val" id="v-csg-ecs">55</div>
-            <button class="cmd-btn" onclick="adj('csg_ecs',+1)">+</button>
-          </div>
-        </div>
-        <div class="cmd-item">
-          <div class="cmd-lbl">STANDBY hab</div>
-          <div class="cmd-ctrl" style="margin-top:4px;">
-            <button class="toggle-btn off" id="btn-stdby-hab" onclick="toggleMode('hab','standby')">INACTIF</button>
-          </div>
-        </div>
-      </div>
-      <button class="cmd-apply" onclick="applyCmd('hab')">Appliquer Habitation</button>
-    </div>
-  </div>
+  <!-- Brique Habitation : commandes maison -->
+  <div id="slot-habitation-cmd" style="display:contents;"></div>
 
   <!-- ── HISTORIQUE COP (full width) ── -->
   <div class="card c-geo c-full">
@@ -664,6 +376,7 @@ footer{text-align:center;padding:16px;font-size:9px;letter-spacing:2px;color:var
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
+<script src="js/commun.js"></script>
 <script>
 // ── CONFIG ────────────────────────────────────────────────
 // Config depuis config.js
@@ -768,27 +481,8 @@ function updateUI(sto, hab, ext, csgs) {
   const pPompe    = sto.pac_on ? 1.2 : 0;
   const pTot      = pElecSto + pElecHab + pVent + pPompe;
 
-  // ── HABITATION ────────────────────────────────────────
-  const tZ1 = parseFloat(hab.t_int_z1??0);
-  const tZ2 = parseFloat(hab.t_int_z2??0);
-  const tEcs = parseFloat(hab.t_ecs??0);
-  set('h-z1', fmt1(tZ1)+'<span class="u">°C</span>', tempClass(tZ1,CMD.csg_z1,1));
-  set('h-z1csg', `csg ${CMD.csg_z1}°C`);
-  set('h-z2', fmt1(tZ2)+'<span class="u">°C</span>', tempClass(tZ2,CMD.csg_z2,1));
-  set('h-z2csg', `csg ${CMD.csg_z2}°C`);
-  const ecsCl = tEcs < 45 ? 'warn' : tEcs > 65 ? 'err' : 'ok';
-  set('h-ecs', fmt1(tEcs)+'<span class="u">°C</span>', ecsCl);
-  set('h-ecscsg', `csg ${CMD.csg_ecs}°C`);
-  setPac('h-p3', !!hab.pac_on, 'PAC3', fmt1(pElecHab)+' kW élec');
-  document.getElementById('h-p3kw').textContent = fmt1(parseFloat(hab.pac_kw??0))+' kW th';
-  set('h-mode', hab.mode_actif??'–');
-  set('h-tdep', fmt1(tDep)+'<span class="u">°C</span>');
-  const vc1 = !!hab.ventilateurcoil_z1_on, vc2 = !!hab.ventilateurcoil_z2_on;
-  set('h-vc', `Z1:${vc1?'<span style="color:var(--ha)">ON</span>':'OFF'} Z2:${vc2?'<span style="color:var(--ha)">ON</span>':'OFF'}`);
-  const alHab = hab.alarme_active;
-  const alDivH = document.getElementById('h-alarm');
-  alDivH.className = 'alarm-row ' + (alHab ? (hab.niveau_alarme>=3?'crit':'warn') : 'ok');
-  alDivH.textContent = alHab ? '⚠ '+alHab : '✓ Aucune alarme';
+  // ── HABITATION (brique optionnelle) ───────────────────
+  GF.appeler('habitation', 'operateur', 'maj', hab, {pElecHab, tDep});
 
   // ── BOUCLE GÉOTHERMIQUE ───────────────────────────────
   const pInj = parseFloat(sto.p_inject_kw ?? (sto.pac_on ? pacKw*(1+1/Math.max(copF,0.1)) : 0));
@@ -851,27 +545,27 @@ function updateUI(sto, hab, ext, csgs) {
   drawSpark('spark-tboucle',HIST.tboucle,2,   20,  '#A0724A', 'sp-tboucle-cur',fmt1(tBoucle)+'°C');
 
   // ── CONSIGNES DEPUIS SUPABASE ─────────────────────────
+  // Ne pas écraser une modification en cours (non appliquée) par le rafraîchissement
   csgs.forEach(row => {
-    if(row.id === 'stockage') {
+    if(row.id === 'stockage' && row.vitesse_sim != null) setVitesse(parseInt(row.vitesse_sim));
+    if(row.id === 'stockage' && !DIRTY.sto) {
       CMD.csg_t   = parseFloat(row.csg_t   ?? CMD.csg_t);
       CMD.csg_hr  = parseFloat(row.csg_hr  ?? CMD.csg_hr);
-      CMD.vitesse_sim = parseInt(row.vitesse_sim ?? CMD.vitesse_sim);
       CMD.standby_sto  = !!row.mode_standby;
       CMD.descente     = !!row.mode_descente;
       document.getElementById('v-csg-t').textContent  = CMD.csg_t;
       document.getElementById('v-csg-hr').textContent = CMD.csg_hr;
-      setVitesse(CMD.vitesse_sim);
       updToggle('btn-stdby-sto', CMD.standby_sto, 'ACTIF', 'INACTIF');
       updToggle('btn-descente', CMD.descente, 'ACTIF — −1°C/jour', 'INACTIF — −1°C/jour');
     }
-    if(row.id === 'habitation') {
+    if(row.id === 'habitation' && !DIRTY.hab) {
       CMD.csg_z1  = parseFloat(row.csg_z1  ?? CMD.csg_z1);
       CMD.csg_z2  = parseFloat(row.csg_z2  ?? CMD.csg_z2);
       CMD.csg_ecs = parseFloat(row.csg_ecs ?? CMD.csg_ecs);
       CMD.standby_hab = !!row.mode_standby_hab;
-      document.getElementById('v-csg-z1').textContent  = CMD.csg_z1;
-      document.getElementById('v-csg-z2').textContent  = CMD.csg_z2;
-      document.getElementById('v-csg-ecs').textContent = CMD.csg_ecs;
+      txt('v-csg-z1', CMD.csg_z1);
+      txt('v-csg-z2', CMD.csg_z2);
+      txt('v-csg-ecs', CMD.csg_ecs);
       updToggle('btn-stdby-hab', CMD.standby_hab, 'ACTIF', 'INACTIF');
     }
   });
@@ -892,7 +586,24 @@ function setVitesse(v) {
   });
 }
 
+// Modifications locales pas encore appliquées
+const DIRTY = { sto:false, hab:false };
+
+// Vitesse de simulation : appliquée tout de suite (pas besoin d'« Appliquer »)
+async function chooseVitesse(v) {
+  setVitesse(v);
+  try {
+    await fetch(`${SB_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`, {
+      method:'PATCH', headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({vitesse_sim: v, updated_at: new Date().toISOString()})
+    });
+    showToast(`✓ Vitesse simulation ×${v}`);
+  } catch(e) { showToast('✗ Erreur : ' + e.message); }
+}
+
 function adj(key, delta) {
+  if(!document.getElementById(EL[key])) return;
+  DIRTY[['csg_z1','csg_z2','csg_ecs'].includes(key) ? 'hab' : 'sto'] = true;
   const [mn, mx] = RANGE[key];
   CMD[key] = Math.round((CMD[key] + delta) * 10) / 10;
   CMD[key] = Math.max(mn, Math.min(mx, CMD[key]));
@@ -900,6 +611,7 @@ function adj(key, delta) {
 }
 
 function toggleMode(side, mode) {
+  DIRTY[side] = true;
   if(side==='sto' && mode==='standby') { CMD.standby_sto = !CMD.standby_sto; updToggle('btn-stdby-sto', CMD.standby_sto, 'ACTIF', 'INACTIF'); }
   if(side==='hab' && mode==='standby') { CMD.standby_hab = !CMD.standby_hab; updToggle('btn-stdby-hab', CMD.standby_hab, 'ACTIF', 'INACTIF'); }
   if(side==='sto' && mode==='descente') { CMD.descente = !CMD.descente; updToggle('btn-descente', CMD.descente, 'ACTIF — −1°C/jour', 'INACTIF — −1°C/jour'); }
@@ -919,6 +631,7 @@ async function applyCmd(side) {
   }
   try {
     await fetch(url, { method:'PATCH', headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'}, body:JSON.stringify(body) });
+    DIRTY[side] = false;
     showToast('✓ Commande envoyée — ' + gfBriqueLabel(side==='sto'?'stockage_pdt':'habitation', false));
   } catch(e) { showToast('✗ Erreur : ' + e.message); }
 }
@@ -931,6 +644,7 @@ function set(id, html, cls) {
   if(cls) el.className = el.className.replace(/\b(ok|warn|err|info|geo|enrg)\b/g,'').trim() + ' ' + cls;
 }
 function fmt1(v) { return parseFloat(v).toFixed(1); }
+function txt(id, v) { const el = document.getElementById(id); if(el) el.textContent = v; }
 function fmt2(v) { return parseFloat(v).toFixed(2); }
 function tempClass(t, csg, h) { return t>csg+h*2?'err':t>csg+h?'warn':t<csg-h*2?'err':'ok'; }
 function setPac(id, on, lbl, kw) {
@@ -1053,9 +767,9 @@ function connectRealtimeOpe() {
           if(rec.mode_descente != null){ CMD.descente = !!rec.mode_descente; updToggle('btn-descente', CMD.descente,'ACTIF — −1°C/jour','INACTIF — −1°C/jour'); }
         }
         if(rec.id === 'habitation') {
-          if(rec.csg_z1  != null){ CMD.csg_z1  = parseFloat(rec.csg_z1);  document.getElementById('v-csg-z1').textContent  = CMD.csg_z1; }
-          if(rec.csg_z2  != null){ CMD.csg_z2  = parseFloat(rec.csg_z2);  document.getElementById('v-csg-z2').textContent  = CMD.csg_z2; }
-          if(rec.csg_ecs != null){ CMD.csg_ecs = parseFloat(rec.csg_ecs); document.getElementById('v-csg-ecs').textContent = CMD.csg_ecs; }
+          if(rec.csg_z1  != null){ CMD.csg_z1  = parseFloat(rec.csg_z1);  txt('v-csg-z1', CMD.csg_z1); }
+          if(rec.csg_z2  != null){ CMD.csg_z2  = parseFloat(rec.csg_z2);  txt('v-csg-z2', CMD.csg_z2); }
+          if(rec.csg_ecs != null){ CMD.csg_ecs = parseFloat(rec.csg_ecs); txt('v-csg-ecs', CMD.csg_ecs); }
           if(rec.mode_standby_hab != null){ CMD.standby_hab = !!rec.mode_standby_hab; updToggle('btn-stdby-hab', CMD.standby_hab,'ACTIF','INACTIF'); }
         }
       }
@@ -1333,13 +1047,16 @@ function applyBriques() {
 
   // Briques sans capteurs raccordés (serre)
   const known = ['stockage_pdt', 'habitation'];
-  document.getElementById('briques-extra').innerHTML = BRIQUES
-    .filter(b => b.actif && !known.includes(b.type))
+  // (les briques avec fichier — serre… — ont déjà posé leur encart : on ne touche qu'aux génériques)
+  const extra = document.getElementById('briques-extra');
+  extra.querySelectorAll('.c-extra-gen').forEach(el => el.remove());
+  extra.insertAdjacentHTML('beforeend', BRIQUES
+    .filter(b => b.actif && !known.includes(b.type) && !GF.fichiersBriques[b.type])
     .map(b => `
-    <div class="card c-extra">
+    <div class="card c-extra c-extra-gen">
       <div class="ct">${gfBriqueLabel(b.type)} <span class="brique-sub">${b.nom ? '· ' + b.nom : ''}</span></div>
       <div class="extra-msg">Brique déclarée — pas encore de capteurs raccordés.<br/>Les mesures apparaîtront ici dès la mise en service.</div>
-    </div>`).join('');
+    </div>`).join(''));
 
   renderBriquesAdmin();
   updateCfgUI();
@@ -1370,7 +1087,32 @@ function renderBriquesAdmin() {
         <div class="brq-nom">${b.nom || ''}</div>
       </div>
       <button class="toggle-btn ${b.actif ? 'on' : 'off'}" onclick="toggleBrique('${b.id}')">${b.actif ? 'ACTIVE' : 'INACTIVE'}</button>
-    </div>`).join('');
+    </div>`).join('') + ajoutBriqueHtml();
+}
+
+// Ajouter un bâtiment absent (ex. une maison ajoutée plus tard → PAC3 activée automatiquement)
+function ajoutBriqueHtml() {
+  const manquants = Object.keys(GEOFRESH_CONFIG.briques).filter(t => !BRIQUES.some(b => b.type === t));
+  if(!manquants.length) return '';
+  return `<div class="brq-row">
+      <select id="brq-new" class="alr-input" style="width:auto;flex:1;">
+        ${manquants.map(t => `<option value="${t}">${gfBriqueLabel(t)}</option>`).join('')}
+      </select>
+      <button class="toggle-btn off" onclick="ajouterBrique()">+ AJOUTER</button>
+    </div>`;
+}
+
+async function ajouterBrique() {
+  const type = document.getElementById('brq-new').value;
+  const noms = {stockage_pdt: 'Stockage PDT', habitation: 'Maison agricole', serre: 'Serre'};
+  const {error} = await _supa_ope.from('briques').insert({
+    exploitation_id: EXPLOIT_ID, type, nom: noms[type] || type, actif: true,
+    ordre: BRIQUES.length + 1,
+  });
+  if(error) { showToast('✗ ' + error.message); return; }
+  showToast(`${gfBriqueLabel(type)} ajouté`);
+  await fetchConfig();
+  await loadBriques();
 }
 
 async function toggleBrique(id) {
@@ -1379,6 +1121,7 @@ async function toggleBrique(id) {
   const {error} = await _supa_ope.from('briques').update({actif: !b.actif}).eq('id', id);
   if(error) { showToast('✗ ' + error.message); return; }
   b.actif = !b.actif;
+  await fetchConfig();   // la brique Habitation active/coupe la PAC3 (module_pac_habitation)
   applyBriques();
   showToast(`${gfBriqueLabel(b.type)} ${b.actif ? 'activée' : 'désactivée'}`);
 }
@@ -1463,6 +1206,7 @@ async function saveAlertEmails() {
   document.getElementById('shell').style.visibility = 'visible';
 
   await fetchConfig();
+  await GF.monterBriques(_supa_ope, EXPLOIT_ID, 'operateur');   // maison, serre… si présentes
   await loadBriques();
   fetchAll();
   fetchSaison();

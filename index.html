@@ -6,385 +6,14 @@
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 
-<script>
-const SUPABASE_URL = 'https://diqxglwsffrlfziymplm.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpcXhnbHdzZmZybGZ6aXltcGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODQwMjksImV4cCI6MjA5NDE2MDAyOX0.7sOo_xhhtISH9tQyJ7pg2Z3eXlDZfKZA5Xp6D7-Gs2w';
-</script>
-<script>
-// _supa initialisé après chargement du CDN supabase-js
-const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-</script>
+<script src="config.js"></script>
+<script src="js/commun.js"></script>
+<script>const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</script>
 <title>GeoFresh — Jumeau Numerique</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥔</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
-<style>
-:root {
-  --bg:#F5F0E8; --cream:#2D2017; --muted:#7A6352;
-  --panel:#FFFFFF; --bdr:#E2D9CC;
-  --ha:#2F8A74; --hd:#2A6E60; --hbr:rgba(47,138,116,0.26);
-  --hsun:#B08A10; --hsky:#3A7FA0; --hamb:#B0701E; --herr:#C0432A;
-  --sa:#5A9E2F; --sd:#4E8F2A; --sbr:rgba(90,158,47,0.26);
-  --sice:#5E8FB0; --samb:#B07A1E; --serr:#C0432A;
-}
-*{margin:0;padding:0;box-sizing:border-box;}
-/* DA GeoFresh — fond clair (mêmes couleurs que le portail / config.js) */
-.card{box-shadow:0 1px 8px rgba(160,114,74,.08);}
-header{box-shadow:0 1px 8px rgba(160,114,74,.08);}
-body::before{display:none;}
-.logo-svg{width:38px;height:38px;flex-shrink:0;}
-header{flex-wrap:wrap;gap:10px;}
-.hdr-r{flex-wrap:wrap;justify-content:flex-end;}
-body{background:var(--bg);color:var(--cream);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden;}
-body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-  background:radial-gradient(ellipse 55% 40% at 5% 5%,rgba(47,138,116,0.084) 0%,transparent 55%),
-             radial-gradient(ellipse 45% 50% at 95% 95%,rgba(90,158,47,0.066) 0%,transparent 55%);}
-.shell{position:relative;z-index:1;display:grid;grid-template-rows:auto auto 1fr;min-height:100vh;}
-
-/* ── HEADER ── */
-header{display:flex;align-items:center;justify-content:space-between;padding:12px 26px;
-  border-bottom:1px solid var(--bdr);background:rgba(255,255,255,1);
-  backdrop-filter:blur(18px);position:sticky;top:0;z-index:300;}
-
-/* Logo GeoFresh SVG inline */
-.brand{display:flex;align-items:center;gap:12px;}
-.logo-svg{width:38px;height:38px;flex-shrink:0;}
-.brand-txt .name{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;letter-spacing:-.5px;color:#6AAF35;}
-.brand-txt .name em{color:#A0724A;font-style:normal;}
-.brand-txt .sub{font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-top:1px;}
-
-.ext-strip{display:flex;gap:16px;align-items:center;padding:6px 14px;border-radius:9px;
-  background:rgba(45,32,23,0.04);border:1px solid var(--bdr);}
-.ex{text-align:center;}
-.exv{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
-.exl{font-size:7px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
-.sep{width:1px;height:22px;background:var(--bdr);}
-.hdr-r{display:flex;align-items:center;gap:12px;}
-.speed-btn{display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:14px;
-  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
-  border:1px solid;font-family:'DM Mono',monospace;transition:all .2s;}
-.speed-btn.normal{background:rgba(47,138,116,0.08);border-color:rgba(47,138,116,0.3);color:var(--ha);}
-.speed-btn.fast{background:rgba(176,138,16,0.15);border-color:rgba(176,138,16,0.5);color:#B08A10;animation:pu 1s infinite;}
-.beta-btn{display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:14px;
-  font-size:9px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
-  border:1px solid;font-family:'DM Mono',monospace;transition:all .3s;}
-.beta-off{background:rgba(45,32,23,0.04);border-color:rgba(45,32,23,0.15);color:var(--muted);}
-.beta-on{background:rgba(58,127,160,0.15);border-color:rgba(58,127,160,0.5);color:#3A7FA0;animation:pu 2s infinite;}
-.beta-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
-.esp32-status{font-size:8px;color:var(--muted);letter-spacing:1px;}
-.live{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:16px;
-  font-size:9px;letter-spacing:2px;text-transform:uppercase;
-  background:rgba(90,158,47,0.09);border:1px solid rgba(90,158,47,0.3);color:var(--sa);}
-.ldot{width:6px;height:6px;border-radius:50%;background:var(--sa);animation:pu 1.8s ease-in-out infinite;}
-@keyframes pu{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.65)}}
-#clk{font-size:11px;color:var(--muted);letter-spacing:1px;}
-
-/* ── TABS ── */
-.tabbar{display:flex;background:rgba(255,255,255,1);border-bottom:1px solid var(--bdr);padding:0 26px;}
-.tb{display:flex;align-items:center;gap:9px;padding:12px 24px;
-  font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.4px;
-  cursor:pointer;border:none;background:none;color:var(--muted);
-  border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;}
-.tb:hover{color:var(--cream);}
-.tb.ah{color:var(--ha);border-bottom-color:var(--ha);background:rgba(47,138,116,0.05);}
-.tb.as{color:var(--sa);border-bottom-color:var(--sa);background:rgba(90,158,47,0.05);}
-.tb.ax{color:#5B8A9A;border-bottom-color:#5B8A9A;background:rgba(91,138,154,0.05);}
-.tbdg{font-size:7px;padding:2px 7px;border-radius:9px;letter-spacing:1px;text-transform:uppercase;font-weight:600;}
-.tok{background:rgba(90,158,47,0.18);color:#4E8F2A;}
-.twrn{background:rgba(176,122,30,0.2);color:#B07A1E;}
-.tcrit{background:rgba(192,67,42,0.28);color:#C0432A;animation:ap .8s infinite;}
-@keyframes ap{0%,100%{opacity:1}50%{opacity:.4}}
-
-/* ── PANELS ── */
-.tc{display:none;}
-.module-disabled{opacity:0.35;pointer-events:none;filter:grayscale(0.6);}
-/* ── Rôles : le client modifie ses consignes, le pilotage reste au staff ── */
-body:not([data-role="super_admin"]):not([data-role="operator"]) .staff-only{display:none !important;}
-.brique-off{display:none !important;}
-.role-chip{display:flex;align-items:center;gap:8px;padding:5px 12px;border-radius:14px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border:1px solid rgba(45,32,23,0.12);background:rgba(160,114,74,0.05);color:var(--muted);font-family:'DM Mono',monospace;}
-.role-chip b{color:var(--cream);font-weight:500;}
-.role-chip button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 0 0 4px;}
-.role-chip button:hover{color:#C0432A;}
-.tab-disabled{opacity:0.4;}
-.tc.active{display:block;}
-#ph{padding:20px 26px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:13px;}
-#ps{padding:20px 26px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px;}
-#phistory{padding:20px 26px;}
-
-/* ── CARDS ── */
-.card{border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;transition:border-color .3s;background:var(--panel);}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
-.ch .card{border:1px solid var(--hbr);}
-.ch .card::before{background:linear-gradient(90deg,var(--hd),var(--ha),transparent);}
-.ch .card:hover{border-color:rgba(47,138,116,0.5);}
-.cs .card{border:1px solid var(--sbr);}
-.cs .card::before{background:linear-gradient(90deg,var(--sd),var(--sa),transparent);}
-.cs .card:hover{border-color:rgba(90,158,47,0.5);}
-.ct{font-family:'Syne',sans-serif;font-size:9px;font-weight:600;letter-spacing:3px;
-  text-transform:uppercase;color:var(--muted);margin-bottom:11px;display:flex;align-items:center;gap:7px;}
-.ct::before{content:'';display:inline-block;width:4px;height:4px;border-radius:50%;}
-.ch .ct::before{background:var(--ha);}
-.cs .ct::before{background:var(--sa);}
-
-/* ── METRICS ── */
-.mbig{font-family:'Syne',sans-serif;font-weight:800;font-size:46px;line-height:1;letter-spacing:-2px;margin-bottom:3px;}
-.mbig .u{font-size:15px;font-weight:400;color:var(--muted);}
-
-/* ── CONSIGNE CLIQUABLE ── */
-.csgbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:7px;
-  font-size:10px;cursor:pointer;border:1px dashed;transition:all .2s;background:transparent;
-  font-family:'DM Mono',monospace;margin-top:5px;}
-.csgbtn .ei{font-size:9px;opacity:.55;}
-.ch .csgbtn{color:var(--ha);border-color:rgba(47,138,116,0.38);}
-.ch .csgbtn:hover{background:rgba(47,138,116,0.1);border-style:solid;}
-.cs .csgbtn{color:var(--sa);border-color:rgba(90,158,47,0.38);}
-.cs .csgbtn:hover{background:rgba(90,158,47,0.08);border-style:solid;}
-
-/* ── SWITCH AUTO/MANU ── */
-.sw-wrap{display:flex;align-items:center;gap:8px;margin-top:8px;}
-.sw-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
-.sw{position:relative;width:44px;height:24px;cursor:pointer;}
-.sw input{opacity:0;width:0;height:0;position:absolute;}
-.sw-track{position:absolute;inset:0;border-radius:12px;background:rgba(45,32,23,0.12);
-  border:1px solid rgba(45,32,23,0.18);transition:all .3s;}
-.sw input:checked + .sw-track{background:rgba(176,122,30,0.35);border-color:var(--samb);}
-.sw-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;
-  background:var(--muted);transition:all .3s;}
-.sw input:checked ~ .sw-thumb{left:23px;background:var(--samb);}
-.sw-val{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;}
-
-/* Commandes manuelles */
-.manu-cmds{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:10px;}
-.cmd-btn{padding:9px 6px;border-radius:9px;border:1px solid var(--bdr);background:rgba(160,114,74,0.05);
-  font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;
-  cursor:pointer;transition:all .25s;color:var(--muted);text-align:center;}
-.cmd-btn.active{border-color:rgba(176,122,30,0.6);background:rgba(176,122,30,0.12);color:var(--samb);}
-.cmd-btn:hover{color:var(--cream);}
-
-/* ── ACTIONNEURS ── */
-.actg{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:7px;}
-.ai{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;
-  border-radius:9px;border:1px solid var(--bdr);background:rgba(160,114,74,0.045);transition:all .35s;}
-.ai.on{border-color:rgba(90,158,47,0.55);background:rgba(90,158,47,0.1);}
-.ai.half{border-color:rgba(176,122,30,0.5);background:rgba(176,122,30,0.08);}
-.ai.off-forced{border-color:rgba(192,67,42,0.4);background:rgba(192,67,42,0.07);}
-.aico{font-size:16px;}
-.albl{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);text-align:center;}
-.ast{font-size:9px;font-weight:600;letter-spacing:.4px;}
-.ai.on .ast{color:var(--sa);}
-.ai.half .ast{color:var(--samb);}
-.ai.off-forced .ast{color:var(--serr);}
-.ai:not(.on):not(.half):not(.off-forced) .ast{color:var(--muted);}
-
-/* Ventilateur 3 etats */
-.ventblk{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  padding:12px;border-radius:9px;border:1px solid var(--bdr);background:rgba(160,114,74,0.045);
-  margin-top:7px;transition:all .35s;}
-.ventblk.voff{border-color:var(--bdr);}
-.ventblk.vhalf{border-color:rgba(176,122,30,0.5);background:rgba(176,122,30,0.08);}
-.ventblk.vfull{border-color:rgba(90,158,47,0.55);background:rgba(90,158,47,0.1);}
-.ventblk .vico{font-size:22px;}
-.ventblk.vhalf .vico,.ventblk.vfull .vico{animation:spin 2s linear infinite;}
-.ventblk.vhalf .vico{animation-duration:3.5s;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.vlbl{font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
-.vval{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
-.ventblk.voff .vval{color:var(--muted);}
-.ventblk.vhalf .vval{color:var(--samb);}
-.ventblk.vfull .vval{color:var(--sa);}
-
-/* ── POMPES ── */
-.pmrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;}
-.pm{flex:1;min-width:60px;display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:8px 5px;border-radius:8px;border:1px solid var(--bdr);background:rgba(160,114,74,0.037);transition:all .35s;}
-.pm.on{border-color:rgba(47,138,116,0.42);background:rgba(47,138,116,0.08);}
-.pmico{font-size:14px;}
-.pmlbl{font-size:6px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);text-align:center;}
-.pmst{font-size:8px;font-weight:500;}
-.pm.on .pmst{color:var(--ha);}
-.pm:not(.on) .pmst{color:var(--muted);}
-
-/* ── MODE BADGE ── */
-.mbdg{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:18px;
-  font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:.4px;
-  margin-bottom:7px;transition:all .35s;}
-.mph-ECS{background:rgba(176,112,30,0.18);color:#B0701E;border:1px solid #B0701E;}
-.mph-CHAUF{background:rgba(176,138,16,0.12);color:#B08A10;border:1px solid rgba(176,138,16,0.45);}
-.mph-CLIM{background:rgba(58,127,160,0.18);color:#3A7FA0;border:1px solid #3A7FA0;}
-.mph-STAND{background:rgba(45,32,23,0.04);color:var(--muted);border:1px solid var(--bdr);}
-.mph-ALARM{background:rgba(192,67,42,0.2);color:#C0432A;border:1px solid #C0432A;}
-.mph-MANU{background:rgba(176,122,30,0.2);color:var(--samb);border:1px solid var(--samb);}
-.mbs-FROID{background:rgba(58,127,160,0.1);color:var(--sice);border:1px solid var(--sice);}
-.mbs-SECH{background:rgba(176,122,30,0.18);color:var(--samb);border:1px solid var(--samb);}
-.mbs-DEGIV{background:rgba(192,67,42,0.18);color:#C0432A;border:1px solid #C0432A;}
-.mbs-FREE{background:rgba(90,158,47,0.132);color:var(--sa);border:1px solid var(--sa);}
-.mbs-MANU{background:rgba(176,122,30,0.18);color:var(--samb);border:1px solid var(--samb);}
-.mbs-ALARM{background:rgba(192,67,42,0.25);color:#C0432A;border:1px solid var(--serr);animation:ap .8s infinite;}
-.mbs-AUTO{background:rgba(90,158,47,0.18);color:#4E8F2A;border:1px solid #4E8F2A;}
-
-/* ── GBAR ── */
-.gbar{height:5px;border-radius:3px;background:rgba(45,32,23,0.07);overflow:hidden;}
-.gfill{height:100%;border-radius:3px;transition:width 1s cubic-bezier(.4,0,.2,1);}
-
-/* ── FC badge -> renomme ventilo-conv ── */
-.fcb{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:11px;
-  font-size:7px;letter-spacing:1px;text-transform:uppercase;margin-top:4px;}
-.fcon{background:rgba(47,138,116,0.16);color:var(--ha);border:1px solid var(--ha);}
-.fcoff{background:rgba(45,32,23,0.04);color:var(--muted);border:1px solid var(--bdr);}
-
-/* ── ECS RING ── */
-.ecswrap{display:flex;align-items:center;gap:13px;margin-top:3px;}
-.ecsring{width:76px;height:76px;position:relative;}
-.ecsring svg{transform:rotate(-90deg);}
-.ecst{fill:none;stroke:rgba(45,32,23,0.06);stroke-width:7;}
-.ecsp{fill:none;stroke:var(--hamb);stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset 1.2s;}
-.ecsin{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.ecsv{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;}
-.ecsu{font-size:7px;color:var(--muted);letter-spacing:1px;}
-
-/* ── PAC STATUS ── */
-.pacs{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:9px;border:1px solid;margin-top:7px;}
-.pac-on{border-color:rgba(47,138,116,0.45);background:rgba(47,138,116,0.07);}
-.pac-off{border-color:var(--bdr);background:rgba(160,114,74,0.045);}
-.pacc{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
-.pac-on .pacc{background:rgba(47,138,116,0.14);animation:spin 3s linear infinite;}
-.pac-off .pacc{background:rgba(45,32,23,0.04);}
-.pact{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;}
-.pac-on .pact{color:var(--ha);}
-.pac-off .pact{color:var(--muted);}
-.pacd{font-size:8px;color:var(--muted);margin-top:2px;letter-spacing:.4px;}
-
-/* ── SAISON ── */
-.stag{padding:4px 10px;border-radius:14px;font-family:'Syne',sans-serif;font-size:9px;font-weight:700;
-  letter-spacing:1px;text-transform:uppercase;display:inline-block;margin-bottom:6px;}
-.sc{background:rgba(176,138,16,0.12);color:#B08A10;border:1px solid rgba(176,138,16,0.38);}
-.sf{background:rgba(58,127,160,0.12);color:#3A7FA0;border:1px solid rgba(58,127,160,0.38);}
-
-/* ── ALARMES ── */
-.apa{padding:9px 12px;border-radius:8px;border:1px solid var(--bdr);font-size:9px;display:flex;align-items:center;gap:8px;margin-top:7px;}
-.aok{border-color:rgba(47,138,116,0.32);background:rgba(47,138,116,0.06);color:var(--ha);}
-.awrn{border-color:rgba(176,112,30,0.45);background:rgba(176,112,30,0.07);color:var(--hamb);}
-.acrit{border-color:rgba(192,67,42,0.6);background:rgba(192,67,42,0.1);color:#C0432A;}
-.as-ok{border-color:rgba(90,158,47,0.32);background:rgba(90,158,47,0.06);color:#4E8F2A;}
-.as-wrn{border-color:rgba(176,122,30,0.45);background:rgba(176,122,30,0.07);color:var(--samb);animation:ap 2s infinite;}
-.as-crit{border-color:rgba(192,67,42,0.6);background:rgba(192,67,42,0.1);color:#C0432A;animation:ap .8s infinite;}
-
-/* ── EAU ── */
-.eaug{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:3px;}
-.eauv{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;}
-.eaul{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:1px;}
-.eaub{height:3px;border-radius:2px;background:rgba(45,32,23,0.06);margin-top:5px;overflow:hidden;}
-.eauf{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--hsky),var(--ha));transition:width 1s;}
-
-/* ── STATS MINI ── */
-.sg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px;}
-.si{padding:7px;border-radius:7px;border:1px solid var(--bdr);}
-.sl{font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
-.sv{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-top:2px;}
-
-/* ── CUMUL PAC ── */
-.cumul-strip{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;}
-.cumul-it{flex:1;min-width:70px;padding:8px;border-radius:8px;border:1px solid var(--bdr);text-align:center;}
-.cumul-v{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;}
-.cumul-l{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
-
-/* ── LOG ── */
-.logl{max-height:100px;overflow-y:auto;scrollbar-width:none;}
-.logl::-webkit-scrollbar{display:none;}
-.le{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid rgba(45,32,23,0.04);font-size:8px;}
-.lt{color:var(--muted);min-width:50px;}
-.lm{flex:1;}
-.log-lvl-2 .lm{color:#B07A1E;}
-.log-lvl-3 .lm{color:#C0432A;}
-
-/* ── CO2 ── */
-.co2-wrap{margin-top:10px;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(160,114,74,0.04);transition:all .4s;}
-.co2-wrap.co2-ok    {border-color:rgba(90,158,47,0.4); background:rgba(90,158,47,0.07);}
-.co2-wrap.co2-info  {border-color:rgba(176,138,16,0.45);background:rgba(176,138,16,0.07);}
-.co2-wrap.co2-alerte{border-color:rgba(176,112,30,0.6); background:rgba(176,112,30,0.09);animation:apx 2s infinite;}
-.co2-wrap.co2-crit  {border-color:rgba(192,67,42,0.7);  background:rgba(192,67,42,0.12); animation:apx .7s infinite;}
-.co2-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
-.co2-lbl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
-.co2-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;}
-.co2-unit{font-size:10px;color:var(--muted);margin-left:3px;}
-.co2-badge{font-size:8px;padding:2px 8px;border-radius:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
-.co2-bar-track{height:8px;border-radius:4px;background:rgba(45,32,23,0.07);overflow:hidden;position:relative;}
-.co2-bar-fill{height:100%;border-radius:4px;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
-.co2-ticks{display:flex;justify-content:space-between;margin-top:3px;}
-.co2-tick{font-size:7px;color:var(--muted);}
-
-/* ── HORLOGE TIMELAPSE ── */
-.sim-clock{display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:9px;
-  background:rgba(160,114,74,0.05);border:1px solid var(--bdr);margin-bottom:8px;}
-.sim-time{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;color:var(--cream);}
-.sim-date{font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
-.sim-speed-lbl{font-size:7px;letter-spacing:2px;color:var(--samb);text-transform:uppercase;margin-left:auto;}
-
-/* Boutons mode stockage */
-.mode-btns{display:flex;gap:7px;margin-top:8px;}
-.mode-btn{flex:1;padding:8px 6px;border-radius:8px;border:1px solid var(--bdr);
-  background:rgba(160,114,74,0.045);cursor:pointer;font-family:'DM Mono',monospace;
-  font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);
-  text-align:center;transition:all .2s;}
-.mode-btn:hover{color:var(--cream);}
-.mode-btn.active-standby{border-color:rgba(176,122,30,0.6);background:rgba(176,122,30,0.1);color:var(--samb);}
-.mode-btn.active-descente{border-color:rgba(58,127,160,0.6);background:rgba(58,127,160,0.1);color:var(--hsky);}
-.mode-btn.active-pr{border-color:rgba(90,158,47,0.6);background:rgba(90,158,47,0.08);color:var(--sa);}
-/* Header figé */
-header{position:sticky;top:0;z-index:300;}
-.hdr-r{flex-wrap:nowrap;white-space:nowrap;}
-.speed-btn{white-space:nowrap;}
-.sim-clock{flex-shrink:0;}
-
-/* ── SPANS ── */
-.s2{grid-column:span 2;}.s3{grid-column:span 3;}.s4{grid-column:span 4;}
-
-/* ── HISTORIQUE ── */
-.hist-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
-.hist-select{background:rgba(45,32,23,0.06);border:1px solid var(--bdr);border-radius:8px;
-  padding:8px 12px;color:var(--cream);font-family:'DM Mono',monospace;font-size:12px;}
-.hist-select:focus{outline:none;border-color:var(--ha);}
-.hist-range-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
-.hist-card{background:var(--panel);border-radius:12px;border:1px solid var(--bdr);padding:20px;margin-bottom:14px;}
-.hist-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;
-  text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
-.hist-table{width:100%;border-collapse:collapse;font-size:11px;}
-.hist-table th{text-align:left;font-size:8px;letter-spacing:2px;text-transform:uppercase;
-  color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--bdr);}
-.hist-table td{padding:8px;border-bottom:1px solid rgba(45,32,23,0.04);color:var(--cream);}
-.hist-table tr:hover td{background:rgba(45,32,23,0.03);}
-.hist-empty{text-align:center;padding:40px;color:var(--muted);font-size:11px;}
-.hist-chart{width:100%;height:180px;position:relative;margin-top:8px;}
-canvas.hc{width:100%!important;height:180px!important;}
-.hist-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
-.hstat{background:var(--panel);border:1px solid var(--bdr);border-radius:10px;padding:14px;text-align:center;}
-.hstat-v{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;}
-.hstat-l{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:3px;}
-
-/* ── MODALE ── */
-.overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(160,114,74,0.18);
-  align-items:center;justify-content:center;}
-.overlay.open{display:flex;}
-.modal{background:#FFFFFF;border-radius:14px;padding:26px 30px;width:400px;max-width:92vw;
-  border:1px solid rgba(45,32,23,0.13);box-shadow:0 20px 50px rgba(160,114,74,0.138);}
-.mtitle{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:18px;
-  display:flex;align-items:center;justify-content:space-between;color:var(--cream);}
-.mclose{cursor:pointer;font-size:18px;color:var(--muted);background:none;border:none;padding:0;}
-.mclose:hover{color:var(--cream);}
-.mfield{margin-bottom:14px;}
-.mfield label{display:block;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
-.mfield input[type=number],.mfield select{width:100%;background:rgba(45,32,23,0.07);
-  border:1px solid rgba(45,32,23,0.15);border-radius:7px;padding:9px 11px;
-  color:var(--cream);font-family:'DM Mono',monospace;font-size:12px;}
-.mfield input:focus,.mfield select:focus{outline:none;border-color:var(--ha);}
-.msep{height:1px;background:rgba(45,32,23,0.08);margin:12px 0;}
-.mbtns{display:flex;gap:9px;margin-top:18px;}
-.mbcancel{flex:1;padding:10px;border-radius:8px;border:1px solid var(--bdr);background:transparent;
-  color:var(--muted);font-family:'Syne',sans-serif;font-size:11px;font-weight:700;cursor:pointer;}
-.mbcancel:hover{color:var(--cream);}
-.mbsave{flex:2;padding:10px;border-radius:8px;border:none;font-family:'Syne',sans-serif;
-  font-size:11px;font-weight:700;cursor:pointer;}
-.mbsave:hover{opacity:.85;}
-.mbsave-h{background:var(--ha);color:#04181200;}
-</style>
+<link rel="stylesheet" href="css/geofresh.css"/>
+<link rel="stylesheet" href="css/vue-client.css"/>
 </head>
 <body>
 <div class="shell">
@@ -392,16 +21,8 @@ canvas.hc{width:100%!important;height:180px!important;}
 <!-- ══ HEADER ════════════════════════════════════════════ -->
 <header>
   <div class="brand">
-    <svg class="logo-svg" viewBox="0 0 40 40" fill="none" aria-label="GeoFresh">
-      <path d="M9 17V10a3 3 0 0 1 3-3h16a3 3 0 0 1 3 3v3" stroke="#6AAF35" stroke-width="3" stroke-linecap="round"/>
-      <path d="M26 12.5h10l-5 6.5z" fill="#6AAF35"/>
-      <path d="M31 23v7a3 3 0 0 1-3 3H12a3 3 0 0 1-3-3v-3" stroke="#A0724A" stroke-width="3" stroke-linecap="round"/>
-      <path d="M4 27.5h10l-5-6.5z" fill="#A0724A"/>
-    </svg>
+    <img class="logo-img" src="img/logo-geofresh.png" alt="GeoFresh" style="height:40px;width:auto;display:block;"/>
     <div class="brand-txt">
-      <div class="name" style="font-family:'Georgia',serif;font-size:18px;letter-spacing:-.3px;">
-        <span style="color:#5A8A3C">Geo</span><span style="color:#A0723A">Fresh</span>
-      </div>
       <div class="sub">Jumeau Numerique · Installation Complete</div>
     </div>
   </div>
@@ -444,11 +65,7 @@ canvas.hc{width:100%!important;height:180px!important;}
 
 <!-- ══ TABS ═══════════════════════════════════════════════ -->
 <div class="tabbar">
-  <button class="tb ah" id="tbh" data-brique="habitation">
-    🏠 Habitation
-    <span class="tbdg tok" id="badge-h">OK</span>
-  </button>
-  <button class="tb" id="tbs" data-brique="stockage_pdt">
+  <button class="tb as" id="tbs">
     🥔 Stockage PDT
     <span class="tbdg tok" id="badge-s">OK</span>
   </button>
@@ -460,156 +77,11 @@ canvas.hc{width:100%!important;height:180px!important;}
   </button>
 </div>
 
-<!-- ══════════════════════════════════════════════════════
-     PANEL HABITATION
-══════════════════════════════════════════════════════ -->
-<div class="tc active ch" id="ph">
-  <!-- Bannière module désactivé -->
-  <div id="hab-disabled-banner" style="display:none;margin-bottom:16px;padding:12px 16px;background:rgba(122,99,82,0.15);border:1px solid rgba(122,99,82,0.4);border-radius:10px;color:var(--muted);font-size:11px;text-align:center;">⊘ Module Habitation désactivé<span class="staff-only"> — </span><a class="staff-only" href="operateur.html" style="color:var(--sa);text-decoration:none;">Activer dans le panneau Opérateur →</a></div>
-
-  <!-- Zone 1 -->
-  <div class="card" id="card-hab-clim">
-    <div class="ct">Zone 1 — Séjour</div>
-    <div class="mbig" id="h-z1">--<span class="u">°C</span></div>
-    <button class="csgbtn" onclick="openModal('hab','z1')" id="h-csgz1-btn">Csg : -- °C <span class="ei">✎</span></button>
-    <div style="margin-top:10px;">
-      <div style="font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Ventilo-convecteur Z1</div>
-      <div class="gbar" style="margin-top:4px;"><div class="gfill" id="h-vc1-fill" style="width:12%"></div></div>
-    </div>
-    <div class="fcb fcoff" id="h-vc1-b">Inactif</div>
-    <div class="sg">
-      <div class="si"><div class="sl">T consigne</div><div class="sv" id="h-csgz1-v">-- °C</div></div>
-      <div class="si"><div class="sl">Hyst</div><div class="sv" style="color:var(--muted)">±1.0 °C</div></div>
-    </div>
-  </div>
-
-  <!-- Zone 2 -->
-  <div class="card">
-    <div class="ct">Zone 2 — Chambres</div>
-    <div class="mbig" id="h-z2">--<span class="u">°C</span></div>
-    <button class="csgbtn" onclick="openModal('hab','z2')" id="h-csgz2-btn">Csg : -- °C <span class="ei">✎</span></button>
-    <div style="margin-top:10px;">
-      <div style="font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Ventilo-convecteur Z2</div>
-      <div class="gbar" style="margin-top:4px;"><div class="gfill" id="h-vc2-fill" style="width:12%"></div></div>
-    </div>
-    <div class="fcb fcoff" id="h-vc2-b">Inactif</div>
-    <div class="sg">
-      <div class="si"><div class="sl">T consigne</div><div class="sv" id="h-csgz2-v">-- °C</div></div>
-      <div class="si"><div class="sl">Hyst</div><div class="sv" style="color:var(--muted)">±1.0 °C</div></div>
-    </div>
-  </div>
-
-  <!-- ECS -->
-  <div class="card" id="card-hab-ecs">
-    <div class="ct">ECS — Eau Chaude Sanitaire</div>
-    <div class="ecswrap">
-      <div class="ecsring">
-        <svg viewBox="0 0 76 76" width="76" height="76">
-          <circle class="ecst" cx="38" cy="38" r="29"/>
-          <circle class="ecsp" id="h-ecsp" cx="38" cy="38" r="29" stroke-dasharray="182" stroke-dashoffset="182"/>
-        </svg>
-        <div class="ecsin"><div class="ecsv" id="h-ecs-v">--</div><div class="ecsu">°C</div></div>
-      </div>
-      <div>
-        <div style="font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Consigne ECS</div>
-        <div style="font-family:'Syne';font-size:19px;font-weight:700;color:var(--hamb)" id="h-csgecs-v">-- °C</div>
-        <button class="csgbtn" style="margin-top:5px;" onclick="openModal('hab','ecs')">Modifier <span class="ei">✎</span></button>
-        <div style="margin-top:7px;font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Vanne ECS</div>
-        <div class="fcb fcoff" id="h-vanne-b" style="margin-top:3px;">Fermee</div>
-      </div>
-    </div>
-    <!-- Cumul PAC saison -->
-    <div class="cumul-strip">
-      <div class="cumul-it">
-        <div class="cumul-v" id="h-cumul-h" style="color:var(--ha)">0 h</div>
-        <div class="cumul-l">Cumul PAC saison</div>
-      </div>
-      <div class="cumul-it">
-        <div class="cumul-v" id="h-cumul-ecs" style="color:var(--hamb)">0 h</div>
-        <div class="cumul-l">Dont ECS</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PAC + Mode + Switch AUTO/MANU -->
-  <div class="card">
-    <div class="ct">PAC & Mode</div>
-    <div class="mbdg mph-STAND" id="h-mode">INIT</div>
-
-    <div class="pacs pac-off" id="h-pac">
-      <div class="pacc">⚙️</div>
-      <div><div class="pact" id="h-pact">PAC OFF</div><div class="pacd" id="h-pacd">En attente</div></div>
-    </div>
-    <!-- Bouton STANDBY habitation -->
-    <div class="mode-btns staff-only" style="margin-top:8px;">
-      <div class="mode-btn" id="h-btn-standby" onclick="toggleStandbyHab()" title="PAC OFF — zones dérivent vers T_ext">
-        ⏸ STANDBY
-      </div>
-      <div class="mode-btn active-descente" id="h-btn-auto" onclick="toggleStandbyHab('auto')" title="Mode automatique">
-        ▶ AUTO
-      </div>
-    </div>
-    <!-- Switch AUTO / MANU -->
-    <div class="sw-wrap staff-only" style="margin-top:10px;">
-      <span class="sw-lbl">Mode</span>
-      <label class="sw" title="Basculer Auto/Manu">
-        <input type="checkbox" id="h-sw-manu" onchange="toggleManu('hab')"/>
-        <div class="sw-track"></div>
-        <div class="sw-thumb"></div>
-      </label>
-      <span class="sw-val" id="h-sw-lbl" style="color:var(--muted)">AUTO</span>
-    </div>
-    <!-- Commandes manuelles (masquees si AUTO) -->
-    <div id="h-manu-cmds" style="display:none;margin-top:8px;">
-      <div style="font-size:7px;letter-spacing:2px;color:var(--samb);text-transform:uppercase;margin-bottom:6px;">Commandes manuelles</div>
-      <div class="manu-cmds">
-        <div class="cmd-btn" id="h-cmd-pac" onclick="toggleCmd('hab','pac')">❄️ PAC</div>
-        <div class="cmd-btn" id="h-cmd-vc1" onclick="toggleCmd('hab','vc1')">🌬 VC Z1</div>
-        <div class="cmd-btn" id="h-cmd-vc2" onclick="toggleCmd('hab','vc2')">🌬 VC Z2</div>
-      </div>
-    </div>
-    <div class="sg" style="margin-top:8px;">
-      <div class="si"><div class="sl">Anti-cycle</div><div class="sv" id="h-acc">-- min</div></div>
-      <div class="si"><div class="sl">T eau dep</div><div class="sv" style="color:var(--hsky)" id="h-dep">-- °C</div></div>
-    </div>
-  </div>
-
-  <!-- Circuit hydraulique + Pompes -->
-  <div class="card s2">
-    <div class="ct">Circuit hydraulique & Pompes</div>
-    <div class="pmrow">
-      <div class="pm" id="h-ps"><div class="pmico">🌡️</div><div class="pmlbl">Pompe Sol</div><div class="pmst" id="h-ps-s">OFF</div></div>
-      <div class="pm" id="h-pc"><div class="pmico">🔄</div><div class="pmlbl">Circuit</div><div class="pmst" id="h-pc-s">OFF</div></div>
-      <div class="pm" id="h-p1"><div class="pmico">🌬️</div><div class="pmlbl">VC Zone 1</div><div class="pmst" id="h-p1-s">OFF</div></div>
-      <div class="pm" id="h-p2"><div class="pmico">🌬️</div><div class="pmlbl">VC Zone 2</div><div class="pmst" id="h-p2-s">OFF</div></div>
-      <div class="pm" id="h-pe"><div class="pmico">🚿</div><div class="pmlbl">Vanne ECS</div><div class="pmst" id="h-pe-s">OFF</div></div>
-    </div>
-  </div>
-
-  <!-- Securites + Alarmes -->
-  <div class="card s2">
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
-      <div>
-        <div class="ct">Alarmes & Securites</div>
-
-        <div class="sg" style="margin-top:8px;">
-          <div class="si"><div class="sl">Surchauffe ECS</div><div class="sv" id="h-ecsmax">OK</div></div>
-          <div class="si"><div class="sl">Gel sol</div><div class="sv" id="h-gel">OK</div></div>
-        </div>
-      </div>
-      <div>
-        <div class="ct">Journal</div>
-        <div class="logl" id="h-log"></div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /ph -->
 
 <!-- ══════════════════════════════════════════════════════
      PANEL STOCKAGE
 ══════════════════════════════════════════════════════ -->
-<div class="tc cs" id="ps">
+<div class="tc active cs" id="ps">
 
   <!-- Temperature -->
   <div class="card">
@@ -994,7 +466,6 @@ canvas.hc{width:100%!important;height:180px!important;}
   </div>
 </div>
 
-<script src="config.js"></script>
 <script>
 // ════════════════════════════════════════
 //  ETAT
@@ -1011,62 +482,6 @@ let _speedFast = false;
 let _pollInterval = null;
 
 // Vitesses : 0=réel(30s) 1=×5(6s) 2=×50(600ms) 3=×100(300ms)
-// ── AUTH ────────────────────────────────────────────────────
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pwd   = document.getElementById('login-pwd').value;
-  const btn   = document.getElementById('login-btn');
-  const err   = document.getElementById('login-err');
-  btn.textContent = 'Connexion...'; btn.disabled = true;
-  err.style.display = 'none';
-
-  const { data, error } = await _supa.auth.signInWithPassword({ email, password: pwd });
-  if(error) {
-    err.textContent = error.message === 'Invalid login credentials'
-      ? 'Email ou mot de passe incorrect'
-      : error.message;
-    err.style.display = 'block';
-    btn.textContent = 'Connexion'; btn.disabled = false;
-    return;
-  }
-
-  AUTH_TOKEN = data.session.access_token;
-  refreshHDRS();
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('logout-btn').style.display = 'flex';
-  document.getElementById('user-email').textContent = data.user.email.split('@')[0];
-
-  // Charger les données auth-only
-  loadConsignes();
-  fetchModuleConfig();
-  fetchInitial();
-  connectRealtime();
-}
-
-async function doLogout() {
-  await _supa.auth.signOut();
-  AUTH_TOKEN = null;
-  refreshHDRS();
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('logout-btn').style.display = 'none';
-}
-
-// Vérifier session existante au chargement
-async function checkSession() {
-  const { data } = await _supa.auth.getSession();
-  if(data.session) {
-    AUTH_TOKEN = data.session.access_token;
-    refreshHDRS();
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('logout-btn').style.display = 'flex';
-    document.getElementById('user-email').textContent = data.session.user.email.split('@')[0];
-    loadConsignes(); fetchModuleConfig(); fetchInitial(); connectRealtime();
-    // Nom exploitation depuis URL
-    fetch(`${SUPABASE_URL}/rest/v1/exploitations?id=eq.${EXPLOIT_ID}&select=nom`,{headers:HDRS})
-      .then(r=>r.json()).then(d=>{if(d?.[0]){const el=document.getElementById('exploit-name-idx');if(el)el.textContent=d[0].nom;document.title='GeoFresh — '+d[0].nom;}}).catch(()=>{});
-  }
-}
-
 const SPEEDS = [
   { label:'▶ Temps réel', ms:30000, cls:'normal', vitesse:1   },
   { label:'⚡ ×5',        ms:6000,  cls:'fast',   vitesse:5   },
@@ -1077,15 +492,25 @@ const SPEEDS = [
 // En mode rapide le Realtime WebSocket suffit, le polling n'est qu'un fallback
 let _speedIdx = 0;
 
+// Aligne le bouton vitesse + l'horloge simulée sur la vitesse enregistrée dans Supabase
+function syncSpeed(v) {
+  const idx = SPEEDS.findIndex(s => s.vitesse === parseInt(v));
+  if(idx < 0 || idx === _speedIdx) return;
+  _speedIdx = idx;
+  const s = SPEEDS[idx], btn = document.getElementById('speed-btn');
+  if(btn) { btn.className = btn.className.replace(/\b(normal|fast)\b/, s.cls); btn.textContent = s.label; }
+  if(_pollInterval) { clearInterval(_pollInterval); _pollInterval = setInterval(fetchLatest, Math.min(s.ms, 10000)); }
+}
+
 function toggleSpeed() {
   if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
   _speedIdx = (_speedIdx + 1) % SPEEDS.length;
   const s = SPEEDS[_speedIdx];
   const btn = document.getElementById('speed-btn');
-  btn.className = 'speed-btn ' + s.cls;
+  btn.className = 'speed-btn staff-only ' + s.cls;
   btn.textContent = s.label;
   if(_pollInterval) clearInterval(_pollInterval);
-  _pollInterval = setInterval(fetchLatest, s.ms);
+  _pollInterval = setInterval(fetchLatest, Math.min(s.ms, 10000));
   // Envoyer la vitesse au simulateur via Supabase
   if(SUPABASE_KEY!=='VOTRE_ANON_KEY') {
     fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`, {
@@ -1109,12 +534,15 @@ async function fetchLatest() {
   _lastFetchTs = now;
   const EQ = `exploitation_id=eq.${EXPLOIT_ID}&`;
   try {
-    const [hR,sR,eR] = await Promise.all([
+    const [hR,sR,eR,cR] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?${EQ}order=ts.desc&limit=1`,{headers:HDRS}),
       fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?${EQ}order=ts.desc&limit=1`,{headers:HDRS}),
-      fetch(`${SUPABASE_URL}/rest/v1/conditions_externes?${EQ}order=ts.desc&limit=1`,{headers:HDRS})
+      fetch(`${SUPABASE_URL}/rest/v1/conditions_externes?${EQ}order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/consignes?${EQ}id=eq.stockage&select=id,vitesse_sim`,{headers:HDRS})
     ]);
     const [hD,sD,eD] = await Promise.all([hR.json(),sR.json(),eR.json()]);
+    const cD = await cR.json().catch(()=>[]);
+    if(cD?.[0]?.vitesse_sim != null) syncSpeed(cD[0].vitesse_sim);
     if(eD?.[0]){lastExt=eD[0];updateExt(lastExt);}
     if(hD?.[0]) updateHab({...hD[0],...lastExt});
     if(sD?.[0]) updateSto({...sD[0],...lastExt});
@@ -1131,10 +559,10 @@ function switchTab(t) {
     e.style.display='none';  // forcer hide
   });
   document.querySelectorAll('.tb').forEach(e=>e.classList.remove('ah','as','ax','ae'));
-  const panelId = t==='x'?'phistory':t==='e'?'pe':'p'+t;
+  const panelId = t==='x'?'phistory':t==='e'?'pe':'p'+t;   // 'serre' → pserre
   const panel = document.getElementById(panelId);
   panel.classList.add('active');
-  panel.style.display='block';  // forcer show
+  panel.style.display=(panel.id==='ph'||panel.id==='ps')?'grid':'block';  // grille 2 cartes par ligne
   const btn=document.getElementById('tb'+t);
   btn.classList.add(t==='h'?'ah':t==='s'?'as':t==='e'?'ae':'ax');
   if(t==='x') loadHistory();
@@ -1147,7 +575,7 @@ function switchTab(t) {
   if(btn) btn.addEventListener('click', ()=>switchTab(t));
 });
 // Init onglet par défaut
-switchTab('h');
+switchTab('s');   // Stockage PDT = brique universelle, onglet par défaut
 
 // ════════════════════════════════════════
 //  SWITCH AUTO / MANU
@@ -1314,6 +742,7 @@ async function pushConsignes() {
 function applyConsignesRow(row) {
   if(!row || !row.id) return;
   if(row.id === 'stockage') {
+    if(row.vitesse_sim != null) syncSpeed(row.vitesse_sim);
     if(row.csg_t   != null) CSG.sto.t       = parseFloat(row.csg_t);
     if(row.hyst_t  != null) CSG.sto.hyst_t  = parseFloat(row.hyst_t);
     if(row.csg_hr  != null) CSG.sto.hr      = parseFloat(row.csg_hr);
@@ -1393,6 +822,7 @@ async function loadConsignes() {
     const rows = await r.json();
     for(const row of rows) {
       if(row.id === 'stockage') {
+        if(row.vitesse_sim != null) syncSpeed(row.vitesse_sim);
         CSG.sto.t      = parseFloat(row.csg_t   || CSG.sto.t);
         CSG.sto.hyst_t = parseFloat(row.hyst_t  || CSG.sto.hyst_t);
         CSG.sto.hr     = parseFloat(row.csg_hr  || CSG.sto.hr);
@@ -1495,12 +925,26 @@ function refreshCsg() {
 //  HELPERS
 // ════════════════════════════════════════
 const logsH=[],logsS=[];
-function addLog(arr,id,msg,niv){
-  const t=new Date().toTimeString().slice(0,8);
-  arr.unshift({t,msg,niv}); if(arr.length>15)arr.pop();
-  document.getElementById(id).innerHTML=arr.map(l=>
-    `<div class="le log-lvl-${l.niv}"><span class="lt">${l.t}</span><span class="lm">${l.msg}</span></div>`
-  ).join('');
+// Journal = 5 dernières alertes enregistrées (alarmes_log) par bâtiment
+function addLog(arr,id,msg,niv){ scheduleJournal(); }
+let _journalTimer = null;
+function scheduleJournal(){ clearTimeout(_journalTimer); _journalTimer = setTimeout(loadJournal, 3000); }
+async function loadJournal(){
+  const {data, error} = await _supa.from('alarmes_log')
+    .select('ts, source, niveau, message, acquittee')
+    .eq('exploitation_id', EXPLOIT_ID).order('ts', {ascending:false}).limit(50);
+  if(error) return;
+  const isHab = a => (a.source||'').startsWith('auto:hab') || (a.message||'').includes('Habitation');
+  const render = (id, rows) => {
+    const el = document.getElementById(id); if(!el) return;
+    el.innerHTML = rows.length ? rows.slice(0,5).map(a => {
+      const d = new Date(a.ts), t = d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+d.toTimeString().slice(0,5);
+      const msg = (a.message||'').replace(/^.*? — /,'');
+      return `<div class="le log-lvl-${a.niveau||1}"><span class="lt">${t}</span><span class="lm">${a.niveau>=3?'🚨':'⚠'} ${msg}${a.acquittee?' <span style="color:var(--muted)">· résolue</span>':''}</span></div>`;
+    }).join('') : '<div class="le"><span class="lm" style="color:var(--muted)">Aucune alerte enregistrée</span></div>';
+  };
+  render('h-log', data.filter(isHab));
+  render('s-log', data.filter(a => !isHab(a)));
 }
 function setPm(id,sid,on){ document.getElementById(id).classList.toggle('on',on); document.getElementById(sid).textContent=on?'ON':'OFF'; }
 function setFcb(id,on){ const b=document.getElementById(id); b.textContent=on?'Actif':'Inactif'; b.className='fcb '+(on?'fcon':'fcoff'); }
@@ -1523,82 +967,8 @@ function updateExt(e){
 // ════════════════════════════════════════
 //  UPDATE HABITATION
 // ════════════════════════════════════════
-function updateHab(d){
-  const z1=parseFloat(d.t_int_z1||20),z2=parseFloat(d.t_int_z2||19);
-  document.getElementById('h-z1').innerHTML=z1.toFixed(1)+'<span class="u">°C</span>';
-  document.getElementById('h-z2').innerHTML=z2.toFixed(1)+'<span class="u">°C</span>';
-  refreshCsg();
-
-  const vc1=!!d.ventilateurcoil_z1_on, vc2=!!d.ventilateurcoil_z2_on;
-  const fcC='var(--hamb)';  // toujours ambre (chauffage uniquement)
-  // En MANU : commandes clavier | En AUTO : données simulateur
-  const isManuH = MANU.hab.on;
-  const vc1m = isManuH ? MANU.hab.vc1 : vc1;
-  const vc2m = isManuH ? MANU.hab.vc2 : vc2;
-  document.getElementById('h-vc1-fill').style.cssText=`width:${vc1m?85:12}%;background:${fcC}`;
-  document.getElementById('h-vc2-fill').style.cssText=`width:${vc2m?85:12}%;background:${fcC}`;
-  setFcb('h-vc1-b',vc1m); setFcb('h-vc2-b',vc2m);
-
-  const tecs=parseFloat(d.t_ecs||52);
-  document.getElementById('h-ecs-v').textContent=tecs.toFixed(1);
-  const ecsPct=Math.max(0,Math.min(1,(tecs-15)/(CSG.hab.ecs+10-15)));
-  document.getElementById('h-ecsp').style.strokeDashoffset=182-182*ecsPct;
-  const von=!!d.vanne_ecs_on;
-  const vb=document.getElementById('h-vanne-b'); vb.textContent=von?'Ouverte':'Fermee'; vb.className='fcb '+(von?'fcon':'fcoff');
-
-  // Cumul
-  // Cumul habitation : MAX local vs Supabase pour survivre aux redémarrages
-  const newHabH = parseFloat(d.cumul_pac_h || 0);
-  if(newHabH > CUMUL.hab.h) {
-    CUMUL.hab.h   = newHabH;
-    CUMUL.hab.ecs = parseFloat(d.cumul_ecs_h || 0);
-  } else if(!!d.pac_on) {
-    CUMUL.hab.h   += CYCLE_S/3600;
-    if(von) CUMUL.hab.ecs += CYCLE_S/3600;
-  }
-  document.getElementById('h-cumul-h').textContent=CUMUL.hab.h.toFixed(1)+' h';
-  document.getElementById('h-cumul-ecs').textContent=CUMUL.hab.ecs.toFixed(1)+' h';
-
-  const mode=d.mode_actif||'INIT';
-  const isManu=MANU.hab.on;
-  const mp=document.getElementById('h-mode');
-  // En MANU : afficher juste STANDBY (pas le mode AUTO)
-  mp.textContent = isManu ? 'STANDBY' : mode;
-  mp.className='mbdg';
-  if(isManu) mp.classList.add('mph-STAND');
-  else if(mode.includes('ECS'))   mp.classList.add('mph-ECS');
-  else if(mode.includes('CLIM'))  mp.classList.add('mph-CLIM');   // CLIM avant CHAUF/Z1/Z2
-  else if(mode.includes('CHAUF')) mp.classList.add('mph-CHAUF');
-  else if(mode.includes('ALARM')) mp.classList.add('mph-ALARM');
-  else mp.classList.add('mph-STAND');
-
-
-
-  // En mode MANU : commandes opérateur | En AUTO : données simulateur
-  const pOn  = isManu ? MANU.hab.pac : !!d.pac_on;
-  const ps=document.getElementById('h-pac'); ps.className='pacs '+(pOn?'pac-on':'pac-off');
-  document.getElementById('h-pact').textContent=pOn?'PAC EN MARCHE':'PAC ARRETEE';
-  document.getElementById('h-pacd').textContent=isManu?'⚙ Mode Manuel':(pOn?'Sol→eau | OK':'Standby');
-
-  document.getElementById('h-acc').textContent=parseFloat(d.temps_depuis_arret_pac_min||0).toFixed(0)+' min';
-  document.getElementById('h-eau-ret').textContent=parseFloat(d.t_eau_ret||35).toFixed(1)+' °C';
-  document.getElementById('h-ret-f').style.width=Math.max(0,Math.min(100,(parseFloat(d.t_eau_ret||35)-5)/50*100))+'%';
-
-  setPm('h-ps','h-ps-s', pOn);
-  setPm('h-pc','h-pc-s', pOn || !!d.pompe_circuit_on);
-  setPm('h-p1','h-p1-s', vc1m); setPm('h-p2','h-p2-s', vc2m); setPm('h-pe','h-pe-s',von);
-
-  const ap=document.getElementById('h-ap'),am=document.getElementById('h-am');
-  ap.className='apa';
-  if(!d.alarme_active){ap.classList.add('aok');am.textContent='✓ Systeme nominal';}
-  else{const niv=parseInt(d.niveau_alarme||0);ap.classList.add(niv>=3?'acrit':'awrn');am.textContent=(niv>=3?'🚨 ':'⚠ ')+d.alarme_active;addLog(logsH,'h-log',d.alarme_active,niv);setBadge('badge-h',niv);}
-  if(!d.alarme_active)setBadge('badge-h',0);
-
-  const tEcs=parseFloat(d.t_ecs||0);
-  const ee=document.getElementById('h-ecsmax'); ee.textContent=tEcs>63?'⚠ '+tEcs.toFixed(1)+'°C':'OK'; ee.style.color=tEcs>63?'var(--herr)':'var(--ha)';
-  const tSol=parseFloat(d.t_sol||10);
-  const ge=document.getElementById('h-gel'); ge.textContent=tSol<-3?'⚠ '+tSol.toFixed(1)+'°C':'OK'; ge.style.color=tSol<-3?'var(--herr)':'var(--ha)';
-}
+// Habitation = brique optionnelle (js/briques/habitation.js), rien à faire sans maison
+function updateHab(d){ GF.appeler('habitation', 'client', 'maj', d); }
 
 // ════════════════════════════════════════
 //  UPDATE STOCKAGE
@@ -1873,27 +1243,6 @@ updateSimClock();
 // ── Boutons STANDBY / DESCENTE stockage ──────────────────────
 let _modeStockage = 'auto';  // 'auto' | 'standby' | 'descente'
 
-// ── STANDBY HABITATION ───────────────────────────────────────
-async function toggleStandbyHab(mode) {
-  if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
-  const isStandby = mode !== 'auto' && document.getElementById('h-btn-standby').className.includes('active');
-  const newStandby = mode === 'auto' ? false : !isStandby;
-  document.getElementById('h-btn-standby').className = 'mode-btn' + (newStandby?' active-standby':'');
-  document.getElementById('h-btn-auto').className    = 'mode-btn' + (!newStandby?' active-descente':'');
-  // Basculer MANU si STANDBY
-  const swManu = document.getElementById('h-sw-manu');
-  if(newStandby && swManu && !swManu.checked){ swManu.checked=true; toggleManu('hab'); }
-  else if(!newStandby && swManu && swManu.checked){ swManu.checked=false; toggleManu('hab'); }
-  if(SUPABASE_KEY!=='VOTRE_ANON_KEY') {
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.habitation`, {
-        method:'PATCH',
-        headers:{...HDRS,'Content-Type':'application/json','Prefer':'return=minimal'},
-        body: JSON.stringify({mode_standby_hab: newStandby, updated_at: new Date().toISOString()})
-      });
-    } catch(e) {}
-  }
-}
 
 async function toggleModeStockage(mode) {
   if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
@@ -2571,11 +1920,10 @@ async function initRole(){
   const lo = document.getElementById('lnk-operateur');
   if(lo) lo.href = `operateur.html?exploitation_id=${EXPLOIT_ID}`;
 
-  // Onglets selon les briques actives (mêmes libellés que le portail)
-  const {data: briques} = await _supa.from('briques')
-    .select('type, actif').eq('exploitation_id', EXPLOIT_ID);
-  if(!briques || !briques.length) return;
-  const actives = new Set(briques.filter(b => b.actif).map(b => b.type));
+  // Briques optionnelles (maison, serre…) : chargées seulement si l'exploitation les a
+  const briques = await GF.monterBriques(_supa, EXPLOIT_ID, 'client');
+  const actives = new Set(briques.map(b => b.type));
+  actives.add('stockage_pdt');
   document.querySelectorAll('[data-brique]').forEach(el =>
     el.classList.toggle('brique-off', !actives.has(el.dataset.brique)));
   const histSel = document.getElementById('hist-bat');
@@ -2583,16 +1931,14 @@ async function initRole(){
     const opt = histSel?.querySelector(`option[value="${v}"]`);
     if(opt) opt.hidden = !actives.has(type);
   });
-  if(!actives.has('habitation')) {
-    if(histSel) histSel.value = 'sto';
-    switchTab(actives.has('stockage_pdt') ? 's' : 'e');
-  }
+  if(!actives.has('habitation') && histSel) histSel.value = 'sto';
 }
 
 // Rafraîchissement de secours toutes les 10 s (si le temps réel WebSocket coupe)
 function startPolling(){
   if(_pollInterval) return;
   _pollInterval = setInterval(fetchLatest, 10000);
+  loadJournal(); setInterval(loadJournal, 60000);
 }
 
 checkSession();

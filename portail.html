@@ -4,163 +4,15 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>GeoFresh — Portail</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥔</text></svg>"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
+<script src="js/commun.js"></script>
 <script>const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</script>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',sans-serif;background:var(--gf-bg);color:var(--gf-text);min-height:100vh;}
-
-/* ── HEADER ── */
-.hdr{
-  background:#fff;
-  border-bottom:2px solid var(--gf-border);
-  padding:0 32px;
-  height:64px;
-  display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;z-index:100;
-  box-shadow:0 1px 8px rgba(160,114,74,.08);
-}
-.logo{display:flex;align-items:center;gap:10px;}
-.logo-text{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;}
-.logo-geo{color:var(--gf-vert);}
-.logo-fresh{color:var(--gf-brun);}
-.logo-badge{font-size:9px;letter-spacing:2px;color:var(--gf-muted);font-family:'DM Mono',monospace;text-transform:uppercase;margin-top:2px;}
-.hdr-right{display:flex;align-items:center;gap:16px;}
-.user-chip{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:20px;background:var(--gf-card2);border:1px solid var(--gf-border);}
-.user-name{font-size:13px;font-weight:500;color:var(--gf-text2);}
-.user-role{font-size:10px;font-family:'DM Mono',monospace;color:var(--gf-vert);text-transform:uppercase;letter-spacing:1px;}
-.btn-logout{padding:6px 14px;border-radius:8px;border:1px solid var(--gf-border);background:transparent;color:var(--gf-text2);font-size:13px;cursor:pointer;transition:all .15s;}
-.btn-logout:hover{background:var(--gf-err);color:#fff;border-color:var(--gf-err);}
-
-/* ── MAIN ── */
-.main{max-width:1100px;margin:0 auto;padding:40px 24px;}
-.page-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--gf-text);margin-bottom:4px;}
-.page-sub{font-size:14px;color:var(--gf-muted);margin-bottom:32px;}
-
-/* ── STATS GLOBALES (super admin) ── */
-.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px;}
-.stat-card{background:#fff;border:1px solid var(--gf-border);border-radius:12px;padding:20px 24px;display:flex;flex-direction:column;gap:4px;}
-.stat-val{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:var(--gf-vert);}
-.stat-lbl{font-size:12px;color:var(--gf-muted);text-transform:uppercase;letter-spacing:1px;}
-
-/* ── TOOLBAR ── */
-.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
-.toolbar-left{display:flex;align-items:center;gap:12px;}
-.search-box{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--gf-border);border-radius:8px;padding:8px 14px;}
-.search-box input{border:none;outline:none;font-size:13px;color:var(--gf-text);background:transparent;width:200px;}
-.search-box input::placeholder{color:var(--gf-muted);}
-.btn-add{display:flex;align-items:center;gap:8px;padding:9px 18px;border-radius:8px;background:var(--gf-vert);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;}
-.btn-add:hover{background:#5a9e2f;}
-
-/* ── LISTE EXPLOITATIONS ── */
-.exploit-list{display:flex;flex-direction:column;gap:12px;}
-.exploit-card{
-  background:#fff;
-  border:1px solid var(--gf-border);
-  border-radius:14px;
-  padding:20px 24px;
-  display:flex;align-items:center;gap:20px;
-  cursor:pointer;
-  transition:all .15s;
-  text-decoration:none;
-  color:inherit;
-  position:relative;
-  overflow:hidden;
-}
-.exploit-card::before{
-  content:'';
-  position:absolute;left:0;top:0;bottom:0;width:4px;
-  background:var(--gf-vert);
-  border-radius:4px 0 0 4px;
-}
-.exploit-card:hover{box-shadow:0 4px 20px rgba(106,175,53,.12);border-color:var(--gf-vert);transform:translateY(-1px);}
-.exploit-card.alerte::before{background:var(--gf-err);}
-.exploit-card.inactif{opacity:.6;}
-.exploit-card.inactif::before{background:var(--gf-muted);}
-
-.exploit-icon{width:44px;height:44px;border-radius:10px;background:var(--gf-card2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
-.exploit-info{flex:1;min-width:0;}
-.exploit-nom{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gf-text);margin-bottom:3px;}
-.exploit-adresse{font-size:12px;color:var(--gf-muted);}
-.exploit-briques{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
-.brique-tag{padding:2px 10px;border-radius:20px;font-size:10px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px;}
-.brique-tag.stockage_pdt{background:rgba(106,175,53,.12);color:var(--gf-vert);}
-.brique-tag.habitation{background:rgba(160,114,74,.12);color:var(--gf-brun);}
-.brique-tag.serre{background:rgba(91,138,154,.12);color:var(--gf-geo);}
-.brique-tag.off{background:var(--gf-card2);color:var(--gf-muted);}
-
-.exploit-metrics{display:flex;gap:24px;align-items:center;flex-shrink:0;}
-.metric-item{text-align:center;}
-.metric-val{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--gf-text);}
-.metric-lbl{font-size:10px;color:var(--gf-muted);text-transform:uppercase;letter-spacing:.5px;}
-.metric-val.ok{color:var(--gf-ok);}
-.metric-val.warn{color:var(--gf-warn);}
-.metric-val.err{color:var(--gf-err);}
-
-.exploit-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;}
-.statut-badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
-.statut-badge.actif{background:rgba(106,175,53,.12);color:var(--gf-vert);}
-.statut-badge.inactif{background:var(--gf-card2);color:var(--gf-muted);}
-.alerte-badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(192,67,42,.1);color:var(--gf-err);display:flex;align-items:center;gap:4px;}
-.arrow-btn{font-size:18px;color:var(--gf-muted);}
-.view-link{font-size:11px;color:var(--gf-brun);text-decoration:none;padding:2px 8px;border-radius:12px;border:1px solid var(--gf-border);}
-.view-link:hover{background:var(--gf-card2);}
-
-/* ── RÉSUMÉ GLOBAL ── */
-.summary-section{margin-top:40px;}
-.section-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gf-text);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
-.summary-card{background:#fff;border:1px solid var(--gf-border);border-radius:12px;padding:18px 20px;}
-.summary-card-title{font-size:11px;color:var(--gf-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
-.summary-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--gf-card2);}
-.summary-row:last-child{border-bottom:none;}
-.summary-key{font-size:12px;color:var(--gf-text2);}
-.summary-val{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:var(--gf-text);}
-
-/* ── MODALE AJOUT ── */
-.modal-overlay{position:fixed;inset:0;background:rgba(45,32,23,.4);z-index:200;display:none;align-items:center;justify-content:center;}
-.modal-overlay.open{display:flex;}
-.modal{background:#fff;border-radius:16px;padding:32px;width:480px;max-width:95vw;box-shadow:0 8px 40px rgba(45,32,23,.15);}
-.modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--gf-text);margin-bottom:24px;}
-.form-group{margin-bottom:16px;}
-.form-label{display:block;font-size:11px;font-weight:600;color:var(--gf-text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
-.form-input{width:100%;padding:10px 14px;border:1.5px solid var(--gf-border);border-radius:8px;font-size:14px;color:var(--gf-text);background:#fff;outline:none;transition:border .15s;}
-.form-input:focus{border-color:var(--gf-vert);}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.brique-checks{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
-.brique-check{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1.5px solid var(--gf-border);cursor:pointer;font-size:12px;transition:all .15s;}
-.brique-check input{display:none;}
-.brique-check.checked{border-color:var(--gf-vert);background:rgba(106,175,53,.08);color:var(--gf-vert);font-weight:600;}
-.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;}
-.btn-cancel{padding:9px 18px;border-radius:8px;border:1.5px solid var(--gf-border);background:transparent;color:var(--gf-text2);font-size:13px;cursor:pointer;}
-.btn-submit{padding:9px 20px;border-radius:8px;background:var(--gf-vert);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;}
-
-/* ── LOGIN ── */
-#login-screen{position:fixed;inset:0;z-index:9999;background:var(--gf-bg);display:flex;align-items:center;justify-content:center;}
-.login-box{width:380px;background:#fff;border:1.5px solid var(--gf-border);border-radius:20px;padding:40px 36px;box-shadow:0 8px 40px rgba(45,32,23,.1);}
-.login-logo{text-align:center;margin-bottom:32px;}
-.login-logo .logo-text{font-size:28px;}
-.login-tagline{font-size:11px;color:var(--gf-muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
-.login-label{display:block;font-size:11px;font-weight:600;color:var(--gf-text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
-.login-input{width:100%;padding:11px 14px;border:1.5px solid var(--gf-border);border-radius:8px;font-size:14px;color:var(--gf-text);outline:none;margin-bottom:14px;transition:border .15s;}
-.login-input:focus{border-color:var(--gf-vert);}
-.login-btn{width:100%;padding:12px;background:var(--gf-vert);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:4px;}
-.login-btn:hover{background:#5a9e2f;}
-.login-err{display:none;margin-top:12px;padding:10px 14px;background:rgba(192,67,42,.08);border:1px solid rgba(192,67,42,.25);border-radius:8px;color:var(--gf-err);font-size:12px;text-align:center;}
-
-.empty-state{text-align:center;padding:60px 20px;color:var(--gf-muted);}
-.empty-state-icon{font-size:48px;margin-bottom:16px;}
-.empty-state-text{font-size:14px;}
-
-@media(max-width:640px){
-  .exploit-metrics{display:none;}
-  .main{padding:20px 16px;}
-}
-</style>
+<link rel="stylesheet" href="css/geofresh.css"/>
+<link rel="stylesheet" href="css/portail.css"/>
 </head>
 <body>
 
@@ -168,7 +20,7 @@ body{font-family:'Inter',sans-serif;background:var(--gf-bg);color:var(--gf-text)
 <div id="login-screen">
   <div class="login-box">
     <div class="login-logo">
-      <div class="logo-text"><span class="logo-geo">Geo</span><span class="logo-fresh">Fresh</span></div>
+      <img class="logo-img" src="img/logo-geofresh.png" alt="GeoFresh" style="height:76px;width:auto;display:block;margin:0 auto;"/>
       <div class="login-tagline">Supervision géothermique</div>
     </div>
     <label class="login-label">Email</label>
@@ -188,7 +40,7 @@ body{font-family:'Inter',sans-serif;background:var(--gf-bg);color:var(--gf-text)
   <header class="hdr">
     <div class="logo">
       <div>
-        <div class="logo-text"><span class="logo-geo">Geo</span><span class="logo-fresh">Fresh</span></div>
+        <img class="logo-img" src="img/logo-geofresh.png" alt="GeoFresh" style="height:40px;width:auto;display:block;"/>
         <div class="logo-badge">Portail de supervision</div>
       </div>
     </div>
@@ -220,7 +72,7 @@ body{font-family:'Inter',sans-serif;background:var(--gf-bg);color:var(--gf-text)
         <div class="stat-lbl">Actives</div>
       </div>
       <div class="stat-card">
-        <div class="stat-val" id="st-alertes" style="color:var(--gf-err)">—</div>
+        <div class="stat-val" id="st-alertes">—</div>
         <div class="stat-lbl">Alertes actives</div>
       </div>
       <div class="stat-card">
@@ -248,6 +100,14 @@ body{font-family:'Inter',sans-serif;background:var(--gf-bg);color:var(--gf-text)
       <div class="empty-state">
         <div class="empty-state-icon">🌾</div>
         <div class="empty-state-text">Chargement des exploitations...</div>
+      </div>
+    </div>
+
+    <!-- Saisons terminées (tous les comptes, dont clients) -->
+    <div class="summary-section" id="saisons-section">
+      <div class="section-title">📅 Saisons terminées</div>
+      <div class="summary-grid" id="saisons-grid">
+        <div class="empty-state-text" style="color:var(--gf-muted);">Chargement…</div>
       </div>
     </div>
 
@@ -283,7 +143,7 @@ body{font-family:'Inter',sans-serif;background:var(--gf-bg);color:var(--gf-text)
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Briques actives</label>
+      <label class="form-label">Bâtiments à chauffer</label>
       <div class="brique-checks" id="brique-checks">
         <label class="brique-check checked" onclick="toggleBrique(this,'stockage_pdt')">
           <input type="checkbox" value="stockage_pdt" checked/> 🥔 Stockage PDT
@@ -366,6 +226,32 @@ async function initApp(session) {
   }
 
   await loadExploitations();
+  loadSaisons();
+}
+
+// ── SAISONS TERMINÉES ─────────────────────────────────────────
+const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR') : '—';
+const fmtNum  = (v, u, n = 1) => v === null || v === undefined ? '—' : `${parseFloat(v).toFixed(n)}${u}`;
+
+async function loadSaisons() {
+  const grid = document.getElementById('saisons-grid');
+  const {data, error} = await _supa.rpc('saisons_terminees');
+  if(error) { grid.innerHTML = `<div class="empty-state-text" style="color:var(--gf-err);">${error.message}</div>`; return; }
+  if(!data.length) { grid.innerHTML = '<div class="empty-state-text" style="color:var(--gf-muted);">Aucune saison terminée pour le moment.</div>'; return; }
+  const multi = new Set(data.map(s => s.exploitation_id)).size > 1;
+  grid.innerHTML = data.map(s => `
+    <div class="summary-card">
+      <div class="summary-card-title">${s.nom}${multi ? ' · ' + s.exploitation : ''}</div>
+      <div class="summary-row"><span class="summary-key">Période</span><span class="summary-val" style="font-size:11px;">${fmtDate(s.date_debut)} → ${fmtDate(s.date_fin)}</span></div>
+      <div class="summary-row"><span class="summary-key">T stock moy.</span><span class="summary-val">${fmtNum(s.t_stock_moy, ' °C')}</span></div>
+      <div class="summary-row"><span class="summary-key">T stock min / max</span><span class="summary-val">${fmtNum(s.t_stock_min, '')} / ${fmtNum(s.t_stock_max, ' °C')}</span></div>
+      <div class="summary-row"><span class="summary-key">HR moy.</span><span class="summary-val">${fmtNum(s.hr_moy, ' %', 0)}</span></div>
+      <div class="summary-row"><span class="summary-key">CO₂ max</span><span class="summary-val">${fmtNum(s.co2_max, ' ppm', 0)}</span></div>
+      <div class="summary-row"><span class="summary-key">T ext moy.</span><span class="summary-val">${fmtNum(s.t_ext_moy, ' °C')}</span></div>
+      <div class="summary-row"><span class="summary-key">PAC en marche</span><span class="summary-val">${fmtNum(s.pac_pct, ' % du temps', 0)}</span></div>
+      <div class="summary-row"><span class="summary-key">Alertes</span><span class="summary-val" style="${s.nb_alertes > 0 ? 'color:var(--gf-err)' : ''}">${s.nb_alertes}</span></div>
+      <div class="summary-row"><span class="summary-key">Mesures</span><span class="summary-val">${Number(s.nb_mesures).toLocaleString('fr-FR')}</span></div>
+    </div>`).join('');
 }
 
 // ── EXPLOITATIONS ─────────────────────────────────────────────
@@ -487,7 +373,10 @@ function openExploitation(id) {
 async function renderStats(exploits) {
   document.getElementById('st-total').textContent   = exploits.length;
   document.getElementById('st-actives').textContent = exploits.filter(e => e.statut === 'actif').length;
-  document.getElementById('st-alertes').textContent = exploits.reduce((s, e) => s + (e._nb_alertes||0), 0);
+  const nbAlertes = exploits.reduce((s, e) => s + (e._nb_alertes||0), 0);
+  const stA = document.getElementById('st-alertes');
+  stA.textContent = nbAlertes;
+  stA.style.color = nbAlertes > 0 ? 'var(--gf-err)' : 'var(--gf-ok)';  // rouge seulement s'il y a une alerte
 
   // Compter les clients uniques
   const {data: users} = await _supa.from('exploitation_users').select('user_id').neq('role','super_admin');
@@ -553,7 +442,9 @@ async function createExploitation() {
 
   closeModal();
   await loadExploitations();
+  loadSaisons();
 }
+
 
 // ── INIT ─────────────────────────────────────────────────────
 checkSession();
