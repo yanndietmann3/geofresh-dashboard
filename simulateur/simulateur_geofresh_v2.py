@@ -26,7 +26,7 @@ EXPLOIT_ID = "00000000-0000-0000-0000-000000000001"  # Site Pilote — configura
 # Avant : U=0.005 kW/°C et respiration 0.25 kW → charges ~100× trop faibles,
 #         une seule PAC suffisait même à 3000 °C extérieur (PAC2 jamais utile).
 UA_ENV_KW      = 0.60        # kW/°C — enveloppe isolée (~1200 m² × U 0.35) + infiltrations
-UA_VOLET_KW    = 2.50        # kW/°C — volet air neuf ouvert (renouvellement d'air)
+UA_VOLET_KW    = 10.0        # kW/°C — registre plein ouvert : 2 Cantoni Ø800 ≈ 30 000 m³/h d'air neuf × 1,2 kg/m³ × 1 kJ/kg·K (avant 2,5 : ~7 500 m³/h, free cooling trop faible)
 P_RESP_5C_KW   = 6.0         # kW    — respiration 500 t à 5 °C (~12 W/t), ×2 tous les +10 °C
 P_FAN_KW       = 2.2         # kW    — chaleur dégagée par ventilateur Cantoni Ø800
 P_PAC_FROID_KW = 15.0        # kW    — puissance froid par PAC (Lemasson HTT42+G)
@@ -44,6 +44,10 @@ T_AILETTE_1PAC = 1.0   # °C — surface batterie avec 1 PAC (demi-charge) : au-
 T_AILETTE_2PAC = -2.0  # °C — surface batterie avec 2 PAC (pleine charge, glycolée -4/+2 °C) → givre
 HR_PAC_ARRET   = 94.0  # % — équilibre transpiration des tubercules (PAC à l'arrêt)
 HR_PAC_MARCHE  = 87.0  # % — équilibre avec condensation sur la batterie (PAC en marche)
+HR_FC_MIN      = 85.0  # % — sous ce HR stock, le registre de mélange se ferme (free cooling réduit, pas coupé)
+OUV_VOLET_MIN  = 0.30  # ouverture mini du registre en free cooling
+P_FC_MIN_KW    = 1.0   # kW — froid net mini pour choisir le free cooling plutôt que la PAC
+T_MELANGE_MIN  = 0.5   # °C — air mélangé (neuf + recyclé) jamais plus froid : pas de gel des tubercules
 DEGIV_VENTIL   = 1.0   # ventilation pendant le dégivrage : 0.5 = 1 ventilateur, 1.0 = 2
 # Échange air / glace ∝ débit^0,7 (convection forcée) : 2 ventilateurs ≈ 1,6× plus vite qu'un seul
 
@@ -293,9 +297,11 @@ class SimulateurStockage:
         hr_ramene = hr_air_ext_a_t_stock(meteo, t)
         fc_ok = (meteo.t_ext < t - 2.0) and \
                 (t_rosee < t - 0.5) and \
-                (meteo.t_ext > 0.5) and \
+                (self._ouverture_gel(meteo.t_ext) >= OUV_VOLET_MIN) and \
                 (hr_ramene < self.csg_hr + self.hyst_hr) and \
-                not (hr < self.csg_hr - self.hyst_hr and hr_ramene < hr)   # stock déjà sec : pas d'air encore plus sec
+                not (hr < HR_FC_MIN - 3 and hr_ramene < hr) and \
+                self._p_free_cooling(meteo) > P_FC_MIN_KW   # le free cooling doit vraiment refroidir
+        # Stock déjà sec : on ne coupe pas le free cooling, on ferme le registre de mélange (voir _ouverture_volet)
 
         # Dégivrage — batterie givréee
         # Dégivrage : déclenché par le givre accumulé, dure jusqu'à la fonte complète
@@ -365,6 +371,28 @@ class SimulateurStockage:
         if "FREE"    in m: return True
         if "SECH"    in m and "AIR" in m: return True
         return False
+
+    def _ouverture_volet(self, meteo):
+        """Registre de mélange air neuf / air recyclé (0 à 1).
+        Plein ouvert si le stock est assez humide. Sous HR_FC_MIN + 2 %, on ferme
+        progressivement jusqu'à 30 % : moins d'air sec entre, le free cooling continue."""
+        if hr_air_ext_a_t_stock(meteo, self.t_stock) >= self.hr_stock:
+            return self._ouverture_gel(meteo.t_ext)   # l'air neuf n'assèche pas
+        x = (self.hr_stock - HR_FC_MIN) / 2.0
+        ouv = max(OUV_VOLET_MIN, min(1.0, OUV_VOLET_MIN + (1 - OUV_VOLET_MIN) * x))
+        return min(ouv, self._ouverture_gel(meteo.t_ext))
+
+    def _p_free_cooling(self, meteo):
+        """Froid net apporté par le free cooling (kW), registre à son ouverture possible."""
+        ouv = self._ouverture_volet(meteo)
+        u   = UA_ENV_KW + ouv * (UA_VOLET_KW - UA_ENV_KW)
+        p_resp = P_RESP_5C_KW * math.pow(2.0, (self.t_stock - 5.0) / 10.0)
+        return u * (self.t_stock - meteo.t_ext) - p_resp - 2 * P_FAN_KW
+
+    def _ouverture_gel(self, t_ext):
+        """Ouverture max du registre pour que l'air mélangé reste au-dessus de 0,5 °C."""
+        if t_ext >= T_MELANGE_MIN: return 1.0
+        return max(0.0, (self.t_stock - T_MELANGE_MIN) / (self.t_stock - t_ext))
 
     def _volet_co2(self):
         """Volet CO2 — indépendant météo, basé uniquement sur co2_ppm.
@@ -476,6 +504,7 @@ class SimulateurStockage:
         self._update_pac(mode, dt_min)
 
         volet    = self._volet_fc(mode)
+        ouv      = self._ouverture_volet(meteo) if volet else 0.0
         volet_co2 = self._volet_co2()
         ventil   = self._ventil(mode)
 
@@ -488,7 +517,7 @@ class SimulateurStockage:
 
         Q10 = math.pow(2.0, (self.t_stock - 5.0) / 10.0)
         P_resp = P_RESP_5C_KW * Q10
-        u_eff  = UA_VOLET_KW if volet else UA_ENV_KW
+        u_eff  = UA_ENV_KW + ouv * (UA_VOLET_KW - UA_ENV_KW)
         P_env  = u_eff * (meteo.t_ext - self.t_stock)
         duty   = 0.25 if "CYCL" in mode else 1.0
         P_fans = P_FAN_KW * (2 * ventil) * duty       # 0.5 = 1 ventilateur, 1.0 = 2
@@ -523,7 +552,9 @@ class SimulateurStockage:
         #   PAC en marche : la batterie condense et sèche vers ~87 %
         #   Volet ouvert  : l'air extérieur ramené à la T du stock impose son humidité
         if volet:
-            hr_cible, tau = hr_air_ext_a_t_stock(meteo, self.t_stock), 20.0
+            # mélange : air neuf (ouv) + transpiration des tubercules dans l'air recyclé (1 - ouv)
+            hr_cible = ouv * hr_air_ext_a_t_stock(meteo, self.t_stock) + (1 - ouv) * HR_PAC_ARRET
+            tau      = 20.0 / ouv
         elif self.pac_on:
             hr_cible, tau = HR_PAC_MARCHE, 90.0
         else:
@@ -592,7 +623,7 @@ class SimulateurStockage:
         # Dilution additive : volet thermique ET volet CO2 peuvent être simultanés
         dilution = 0.0
         if volet_co2: dilution += 0.12 * (CO2_EXT - self.co2_ppm)
-        if volet:     dilution += 0.08 * (CO2_EXT - self.co2_ppm)
+        if volet:     dilution += 0.08 * ouv * (CO2_EXT - self.co2_ppm)
         if not volet_co2 and not volet:
             if ventil > 0: dilution += 0.02 * (CO2_EXT - self.co2_ppm) * ventil
             else:          dilution  = 0.005 * (CO2_EXT - self.co2_ppm)
