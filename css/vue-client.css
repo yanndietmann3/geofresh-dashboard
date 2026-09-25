@@ -366,3 +366,6 @@ canvas.hc{width:100%!important;height:180px!important;}
   font-size:11px;font-weight:700;cursor:pointer;}
 .mbsave:hover{opacity:.85;}
 .mbsave-h{background:var(--ha);color:#04181200;}
+
+/* Badges d'onglet : affichés seulement en cas d'alerte (pas de « OK » permanent) */
+.tbdg.tok{display:none;}

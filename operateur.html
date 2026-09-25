@@ -272,29 +272,29 @@
     </div>
   </div>
 
-  <!-- ── NOUVELLE SAISON ── -->
+  <!-- ── SAISONS DE STOCKAGE : démarrer / arrêter / archiver ── -->
   <div class="card" style="grid-column:span 2;border:1px solid rgba(176,122,30,0.3);background:rgba(176,122,30,0.04);">
-    <div class="ct" style="color:var(--samb);">📅 Saison</div>
-    <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:10px;">
+    <div class="ct" style="color:var(--samb);">📅 Saisons de stockage</div>
+
+    <div id="saison-en-cours" style="margin-top:10px;"></div>
+
+    <!-- Démarrer (affiché s'il n'y a pas de saison en cours) -->
+    <div id="saison-form" style="display:none;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:10px;">
       <div>
-        <div style="font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:1px;">SAISON EN COURS</div>
-        <div id="saison-nom" style="font-size:14px;color:var(--cream);font-family:'Syne',sans-serif;font-weight:700;">–</div>
+        <div class="mlbl" style="margin-bottom:4px;">Date de début</div>
+        <input type="date" id="inp-nouvelle-saison" class="alr-input" style="width:auto;"/>
       </div>
       <div>
-        <div style="font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:1px;">DATE DÉBUT NOUVELLE SAISON</div>
-        <input type="date" id="inp-nouvelle-saison"
-          style="background:rgba(160,114,74,0.075);border:1px solid rgba(176,122,30,0.4);border-radius:6px;color:var(--cream);font-size:12px;padding:5px 8px;"/>
+        <div class="mlbl" style="margin-bottom:4px;">Nom</div>
+        <input type="text" id="inp-saison-nom" class="alr-input" placeholder="ex : Saison 2026-2027" style="width:180px;"/>
       </div>
-      <div>
-        <div style="font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:1px;">NOM SAISON</div>
-        <input type="text" id="inp-saison-nom" placeholder="ex: Saison 2025-2026"
-          style="background:rgba(160,114,74,0.075);border:1px solid rgba(176,122,30,0.4);border-radius:6px;color:var(--cream);font-size:12px;padding:5px 8px;width:160px;"/>
-      </div>
-      <button onclick="nouvelleSaison()" style="padding:8px 18px;background:rgba(176,122,30,0.15);border:1px solid rgba(176,122,30,0.5);border-radius:8px;color:var(--samb);font-size:10px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;font-family:'DM Mono',monospace;">
-        🚀 Démarrer nouvelle saison
-      </button>
+      <button class="cmd-apply" style="width:auto;margin:0;padding:8px 18px;" onclick="demarrerSaison()">▶ Démarrer la saison</button>
     </div>
-    <div id="saison-confirm" style="display:none;margin-top:10px;padding:8px 12px;background:rgba(176,122,30,0.1);border-radius:6px;font-size:10px;color:var(--samb);"></div>
+
+    <div style="margin-top:14px;border-top:1px solid var(--bdr);padding-top:10px;">
+      <div class="mlbl" style="margin-bottom:6px;">Saisons terminées</div>
+      <div id="saisons-liste" class="brq-list"></div>
+    </div>
   </div>
 
   <!-- ── COMMANDES STOCKAGE ── -->
@@ -889,14 +889,73 @@ async function fetchConfig() {
   } catch(e) { console.warn('fetchConfig:', e); }
 }
 
+// ── SAISONS ─────────────────────────────────────────────────
+// en_cours → (Arrêter) → terminee → (Archiver) → archivee (masquée du portail)
+let SAISONS = [];
+const fmtJour = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR') : '—';
+
 async function fetchSaison() {
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/saisons?exploitation_id=eq.${EXPLOIT_ID}&statut=eq.en_cours&order=created_at.desc&limit=1`, {headers: HDRS});
-    const rows = await r.json();
-    if(rows.length > 0) {
-      document.getElementById('saison-nom').textContent = rows[0].nom + ' (depuis ' + rows[0].date_debut + ')';
-    }
-  } catch(e) {}
+  const {data, error} = await _supa_ope.from('saisons')
+    .select('id, nom, date_debut, date_fin, statut')
+    .eq('exploitation_id', EXPLOIT_ID).order('date_debut', {ascending: false});
+  if(error) { showToast('✗ ' + error.message); return; }
+  SAISONS = data || [];
+  const enCours = SAISONS.find(x => x.statut === 'en_cours');
+  document.getElementById('saison-en-cours').innerHTML = enCours ? `
+    <div class="brq-row">
+      <div>
+        <div class="brq-name">${esc(enCours.nom)} <span class="brique-sub">· en cours</span></div>
+        <div class="brq-nom">depuis le ${fmtJour(enCours.date_debut)}</div>
+      </div>
+      <button class="toggle-btn on" onclick="arreterSaison('${enCours.id}')">⏹ ARRÊTER LA SAISON</button>
+    </div>` : '<div class="extra-msg">Aucune saison en cours.</div>';
+  document.getElementById('saison-form').style.display = enCours ? 'none' : 'flex';
+  if(!enCours) document.getElementById('inp-nouvelle-saison').value = new Date().toISOString().slice(0, 10);
+
+  const finies = SAISONS.filter(x => x.statut !== 'en_cours');
+  document.getElementById('saisons-liste').innerHTML = finies.length ? finies.map(x => `
+    <div class="brq-row" style="${x.statut === 'archivee' ? 'opacity:.55;' : ''}">
+      <div>
+        <div class="brq-name">${esc(x.nom)}${x.statut === 'archivee' ? ' <span class="brique-sub">· archivée</span>' : ''}</div>
+        <div class="brq-nom">${fmtJour(x.date_debut)} → ${fmtJour(x.date_fin)}</div>
+      </div>
+      <button class="toggle-btn off" onclick="archiverSaison('${x.id}', ${x.statut !== 'archivee'})">
+        ${x.statut === 'archivee' ? '↩ DÉSARCHIVER' : '🗄 ARCHIVER'}</button>
+    </div>`).join('') : '<div class="extra-msg">Aucune saison terminée.</div>';
+}
+
+async function demarrerSaison() {
+  const debut = document.getElementById('inp-nouvelle-saison').value;
+  if(!debut) { showToast('Choisissez une date de début'); return; }
+  if(SAISONS.some(x => x.statut === 'en_cours')) { showToast('Arrêtez d\'abord la saison en cours'); return; }
+  const an  = parseInt(debut.slice(0, 4));
+  const nom = document.getElementById('inp-saison-nom').value.trim() || `Saison ${an}-${an + 1}`;
+  const id  = `saison_${debut.replace(/-/g, '_')}_${EXPLOIT_ID.slice(0, 8)}_${Date.now().toString(36)}`;
+  const {error} = await _supa_ope.from('saisons').insert({id, nom, date_debut: debut, statut: 'en_cours', config: CFG, exploitation_id: EXPLOIT_ID});
+  if(error) { showToast('✗ ' + error.message); return; }
+  // Le simulateur recale sa météo / son horloge sur cette date
+  await _supa_ope.from('config_installation').update({valeur: debut})
+    .eq('exploitation_id', EXPLOIT_ID).eq('cle', 'date_debut_saison');
+  showToast(`▶ ${nom} démarrée`);
+  fetchSaison();
+}
+
+async function arreterSaison(id) {
+  const s = SAISONS.find(x => x.id === id);
+  if(!confirm(`Arrêter « ${s?.nom} » ? Ses mesures resteront consultables dans le portail.`)) return;
+  const {error} = await _supa_ope.from('saisons')
+    .update({statut: 'terminee', date_fin: new Date().toISOString().slice(0, 10)}).eq('id', id);
+  if(error) { showToast('✗ ' + error.message); return; }
+  showToast('⏹ Saison arrêtée');
+  fetchSaison();
+}
+
+async function archiverSaison(id, archiver) {
+  const {error} = await _supa_ope.from('saisons')
+    .update({statut: archiver ? 'archivee' : 'terminee'}).eq('id', id);
+  if(error) { showToast('✗ ' + error.message); return; }
+  showToast(archiver ? '🗄 Saison archivée (masquée du portail)' : '↩ Saison désarchivée');
+  fetchSaison();
 }
 
 function updateCfgUI() {
@@ -960,60 +1019,6 @@ async function adjCfg(cle, delta) {
   } catch(e) {}
 }
 
-async function nouvelleSaison() {
-  const dateInput = document.getElementById('inp-nouvelle-saison').value;
-  const nomInput  = document.getElementById('inp-saison-nom').value.trim();
-  if(!dateInput) { showToast('Choisissez une date de début'); return; }
-  const nom = nomInput || 'Saison ' + dateInput.slice(0,4) + '-' + (parseInt(dateInput.slice(0,4))+1);
-  const id  = 'saison_' + dateInput.replace(/-/g,'_');
-
-  // Clôturer saison en cours
-  try {
-    await fetch(`${SB_URL}/rest/v1/saisons?exploitation_id=eq.${EXPLOIT_ID}&statut=eq.en_cours`, {
-      method: 'PATCH',
-      headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
-      body: JSON.stringify({statut: 'terminee', date_fin: new Date().toISOString().slice(0,10)})
-    });
-  } catch(e) {}
-
-  // Créer nouvelle saison
-  try {
-    await fetch(`${SB_URL}/rest/v1/saisons`, {
-      method: 'POST',
-      headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
-      body: JSON.stringify({id: id + '_' + EXPLOIT_ID.slice(0,8), nom, date_debut: dateInput, statut: 'en_cours', config: CFG, exploitation_id: EXPLOIT_ID})
-    });
-  } catch(e) {}
-
-  // Mettre à jour date_debut_saison dans config_installation
-  try {
-    await fetch(`${SB_URL}/rest/v1/config_installation?exploitation_id=eq.${EXPLOIT_ID}&cle=eq.date_debut_saison`, {
-      method: 'PATCH',
-      headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
-      body: JSON.stringify({valeur: dateInput})
-    });
-  } catch(e) {}
-
-  // Remettre à zéro les cumuls dans consignes
-  try {
-    await fetch(`${SB_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`, {
-      method: 'PATCH',
-      headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
-      body: JSON.stringify({cumul_pac_sto_h: 0, vitesse_sim: 1})
-    });
-    await fetch(`${SB_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.habitation`, {
-      method: 'PATCH',
-      headers: {...HDRS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
-      body: JSON.stringify({cumul_pac_hab_h: 0})
-    });
-  } catch(e) {}
-
-  const conf = document.getElementById('saison-confirm');
-  conf.style.display = 'block';
-  conf.textContent = '✓ Nouvelle saison démarrée : ' + nom + ' — Cumuls remis à zéro — Le simulateur va recaler la météo sur ' + dateInput;
-  fetchSaison();
-  showToast('Nouvelle saison démarrée !');
-}
 
 // ── BRIQUES DYNAMIQUES ───────────────────────────────────────
 // Chaque carte porte data-brique="<type>" : masquée si la brique est absente ou inactive

@@ -567,6 +567,7 @@ function switchTab(t) {
   btn.classList.add(t==='h'?'ah':t==='s'?'as':t==='e'?'ae':'ax');
   if(t==='x') loadHistory();
   if(t==='e') loadEnergie();
+  try { sessionStorage.setItem('gf-onglet-' + EXPLOIT_ID, t); } catch(_) {}
 }
 // Init : masquer tous les panneaux sauf le premier
 // Attacher les événements des onglets
@@ -1031,7 +1032,11 @@ function updateSto(d){
   if(newStoH > CUMUL.sto.h) CUMUL.sto.h = newStoH;
   else if(!!d.pac_on) CUMUL.sto.h += CYCLE_S/3600;
   const mode=d.mode_actif||'INIT';
-  if(mode.includes('FREE')) CUMUL.sto.fc += CYCLE_S/3600;
+  // Cumul free cooling : envoyé par le simulateur (sinon compté localement)
+  if(d.cumul_fc_h != null) CUMUL.sto.fc = parseFloat(d.cumul_fc_h);
+  else if(mode.includes('FREE')) CUMUL.sto.fc += CYCLE_S/3600;
+  // Heure simulée : relue dans la mesure → l'horloge ne repart plus de zéro
+  if(d.heure_simulee) recalerHorloge(d.heure_simulee);
   document.getElementById('s-cumul-h').textContent=CUMUL.sto.h.toFixed(1)+' h';
   document.getElementById('s-cumul-fc').textContent=CUMUL.sto.fc.toFixed(1)+' h';
   document.getElementById('s-cumul-h2').textContent=CUMUL.sto.h.toFixed(1)+' h';
@@ -1217,6 +1222,11 @@ document.getElementById('clk').textContent=new Date().toTimeString().slice(0,8);
 // En mode accéléré, on affiche l'heure simulée qui avance vite
 let _simNow = new Date();  // heure simulée
 let _lastReal = Date.now();
+// Recale l'horloge sur l'heure simulée envoyée par le simulateur
+function recalerHorloge(iso) {
+  const t = new Date(iso);
+  if(!isNaN(t)) { _simNow = t; _lastReal = Date.now(); }
+}
 
 function updateSimClock() {
   const realElapsed = Date.now() - _lastReal;
@@ -1337,19 +1347,14 @@ function calcEnergie(h_sto, h_hab, cop_sto_reel=null, cop_hab_reel=null) {
 async function loadEnergie() {
   if(SUPABASE_KEY==='VOTRE_ANON_KEY'){calcEnergie(0,0);return;}
   try {
-    // Cumuls PAC depuis consignes
-    const [rCsg, rSto, rHab] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&select=id,cumul_pac_sto_h,cumul_pac_hab_h`,{headers:HDRS}),
-      fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?exploitation_id=eq.${EXPLOIT_ID}&select=cop_boucle,pac_kw,pac_on&order=ts.desc&limit=1`,{headers:HDRS}),
-      fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?exploitation_id=eq.${EXPLOIT_ID}&select=cop_boucle,pac_kw,pac_on&order=ts.desc&limit=1`,{headers:HDRS}),
+    // Cumuls PAC depuis la dernière mesure (le simulateur n'écrit plus dans consignes)
+    const [rSto, rHab] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/stockage_readings?exploitation_id=eq.${EXPLOIT_ID}&select=cop_boucle,pac_kw,pac_on,duree_fonct_pac_h&order=ts.desc&limit=1`,{headers:HDRS}),
+      fetch(`${SUPABASE_URL}/rest/v1/habitation_readings?exploitation_id=eq.${EXPLOIT_ID}&select=cop_boucle,pac_kw,pac_on,cumul_pac_h&order=ts.desc&limit=1`,{headers:HDRS}),
     ]);
-    const [dCsg, dSto, dHab] = await Promise.all([rCsg.json(), rSto.json(), rHab.json()]);
-
-    let h_sto=0, h_hab=0;
-    dCsg.forEach(row=>{
-      if(row.id==='stockage')   h_sto=parseFloat(row.cumul_pac_sto_h||0);
-      if(row.id==='habitation') h_hab=parseFloat(row.cumul_pac_hab_h||0);
-    });
+    const [dSto, dHab] = await Promise.all([rSto.json(), rHab.json()]);
+    const h_sto = parseFloat(dSto[0]?.duree_fonct_pac_h || 0);
+    const h_hab = parseFloat(dHab[0]?.cumul_pac_h || 0);
 
     // COP réels depuis dernière lecture
     const cop_sto_reel = dSto[0]?.cop_boucle ? parseFloat(dSto[0].cop_boucle) : null;
@@ -1932,6 +1937,11 @@ async function initRole(){
     if(opt) opt.hidden = !actives.has(type);
   });
   if(!actives.has('habitation') && histSel) histSel.value = 'sto';
+  // Revenir sur l'onglet quitté (ex. aller-retour par le portail)
+  try {
+    const t = sessionStorage.getItem('gf-onglet-' + EXPLOIT_ID);
+    if(t && document.getElementById('tb' + t)) switchTab(t);
+  } catch(_) {}
 }
 
 // Rafraîchissement de secours toutes les 10 s (si le temps réel WebSocket coupe)
