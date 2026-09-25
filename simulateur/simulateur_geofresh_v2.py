@@ -231,6 +231,10 @@ class SimulateurStockage:
         self.pac2_on = False
         self.pac_on  = False
         self.nb_pac  = 2          # config_installation.nb_pac_stockage
+        # Cycle de froid : commencé à csg+hyst, il continue jusqu'à csg-hyst (même après un dégivrage)
+        self._cycle_froid   = False
+        self._p1_seule_min  = 0.0    # durée PAC1 seule (pour le renfort PAC2)
+        self._t_ref_renfort = self.t_stock
 
         # Anti court-cycle — 30 min minimum par unité
         self._arret_pac1 = 65.0   # init à 65 → démarrage immédiat autorisé
@@ -251,7 +255,7 @@ class SimulateurStockage:
 
         # Besoins
         besoin_froid = (t > self.csg_t + self.hyst_t) or \
-                       (self.pac_on and t > self.csg_t - self.hyst_t)
+                       ((self.pac_on or self._cycle_froid) and t > self.csg_t - self.hyst_t)
         besoin_sech  = hr > self.csg_hr + self.hyst_hr
 
         # Free cooling — 4 conditions simultanées
@@ -356,31 +360,49 @@ class SimulateurStockage:
     def _update_pac(self, mode, dt_min):
         """
         PAC1 + PAC2 Lemasson HTT42+G — 15 kW chacune côté stockage.
-        PAC1 : démarre si ΔT > hyst ET arrêt ≥ 30 min
-        PAC2 : s'ajoute si ΔT > 1.5×hyst ET arrêt ≥ 30 min
-               (mode descente : PAC1+PAC2 obligatoires dès que mode actif)
-        Anti court-cycle : timer indépendant par unité, 30 min minimum.
+        Cycle de froid : démarre quand T > csg + hyst (ex. 7 °C), s'arrête quand T < csg - hyst (5 °C).
+          PAC1 : démarre en premier.
+          PAC2 : s'ajoute si T > csg + 1.5×hyst (7,5 °C), OU en renfort si la PAC1 tourne seule
+                 depuis 2 h sans faire baisser la T (journées chaudes), OU en mode descente.
+          Après un dégivrage, le cycle reprend (avant : abandonné vers 6,7 °C).
+        Anti court-cycle : 30 min minimum d'arrêt par unité.
         """
         m = mode.upper()
         need_froid = "FROID" in m or "FREE" in m or "DESCENTE" in m
         antigel    = "ANTI-GEL" in m
+        delta      = self.t_stock - self.csg_t
+
+        if delta > self.hyst_t:  self._cycle_froid = True
+        if delta < -self.hyst_t: self._cycle_froid = False
 
         if antigel:
             # Mode chauffage — PAC en sens inverse, une seule unité suffit
             self.pac1_on = True
             self.pac2_on = False
         elif need_froid:
-            delta = self.t_stock - self.csg_t
-            # PAC1 — charge normale
-            if delta > self.hyst_t and self._arret_pac1 >= 30.0:
+            # PAC1 — tout le cycle de froid
+            if self._cycle_froid and self._arret_pac1 >= 30.0:
                 self.pac1_on = True
-            elif delta < -self.hyst_t:
+            elif not self._cycle_froid:
                 self.pac1_on = False
-            # PAC2 — charge forte ou mode descente (les deux obligatoires)
-            charge_forte = ((delta > self.hyst_t * 1.5) or self.mode_descente) and self.nb_pac >= 2
-            if charge_forte and self._arret_pac2 >= 30.0:
+
+            # Renfort : PAC1 seule depuis 2 h et la T ne baisse pas d'au moins 0,1 °C
+            renfort = False
+            if self.pac1_on and not self.pac2_on:
+                self._p1_seule_min += dt_min
+                if self._p1_seule_min >= 120.0:
+                    renfort = self.t_stock >= self._t_ref_renfort - 0.1 and delta > 0
+                    self._p1_seule_min  = 0.0
+                    self._t_ref_renfort = self.t_stock
+            else:
+                self._p1_seule_min  = 0.0
+                self._t_ref_renfort = self.t_stock
+
+            # PAC2 — charge forte, renfort ou descente ; s'arrête avec le cycle
+            charge_forte = (delta > self.hyst_t * 1.5) or renfort or self.mode_descente
+            if charge_forte and self.nb_pac >= 2 and self._arret_pac2 >= 30.0:
                 self.pac2_on = True
-            elif not charge_forte:
+            elif not self._cycle_froid or self.nb_pac < 2:
                 self.pac2_on = False
         else:
             self.pac1_on = False
