@@ -32,6 +32,13 @@ P_FAN_KW       = 2.2         # kW    — chaleur dégagée par ventilateur Canto
 P_PAC_FROID_KW = 15.0        # kW    — puissance froid par PAC (Lemasson HTT42+G)
 C_STOCK_KJ     = 1_750_000.0 # kJ/°C — 500 000 kg × 3.5 kJ/kg·K (inertie réelle)
 
+# ── Givrage de la batterie ICARUS HEX (air humide ~90 % sur ailettes < 0 °C)
+GIVRE_H_PLEIN  = 6.0   # h de PAC pour givrer complètement (surface -2 °C, HR 90 %)
+GIVRE_SEUIL    = 0.8   # givre (0-1) qui déclenche le dégivrage
+GIVRE_PERTE    = 0.5   # perte de puissance froid à givre = 1 (ailettes bouchées)
+DEGIV_MIN_REF  = 20.0  # min — dégivrage par l'air du stock à 6 °C (PAC arrêtée, 1 ventilateur)
+DEGIV_MAX_MIN  = 60.0  # min — au-delà : alarme « dégivrage inefficace »
+
 # ===========================================================
 #  IMPORTS & INSTALL
 # ===========================================================
@@ -247,6 +254,8 @@ class SimulateurStockage:
         # Cumuls
         self.cumul_pac_h        = 0.0
         self.duree_degivrage_min = 0.0
+        self.givre              = 0.0     # 0 = batterie propre, 1 = bouchée
+        self._degivrage         = False   # dégivrage en cours
 
     # ─── SÉLECTION DU MODE ────────────────────────────────
     def _mode(self, meteo):
@@ -266,7 +275,10 @@ class SimulateurStockage:
                 (meteo.hr_ext < 85.0)
 
         # Dégivrage — batterie givréee
-        degiv = self.t_batt <= 0.5
+        # Dégivrage : déclenché par le givre accumulé, dure jusqu'à la fonte complète
+        if self.givre >= GIVRE_SEUIL and self.pac_on:
+            self._degivrage = True
+        degiv = self._degivrage
 
         # Anti court-cycle — si besoin froid mais PAC pas encore disponible → mode ATTENTE (pas CYCL)
         _attente_acc = (self._arret_pac1 < 30.0) and (self.t_stock > self.csg_t - self.hyst_t)
@@ -300,8 +312,8 @@ class SimulateurStockage:
             air_fav = (t_rosee < t) and (meteo.t_ext > t - 5) and (meteo.t_ext < t + 3)
             return "SECHAGE-AIR FRAIS" if air_fav else "SECHAGE-CONDENSATION"
 
-        # 6. DÉGIVRAGE
-        if degiv and self._last_mode != "DEGIVRAGE" and self.pac_on:
+        # 6. DÉGIVRAGE (air du stock : PAC arrêtée, ventilation maintenue)
+        if degiv:
             return "DEGIVRAGE"
 
         # 7. FREE COOLING
@@ -340,7 +352,9 @@ class SimulateurStockage:
         """Retourne 0.0 / 0.5 / 1.0 — puissance ventilation."""
         m = mode.upper()
         # Arrêt ventil
-        if any(x in m for x in ["DEGIV", "ANTI", "ALARM", "SECURIT"]): return 0.0
+        # Dégivrage par l'air du stock : 1 ventilateur souffle l'air à ~6 °C sur la batterie
+        if "DEGIV" in m: return 0.5
+        if any(x in m for x in ["ANTI", "ALARM", "SECURIT"]): return 0.0
         # Mi-vitesse : 1 fan
         if "CYCL" in m: return 0.5
         # Pleine vitesse : 2 fans
@@ -449,7 +463,9 @@ class SimulateurStockage:
             P_froid = 0.0
         else:
             P_chaud = 0.0
-            P_froid = -P_PAC if (self.pac_on and self.t_stock > self.csg_t - self.hyst_t) else 0.0
+            # Le givre isole les ailettes et freine l'air : la puissance froid baisse
+            P_froid = -P_PAC * (1 - GIVRE_PERTE * self.givre) \
+                      if (self.pac_on and self.t_stock > self.csg_t - self.hyst_t) else 0.0
 
         dT = (P_froid + P_chaud + P_resp + P_env + P_fans) * dt_s / C_TH_EFF
         self.t_stock += dT + random.gauss(0, 0.003)
@@ -472,29 +488,41 @@ class SimulateurStockage:
         self.hr_stock  = max(68, min(99, self.hr_stock))
 
         # ── BATTERIE ÉVAPORATEUR ICARUS HEX ──────────────
-        # Modèle physique calibré :
-        # PAC ON  → descente vers T_sat (~-2°C) τ=180 min
-        # PAC OFF → remontée vers T_stock       τ=25 min
-        # Dégivrage → montée vers +10°C         τ=5 min
-        TAU_REF  = 180.0; TAU_REM = 25.0; TAU_DEG = 5.0
-        T_SAT    = -2.0
-        dt_m     = min(dt_min, 2.0)
+        # PAC ON  → T batterie vers T_sat (~-2 °C), τ = 180 min
+        # PAC OFF → remontée vers T_stock, τ = 25 min
+        # Dégivrage → batterie à ~0 °C tant qu'il reste de la glace, puis T_stock
+        # Pas de calcul exact (exp) : même comportement à ×1 et à ×500
+        TAU_REF = 180.0; TAU_REM = 25.0
+        T_SAT   = -2.0
+        rapproche = lambda cible, tau: cible + (self.t_batt - cible) * math.exp(-dt_min / tau)
 
         if "ANTI-GEL" in mode.upper():
-            self.t_batt += (self.t_stock + 2.0 - self.t_batt) / TAU_REM * dt_m
+            self.t_batt = rapproche(self.t_stock + 2.0, TAU_REM)
             self.cumul_pac_h += dt_h
-        elif "DEGIV" in mode.upper():
-            self.t_batt += (10.0 - self.t_batt) / TAU_DEG * dt_m + random.gauss(0, 0.05)
-            self.duree_degivrage_min += dt_m
+        elif self._degivrage:
+            # Fonte : plus l'air du stock est chaud, plus c'est rapide (20 min à 6 °C)
+            vitesse_fonte = max(0.1, self.t_stock / 6.0) / DEGIV_MIN_REF   # fraction / min
+            self.givre = max(0.0, self.givre - vitesse_fonte * GIVRE_SEUIL * dt_min)
+            self.duree_degivrage_min += dt_min
+            self.t_batt = rapproche(0.0 if self.givre > 0 else self.t_stock, 5.0)
+            if self.givre <= 0.0:
+                self._degivrage = False
         else:
             self.duree_degivrage_min = 0.0
             if self.pac_on:
                 t_sat_eff = T_SAT - max(0, (self.t_stock - 6.0) * 0.2)
-                self.t_batt += (t_sat_eff - self.t_batt) / TAU_REF * dt_m
+                self.t_batt = rapproche(t_sat_eff, TAU_REF)
+                # Givre : ailettes sous 0 °C + air humide
+                if self.t_batt < 0.0:
+                    f_froid = min(1.5, -self.t_batt / 2.0)
+                    f_hr    = max(0.0, (self.hr_stock - 60.0) / 30.0)
+                    self.givre = min(1.0, self.givre + f_froid * f_hr * dt_h / GIVRE_H_PLEIN)
             else:
-                self.t_batt += (self.t_stock - self.t_batt) / TAU_REM * dt_m
-            self.t_batt += random.gauss(0, 0.03)
-
+                self.t_batt = rapproche(self.t_stock, TAU_REM)
+                # PAC à l'arrêt, air > 0 °C : le givre fond doucement
+                if self.t_stock > 1.0:
+                    self.givre = max(0.0, self.givre - dt_min / (DEGIV_MIN_REF * 4))
+        self.t_batt += random.gauss(0, 0.02)
         self.t_batt = max(-4.0, min(self.t_stock + 2.0, self.t_batt))
 
         # ── CO2 ───────────────────────────────────────────
@@ -533,8 +561,8 @@ class SimulateurStockage:
         alarme, niveau = None, 0
         if self.t_stock < 2.0:
             alarme = f"ANTI-GEL CRITIQUE — T={self.t_stock:.1f}°C"; niveau = 3
-        elif self.t_batt < 0.5:
-            alarme = f"BATTERIE GIVRÉE — T_batt={self.t_batt:.1f}°C"; niveau = 3
+        elif self._degivrage and self.duree_degivrage_min > DEGIV_MAX_MIN:
+            alarme = f"DÉGIVRAGE INEFFICACE — {self.duree_degivrage_min:.0f} min"; niveau = 2
         elif self.co2_ppm > 5000:
             alarme = f"CO2 CRITIQUE — {self.co2_ppm:.0f} ppm"; niveau = 3
         elif self.co2_ppm > 3500:
