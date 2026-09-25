@@ -46,7 +46,8 @@ HR_PAC_ARRET   = 94.0  # % — équilibre transpiration des tubercules (PAC à l
 HR_PAC_MARCHE  = 87.0  # % — équilibre avec condensation sur la batterie (PAC en marche)
 HR_FC_MIN      = 85.0  # % — sous ce HR stock, le registre de mélange se ferme (free cooling réduit, pas coupé)
 OUV_VOLET_MIN  = 0.30  # ouverture mini du registre en free cooling
-P_FC_MIN_KW    = 1.0   # kW — froid net mini pour choisir le free cooling plutôt que la PAC
+ECART_FC       = 2.0   # °C — free cooling si T ext < T stock − 2 °C (registre plein ouvert)
+ECART_FC_SEC   = 4.0   # °C — écart demandé quand le stock est sec (HR < HR_FC_MIN, registre réduit)
 T_MELANGE_MIN  = 0.5   # °C — air mélangé (neuf + recyclé) jamais plus froid : pas de gel des tubercules
 DEGIV_VENTIL   = 1.0   # ventilation pendant le dégivrage : 0.5 = 1 ventilateur, 1.0 = 2
 # Échange air / glace ∝ débit^0,7 (convection forcée) : 2 ventilateurs ≈ 1,6× plus vite qu'un seul
@@ -295,12 +296,14 @@ class SimulateurStockage:
         # HR de l'air extérieur une fois réchauffé à la T du stock (avant : HR ext brute < 85 %,
         # quasi jamais vrai l'hiver dans le 62 alors que cet air froid sèche le stock)
         hr_ramene = hr_air_ext_a_t_stock(meteo, t)
-        fc_ok = (meteo.t_ext < t - 2.0) and \
+        # Écart mini T stock − T ext : 2 °C registre plein ouvert, 4 °C si le stock est sec
+        # (registre réduit → il faut un air plus froid pour refroidir autant)
+        ecart_fc = ECART_FC_SEC if hr < HR_FC_MIN else ECART_FC
+        fc_ok = (meteo.t_ext < t - ecart_fc) and \
                 (t_rosee < t - 0.5) and \
                 (self._ouverture_gel(meteo.t_ext) >= OUV_VOLET_MIN) and \
                 (hr_ramene < self.csg_hr + self.hyst_hr) and \
-                not (hr < HR_FC_MIN - 3 and hr_ramene < hr) and \
-                self._p_free_cooling(meteo) > P_FC_MIN_KW   # le free cooling doit vraiment refroidir
+                not (hr < HR_FC_MIN - 3 and hr_ramene < hr)
         # Stock déjà sec : on ne coupe pas le free cooling, on ferme le registre de mélange (voir _ouverture_volet)
 
         # Dégivrage — batterie givréee
@@ -381,13 +384,6 @@ class SimulateurStockage:
         x = (self.hr_stock - HR_FC_MIN) / 2.0
         ouv = max(OUV_VOLET_MIN, min(1.0, OUV_VOLET_MIN + (1 - OUV_VOLET_MIN) * x))
         return min(ouv, self._ouverture_gel(meteo.t_ext))
-
-    def _p_free_cooling(self, meteo):
-        """Froid net apporté par le free cooling (kW), registre à son ouverture possible."""
-        ouv = self._ouverture_volet(meteo)
-        u   = UA_ENV_KW + ouv * (UA_VOLET_KW - UA_ENV_KW)
-        p_resp = P_RESP_5C_KW * math.pow(2.0, (self.t_stock - 5.0) / 10.0)
-        return u * (self.t_stock - meteo.t_ext) - p_resp - 2 * P_FAN_KW
 
     def _ouverture_gel(self, t_ext):
         """Ouverture max du registre pour que l'air mélangé reste au-dessus de 0,5 °C."""
