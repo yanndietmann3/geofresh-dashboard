@@ -33,7 +33,7 @@ P_PAC_FROID_KW = 15.0        # kW    — puissance froid par PAC (Lemasson HTT42
 C_STOCK_KJ     = 1_750_000.0 # kJ/°C — 500 000 kg × 3.5 kJ/kg·K (inertie réelle)
 
 # ── Givrage de la batterie ICARUS HEX (air humide ~90 % sur ailettes < 0 °C)
-GIVRE_H_PLEIN  = 6.0   # h de PAC pour givrer complètement (surface -2 °C, HR 90 %)
+GIVRE_H_PLEIN  = 18.0  # h de PAC pour givrer complètement (surface -2 °C, HR 90 %) — ↑ = dégivrages plus rares
 GIVRE_SEUIL    = 0.8   # givre (0-1) qui déclenche le dégivrage
 GIVRE_PERTE    = 0.5   # perte de puissance froid à givre = 1 (ailettes bouchées)
 DEGIV_MIN_REF  = 20.0  # min — dégivrage par l'air du stock à 6 °C (PAC arrêtée, 1 ventilateur)
