@@ -68,14 +68,6 @@
         <div class="stat-lbl">Exploitations</div>
       </div>
       <div class="stat-card">
-        <div class="stat-val" id="st-actives">—</div>
-        <div class="stat-lbl">Actives</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-val" id="st-alertes">—</div>
-        <div class="stat-lbl">Alertes actives</div>
-      </div>
-      <div class="stat-card">
         <div class="stat-val" id="st-clients">—</div>
         <div class="stat-lbl">Clients</div>
       </div>
@@ -350,7 +342,7 @@ function renderList(exploits) {
         </div>
       </div>
       <div class="exploit-right">
-        <span class="statut-badge ${e.statut}">${e.statut}</span>
+        ${e.statut !== 'actif' ? `<span class="statut-badge inactif">En pause</span>` : ''}
         ${alerteBadge}
         ${gfIsStaff(USER_ROLE)
           ? `<a class="view-link" href="index.html?exploitation_id=${e.id}" onclick="event.stopPropagation()">👁 Vue client</a>`
@@ -372,11 +364,6 @@ function openExploitation(id) {
 // ── STATS GLOBALES ────────────────────────────────────────────
 async function renderStats(exploits) {
   document.getElementById('st-total').textContent   = exploits.length;
-  document.getElementById('st-actives').textContent = exploits.filter(e => e.statut === 'actif').length;
-  const nbAlertes = exploits.reduce((s, e) => s + (e._nb_alertes||0), 0);
-  const stA = document.getElementById('st-alertes');
-  stA.textContent = nbAlertes;
-  stA.style.color = nbAlertes > 0 ? 'var(--gf-err)' : 'var(--gf-ok)';  // rouge seulement s'il y a une alerte
 
   // Compter les clients uniques
   const {data: users} = await _supa.from('exploitation_users').select('user_id').neq('role','super_admin');

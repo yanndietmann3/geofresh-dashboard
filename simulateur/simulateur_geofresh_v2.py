@@ -32,11 +32,26 @@ P_FAN_KW       = 2.2         # kW    — chaleur dégagée par ventilateur Canto
 P_PAC_FROID_KW = 15.0        # kW    — puissance froid par PAC (Lemasson HTT42+G)
 C_STOCK_KJ     = 1_750_000.0 # kJ/°C — 500 000 kg × 3.5 kJ/kg·K (inertie réelle)
 
+# ── Givrage de la batterie ICARUS HEX (air humide ~90 % sur ailettes < 0 °C)
+GIVRE_H_PLEIN  = 90.0  # h de PAC en continu pour givrer complètement (surface -2 °C, HR 90 %)
+                       # calé terrain : dégivrage surtout en canicule (T ext > 25 °C jour ET nuit),
+                       # quand les 2 PAC tournent longtemps — ↑ = dégivrages plus rares
+GIVRE_SEUIL    = 0.8   # givre (0-1) qui déclenche le dégivrage
+GIVRE_PERTE    = 0.5   # perte de puissance froid à givre = 1 (ailettes bouchées)
+DEGIV_MIN_REF  = 20.0  # min — dégivrage par l'air du stock à 6 °C (PAC arrêtée, 1 ventilateur)
+DEGIV_MAX_MIN  = 60.0  # min — au-delà : alarme « dégivrage inefficace »
+T_AILETTE_1PAC = 1.0   # °C — surface batterie avec 1 PAC (demi-charge) : au-dessus de 0 → pas de givre
+T_AILETTE_2PAC = -2.0  # °C — surface batterie avec 2 PAC (pleine charge, glycolée -4/+2 °C) → givre
+HR_PAC_ARRET   = 94.0  # % — équilibre transpiration des tubercules (PAC à l'arrêt)
+HR_PAC_MARCHE  = 87.0  # % — équilibre avec condensation sur la batterie (PAC en marche)
+DEGIV_VENTIL   = 1.0   # ventilation pendant le dégivrage : 0.5 = 1 ventilateur, 1.0 = 2
+# Échange air / glace ∝ débit^0,7 (convection forcée) : 2 ventilateurs ≈ 1,6× plus vite qu'un seul
+
 # ===========================================================
 #  IMPORTS & INSTALL
 # ===========================================================
 import sys, time, math, random, json, urllib.request
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 def install_if_missing(p):
     try: __import__(p.replace("-","_"))
@@ -122,6 +137,12 @@ class Meteo:
             "t_rosee":    self.t_rosee,
             "t_sol":      self.t_sol,
         }
+
+
+def hr_air_ext_a_t_stock(meteo, t_stock):
+    """HR de l'air extérieur une fois amené à la température du stock (même eau, autre T)."""
+    p_sat = lambda t: 6.112 * math.exp(17.62 * t / (243.12 + t))
+    return max(30.0, min(100.0, meteo.hr_ext * p_sat(meteo.t_ext) / p_sat(t_stock)))
 
 
 # ===========================================================
@@ -231,6 +252,10 @@ class SimulateurStockage:
         self.pac2_on = False
         self.pac_on  = False
         self.nb_pac  = 2          # config_installation.nb_pac_stockage
+        # Cycle de froid : commencé à csg+hyst, il continue jusqu'à csg-hyst (même après un dégivrage)
+        self._cycle_froid   = False
+        self._p1_seule_min  = 0.0    # durée PAC1 seule (pour le renfort PAC2)
+        self._t_ref_renfort = self.t_stock
 
         # Anti court-cycle — 30 min minimum par unité
         self._arret_pac1 = 65.0   # init à 65 → démarrage immédiat autorisé
@@ -243,6 +268,10 @@ class SimulateurStockage:
         # Cumuls
         self.cumul_pac_h        = 0.0
         self.duree_degivrage_min = 0.0
+        self.givre              = 0.0     # 0 = batterie propre, 1 = bouchée
+        self._sechage           = False   # séchage en cours (hystérésis)
+        self.cumul_fc_h         = 0.0     # heures de free cooling
+        self._degivrage         = False   # dégivrage en cours
 
     # ─── SÉLECTION DU MODE ────────────────────────────────
     def _mode(self, meteo):
@@ -251,18 +280,28 @@ class SimulateurStockage:
 
         # Besoins
         besoin_froid = (t > self.csg_t + self.hyst_t) or \
-                       (self.pac_on and t > self.csg_t - self.hyst_t)
-        besoin_sech  = hr > self.csg_hr + self.hyst_hr
+                       ((self.pac_on or self._cycle_froid) and t > self.csg_t - self.hyst_t)
+        # Séchage : démarre au-dessus de csg_hr + hyst (93 %), s'arrête sous csg_hr (90 %)
+        if hr > self.csg_hr + self.hyst_hr: self._sechage = True
+        if hr < self.csg_hr:                self._sechage = False
+        besoin_sech = self._sechage
 
         # Free cooling — 4 conditions simultanées
         t_rosee = meteo.t_rosee
+        # HR de l'air extérieur une fois réchauffé à la T du stock (avant : HR ext brute < 85 %,
+        # quasi jamais vrai l'hiver dans le 62 alors que cet air froid sèche le stock)
+        hr_ramene = hr_air_ext_a_t_stock(meteo, t)
         fc_ok = (meteo.t_ext < t - 2.0) and \
                 (t_rosee < t - 0.5) and \
                 (meteo.t_ext > 0.5) and \
-                (meteo.hr_ext < 85.0)
+                (hr_ramene < self.csg_hr + self.hyst_hr) and \
+                not (hr < self.csg_hr - self.hyst_hr and hr_ramene < hr)   # stock déjà sec : pas d'air encore plus sec
 
         # Dégivrage — batterie givréee
-        degiv = self.t_batt <= 0.5
+        # Dégivrage : déclenché par le givre accumulé, dure jusqu'à la fonte complète
+        if self.givre >= GIVRE_SEUIL and self.pac_on:
+            self._degivrage = True
+        degiv = self._degivrage
 
         # Anti court-cycle — si besoin froid mais PAC pas encore disponible → mode ATTENTE (pas CYCL)
         _attente_acc = (self._arret_pac1 < 30.0) and (self.t_stock > self.csg_t - self.hyst_t)
@@ -291,17 +330,20 @@ class SimulateurStockage:
         if self.mode_descente:
             return "DESCENTE-FROID" if t > self.t_cible_descente + 0.5 else "DESCENTE-ATTENTE"
 
-        # 5. SÉCHAGE
-        if besoin_sech:
-            air_fav = (t_rosee < t) and (meteo.t_ext > t - 5) and (meteo.t_ext < t + 3)
-            return "SECHAGE-AIR FRAIS" if air_fav else "SECHAGE-CONDENSATION"
-
-        # 6. DÉGIVRAGE
-        if degiv and self._last_mode != "DEGIVRAGE" and self.pac_on:
+        # 5. DÉGIVRAGE (air du stock : PAC arrêtée, ventilation maintenue)
+        #    avant le séchage : inutile de sécher avec une batterie givrée
+        if degiv:
             return "DEGIVRAGE"
 
-        # 7. FREE COOLING
-        if fc_ok and besoin_froid:
+        # 6. SÉCHAGE
+        #    Air frais : sans PAC, seulement si le stock n'a pas besoin de froid
+        #    Condensation : la PAC tourne, l'eau condense sur la batterie (sèche ET refroidit)
+        if besoin_sech:
+            air_fav = (t_rosee < t) and (meteo.t_ext > t - 5) and (meteo.t_ext < t + 3)
+            return "SECHAGE-AIR FRAIS" if (air_fav and not besoin_froid) else "SECHAGE-CONDENSATION"
+
+        # 7. FREE COOLING (PAC arrêtée) — si le stock dérive trop, on repasse en froid mécanique
+        if fc_ok and besoin_froid and t <= self.csg_t + 1.5 * self.hyst_t:
             return "FREE COOLING"
 
         # 8. FROID MÉCANIQUE
@@ -336,9 +378,11 @@ class SimulateurStockage:
         """Retourne 0.0 / 0.5 / 1.0 — puissance ventilation."""
         m = mode.upper()
         # Arrêt ventil
-        if any(x in m for x in ["DEGIV", "ANTI", "ALARM", "SECURIT"]): return 0.0
-        # Mi-vitesse : 1 fan
-        if "CYCL" in m: return 0.5
+        # Dégivrage par l'air du stock : les ventilateurs soufflent l'air à ~6 °C sur la batterie
+        if "DEGIV" in m: return DEGIV_VENTIL
+        if any(x in m for x in ["ANTI", "ALARM", "SECURIT"]): return 0.0
+        # Ventilation cyclique : 2 ventilateurs, 25 % du temps (duty dans le bilan)
+        if "CYCL" in m: return 1.0
         # Pleine vitesse : 2 fans
         if "FREE" in m: return 1.0
         if "SECH" in m: return 1.0
@@ -356,35 +400,63 @@ class SimulateurStockage:
     def _update_pac(self, mode, dt_min):
         """
         PAC1 + PAC2 Lemasson HTT42+G — 15 kW chacune côté stockage.
-        PAC1 : démarre si ΔT > hyst ET arrêt ≥ 30 min
-        PAC2 : s'ajoute si ΔT > 1.5×hyst ET arrêt ≥ 30 min
-               (mode descente : PAC1+PAC2 obligatoires dès que mode actif)
-        Anti court-cycle : timer indépendant par unité, 30 min minimum.
+        Cycle de froid : démarre quand T > csg + hyst (ex. 7 °C), s'arrête quand T < csg - hyst (5 °C).
+          PAC1 : démarre en premier.
+          PAC2 : s'ajoute si T > csg + 1.5×hyst (7,5 °C), OU en renfort si la PAC1 tourne seule
+                 depuis 2 h sans que la T baisse (journées chaudes), OU en mode descente.
+          Après un dégivrage, le cycle reprend (avant : abandonné vers 6,7 °C).
+        Anti court-cycle : 30 min minimum d'arrêt par unité.
         """
         m = mode.upper()
-        need_froid = "FROID" in m or "FREE" in m or "DESCENTE" in m
+        need_froid = "FROID" in m or "DESCENTE" in m     # free cooling : volet seul, PAC arrêtée
         antigel    = "ANTI-GEL" in m
+        condens    = "CONDENSATION" in m                 # séchage par la batterie froide
+        delta      = self.t_stock - self.csg_t
+
+        if delta > self.hyst_t:  self._cycle_froid = True
+        if delta < -self.hyst_t: self._cycle_froid = False
 
         if antigel:
             # Mode chauffage — PAC en sens inverse, une seule unité suffit
             self.pac1_on = True
             self.pac2_on = False
-        elif need_froid:
-            delta = self.t_stock - self.csg_t
-            # PAC1 — charge normale
-            if delta > self.hyst_t and self._arret_pac1 >= 30.0:
-                self.pac1_on = True
-            elif delta < -self.hyst_t:
+        elif condens:
+            # Séchage par condensation : PAC1 tant que le stock peut encore refroidir
+            if self.t_stock > self.csg_t - self.hyst_t:
+                if self._arret_pac1 >= 30.0: self.pac1_on = True
+            else:
                 self.pac1_on = False
-            # PAC2 — charge forte ou mode descente (les deux obligatoires)
-            charge_forte = ((delta > self.hyst_t * 1.5) or self.mode_descente) and self.nb_pac >= 2
-            if charge_forte and self._arret_pac2 >= 30.0:
+            self.pac2_on = self.pac2_on and self._cycle_froid and self.nb_pac >= 2
+        elif need_froid:
+            # PAC1 — tout le cycle de froid
+            if self._cycle_froid and self._arret_pac1 >= 30.0:
+                self.pac1_on = True
+            elif not self._cycle_froid:
+                self.pac1_on = False
+
+            # Renfort : PAC1 seule depuis 2 h et la T ne baisse pas (elle stagne ou monte)
+            renfort = False
+            if self.pac1_on and not self.pac2_on:
+                self._p1_seule_min += dt_min
+                if self._p1_seule_min >= 120.0:
+                    renfort = self.t_stock >= self._t_ref_renfort and delta > 0   # la T ne baisse pas du tout
+                    self._p1_seule_min  = 0.0
+                    self._t_ref_renfort = self.t_stock
+            else:
+                self._p1_seule_min  = 0.0
+                self._t_ref_renfort = self.t_stock
+
+            # PAC2 — charge forte, renfort ou descente ; s'arrête avec le cycle
+            charge_forte = (delta > self.hyst_t * 1.5) or renfort or self.mode_descente
+            if charge_forte and self.nb_pac >= 2 and self._arret_pac2 >= 30.0:
                 self.pac2_on = True
-            elif not charge_forte:
+            elif not self._cycle_froid or self.nb_pac < 2:
                 self.pac2_on = False
         else:
             self.pac1_on = False
             self.pac2_on = False
+            self._p1_seule_min  = 0.0              # le renfort repart de zéro au prochain cycle
+            self._t_ref_renfort = self.t_stock
 
         self.pac_on = self.pac1_on or self.pac2_on
 
@@ -427,10 +499,12 @@ class SimulateurStockage:
             P_froid = 0.0
         else:
             P_chaud = 0.0
-            P_froid = -P_PAC if (self.pac_on and self.t_stock > self.csg_t - self.hyst_t) else 0.0
+            # Le givre isole les ailettes et freine l'air : la puissance froid baisse
+            P_froid = -P_PAC * (1 - GIVRE_PERTE * self.givre) \
+                      if (self.pac_on and self.t_stock > self.csg_t - self.hyst_t) else 0.0
 
         dT = (P_froid + P_chaud + P_resp + P_env + P_fans) * dt_s / C_TH_EFF
-        self.t_stock += dT + random.gauss(0, 0.003)
+        self.t_stock += dT          # physique sans bruit (le bruit capteur est ajouté à la mesure envoyée)
         t_max = 30.0 if self.mode_standby else 16.0
         self.t_stock = max(2.0, min(t_max, self.t_stock))
 
@@ -443,36 +517,61 @@ class SimulateurStockage:
             )
 
         # ── HUMIDITÉ ─────────────────────────────────────
-        transp   = 0.0012 * Q10
-        ech_hr   = 0.06 * (meteo.hr_ext - self.hr_stock) if volet else 0
-        dehumid  = -0.12 if self.pac_on else 0
-        self.hr_stock += transp + ech_hr + dehumid + random.gauss(0, 0.3)
-        self.hr_stock  = max(68, min(99, self.hr_stock))
+        # Avant : +0,0012 / -0,12 % PAR MESURE → trop sec en accéléré (plancher 68 %).
+        # Maintenant : équilibre par minute, indépendant du pas de calcul.
+        #   PAC à l'arrêt : la transpiration des tubercules pousse vers ~94 %
+        #   PAC en marche : la batterie condense et sèche vers ~87 %
+        #   Volet ouvert  : l'air extérieur ramené à la T du stock impose son humidité
+        if volet:
+            hr_cible, tau = hr_air_ext_a_t_stock(meteo, self.t_stock), 20.0
+        elif self.pac_on:
+            hr_cible, tau = HR_PAC_MARCHE, 90.0
+        else:
+            hr_cible, tau = HR_PAC_ARRET, 120.0
+        self.hr_stock = hr_cible + (self.hr_stock - hr_cible) * math.exp(-dt_min / tau)
+        self.hr_stock += random.gauss(0, 0.2)
+        self.hr_stock  = max(60, min(99, self.hr_stock))
 
         # ── BATTERIE ÉVAPORATEUR ICARUS HEX ──────────────
-        # Modèle physique calibré :
-        # PAC ON  → descente vers T_sat (~-2°C) τ=180 min
-        # PAC OFF → remontée vers T_stock       τ=25 min
-        # Dégivrage → montée vers +10°C         τ=5 min
-        TAU_REF  = 180.0; TAU_REM = 25.0; TAU_DEG = 5.0
-        T_SAT    = -2.0
-        dt_m     = min(dt_min, 2.0)
+        # PAC ON  → T batterie vers la T des ailettes : ~+1 °C avec 1 PAC, ~-2 °C avec 2 PAC, τ = 180 min
+        # PAC OFF → remontée vers T_stock, τ = 25 min
+        # Dégivrage → batterie à ~0 °C tant qu'il reste de la glace, puis T_stock
+        # Pas de calcul exact (exp) : même comportement à ×1 et à ×500
+        TAU_REF = 180.0; TAU_REM = 25.0
+        T_SAT   = -2.0
+        rapproche = lambda cible, tau: cible + (self.t_batt - cible) * math.exp(-dt_min / tau)
 
         if "ANTI-GEL" in mode.upper():
-            self.t_batt += (self.t_stock + 2.0 - self.t_batt) / TAU_REM * dt_m
+            self.t_batt = rapproche(self.t_stock + 2.0, TAU_REM)
             self.cumul_pac_h += dt_h
-        elif "DEGIV" in mode.upper():
-            self.t_batt += (10.0 - self.t_batt) / TAU_DEG * dt_m + random.gauss(0, 0.05)
-            self.duree_degivrage_min += dt_m
+        elif self._degivrage:
+            # Fonte : plus l'air du stock est chaud et plus il circule, plus c'est rapide
+            # (20 min à 6 °C avec 1 ventilateur ; ~12 min avec 2)
+            debit = self._ventil(mode) / 0.5                 # 1 = 1 ventilateur
+            f_air = max(0.15, debit) ** 0.7                  # 0 ventilateur ≈ convection naturelle
+            vitesse_fonte = max(0.1, self.t_stock / 6.0) * f_air / DEGIV_MIN_REF   # fraction / min
+            self.givre = max(0.0, self.givre - vitesse_fonte * GIVRE_SEUIL * dt_min)
+            self.duree_degivrage_min += dt_min
+            self.t_batt = rapproche(0.0 if self.givre > 0 else self.t_stock, 5.0)
+            if self.givre <= 0.0:
+                self._degivrage = False
         else:
             self.duree_degivrage_min = 0.0
             if self.pac_on:
-                t_sat_eff = T_SAT - max(0, (self.t_stock - 6.0) * 0.2)
-                self.t_batt += (t_sat_eff - self.t_batt) / TAU_REF * dt_m
+                t_ail     = T_AILETTE_2PAC if (self.pac1_on and self.pac2_on) else T_AILETTE_1PAC
+                t_sat_eff = t_ail - max(0, (self.t_stock - 6.0) * 0.2)
+                self.t_batt = rapproche(t_sat_eff, TAU_REF)
+                # Givre : ailettes sous 0 °C + air humide
+                if self.t_batt < 0.0:
+                    f_froid = min(1.5, -self.t_batt / 2.0)
+                    f_hr    = max(0.0, (self.hr_stock - 60.0) / 30.0)
+                    self.givre = min(1.0, self.givre + f_froid * f_hr * dt_h / GIVRE_H_PLEIN)
             else:
-                self.t_batt += (self.t_stock - self.t_batt) / TAU_REM * dt_m
-            self.t_batt += random.gauss(0, 0.03)
-
+                self.t_batt = rapproche(self.t_stock, TAU_REM)
+                # PAC à l'arrêt, air > 0 °C : le givre fond doucement
+                if self.t_stock > 1.0:
+                    self.givre = max(0.0, self.givre - dt_min / (DEGIV_MIN_REF * 4))
+        self.t_batt += random.gauss(0, 0.02)
         self.t_batt = max(-4.0, min(self.t_stock + 2.0, self.t_batt))
 
         # ── CO2 ───────────────────────────────────────────
@@ -503,6 +602,8 @@ class SimulateurStockage:
         # ── CUMULS ────────────────────────────────────────
         if self.pac_on:
             self.cumul_pac_h += dt_h
+        if "FREE" in mode.upper():
+            self.cumul_fc_h += dt_h
 
         # ── SEMAINES STOCKAGE ─────────────────────────────
         self._last_mode = mode
@@ -511,8 +612,8 @@ class SimulateurStockage:
         alarme, niveau = None, 0
         if self.t_stock < 2.0:
             alarme = f"ANTI-GEL CRITIQUE — T={self.t_stock:.1f}°C"; niveau = 3
-        elif self.t_batt < 0.5:
-            alarme = f"BATTERIE GIVRÉE — T_batt={self.t_batt:.1f}°C"; niveau = 3
+        elif self._degivrage and self.duree_degivrage_min > DEGIV_MAX_MIN:
+            alarme = f"DÉGIVRAGE INEFFICACE — {self.duree_degivrage_min:.0f} min"; niveau = 2
         elif self.co2_ppm > 5000:
             alarme = f"CO2 CRITIQUE — {self.co2_ppm:.0f} ppm"; niveau = 3
         elif self.co2_ppm > 3500:
@@ -523,7 +624,7 @@ class SimulateurStockage:
             alarme = f"T_HAUTE — {self.t_stock:.1f}°C vs csg {self.csg_t}°C"; niveau = 2
 
         return {
-            "t_stock":             round(self.t_stock, 2),
+            "t_stock":             round(self.t_stock + random.gauss(0, 0.02), 2),   # bruit capteur ±0,02 °C
             "hr_stock":            round(self.hr_stock, 2),
             "t_batterie":          round(self.t_batt, 2),
             "co2_ppm":             round(self.co2_ppm, 1),
@@ -544,6 +645,8 @@ class SimulateurStockage:
             "alarme_active":       alarme,
             "niveau_alarme":       niveau,
             "duree_fonct_pac_h":   round(self.cumul_pac_h, 2),
+            "cumul_pac_h":         round(self.cumul_pac_h, 2),
+            "cumul_fc_h":          round(self.cumul_fc_h, 2),
             "duree_degivrage_min": round(self.duree_degivrage_min, 1),
             "mode_standby":        self.mode_standby,
             "mode_descente":       self.mode_descente,
@@ -815,11 +918,15 @@ def main():
     hab    = SimulateurHabitation(csg_z1=csg_z1, csg_z2=csg_z2, csg_ecs=csg_ecs)
     boucle = BoucleGeothermique(t_init=12.0)  # C_sol=3000 kJ/°C par défaut (simulation visible)
 
-    # Restaurer cumuls depuis les dernières mesures (la clé anon ne peut pas écrire dans consignes)
+    # Restaurer cumuls + horloge simulée depuis les dernières mesures
+    heure_reprise = None
     try:
-        r = sb.table("stockage_readings").select("duree_fonct_pac_h").eq("exploitation_id", EXPLOIT_ID) \
-              .order("ts", desc=True).limit(1).execute().data
-        if r: sto.cumul_pac_h = float(r[0].get("duree_fonct_pac_h") or 0)
+        r = sb.table("stockage_readings").select("duree_fonct_pac_h,cumul_fc_h,heure_simulee") \
+              .eq("exploitation_id", EXPLOIT_ID).order("ts", desc=True).limit(1).execute().data
+        if r:
+            sto.cumul_pac_h = float(r[0].get("duree_fonct_pac_h") or 0)
+            sto.cumul_fc_h  = float(r[0].get("cumul_fc_h") or 0)
+            heure_reprise   = r[0].get("heure_simulee")     # reprise de l'horloge simulée
         r = sb.table("habitation_readings").select("cumul_pac_h").eq("exploitation_id", EXPLOIT_ID) \
               .order("ts", desc=True).limit(1).execute().data
         if r: hab.cumul_pac_h = float(r[0].get("cumul_pac_h") or 0)
@@ -860,6 +967,18 @@ def main():
         if meteo.date_debut_saison != date_debut_saison:
             meteo.date_debut_saison = date_debut_saison
             p(f"  [CFG] Recalage météo sur {date_debut_saison}", GREEN)
+        try:    debut_sim = datetime.fromisoformat(date_debut_saison)
+        except: debut_sim = datetime(2024, 9, 1)
+        # Au démarrage : reprendre l'horloge simulée là où elle s'était arrêtée (avant : retour au début)
+        if heure_reprise:
+            try:
+                h = (datetime.fromisoformat(heure_reprise.replace("Z", "+00:00")).replace(tzinfo=None)
+                     - debut_sim).total_seconds() / 3600.0
+                if h >= 0:
+                    meteo._heure = h
+                    p(f"  Reprise horloge simulée : {heure_reprise[:16]}", GREEN)
+            except Exception: pass
+            heure_reprise = None
 
         if systeme.get("date_debut_campagne"):
             sto.date_debut_campagne = systeme["date_debut_campagne"]
@@ -964,6 +1083,7 @@ def main():
         data_hab["exploitation_id"] = EXPLOIT_ID
         if saison_id:
             meteo_dict["saison_id"] = data_sto["saison_id"] = data_hab["saison_id"] = saison_id
+        data_sto["heure_simulee"] = (debut_sim + timedelta(hours=meteo._heure)).isoformat()
 
         try:
             ext_row = sb.table("conditions_externes").insert(meteo_dict).execute()
