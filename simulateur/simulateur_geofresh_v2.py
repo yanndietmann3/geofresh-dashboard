@@ -26,7 +26,7 @@ EXPLOIT_ID = "00000000-0000-0000-0000-000000000001"  # Site Pilote — configura
 # Avant : U=0.005 kW/°C et respiration 0.25 kW → charges ~100× trop faibles,
 #         une seule PAC suffisait même à 3000 °C extérieur (PAC2 jamais utile).
 UA_ENV_KW      = 0.60        # kW/°C — enveloppe isolée (~1200 m² × U 0.35) + infiltrations
-UA_VOLET_KW    = 10.0        # kW/°C — registre plein ouvert : 2 Cantoni Ø800 ≈ 30 000 m³/h d'air neuf × 1,2 kg/m³ × 1 kJ/kg·K (avant 2,5 : ~7 500 m³/h, free cooling trop faible)
+UA_VOLET_KW    = 10.0        # kW/°C — volet ouvert : 2 Cantoni Ø800 ≈ 30 000 m³/h d'air neuf × 1,2 kg/m³ × 1 kJ/kg·K (avant 2,5 : ~7 500 m³/h, free cooling trop faible)
 P_RESP_5C_KW   = 6.0         # kW    — respiration 500 t à 5 °C (~12 W/t), ×2 tous les +10 °C
 P_FAN_KW       = 2.2         # kW    — chaleur dégagée par ventilateur Cantoni Ø800
 P_PAC_FROID_KW = 15.0        # kW    — puissance froid par PAC (Lemasson HTT42+G)
@@ -44,11 +44,12 @@ T_AILETTE_1PAC = 1.0   # °C — surface batterie avec 1 PAC (demi-charge) : au-
 T_AILETTE_2PAC = -2.0  # °C — surface batterie avec 2 PAC (pleine charge, glycolée -4/+2 °C) → givre
 HR_PAC_ARRET   = 94.0  # % — équilibre transpiration des tubercules (PAC à l'arrêt)
 HR_PAC_MARCHE  = 87.0  # % — équilibre avec condensation sur la batterie (PAC en marche)
-HR_FC_MIN      = 85.0  # % — sous ce HR stock, le registre de mélange se ferme (free cooling réduit, pas coupé)
-OUV_VOLET_MIN  = 0.30  # ouverture mini du registre en free cooling
-ECART_FC       = 2.0   # °C — free cooling si T ext < T stock − 2 °C (registre plein ouvert)
-ECART_FC_SEC   = 4.0   # °C — écart demandé quand le stock est sec (HR < HR_FC_MIN, registre réduit)
-T_MELANGE_MIN  = 0.5   # °C — air mélangé (neuf + recyclé) jamais plus froid : pas de gel des tubercules
+HR_FC_MIN      = 85.0  # % — sous ce HR stock, volet de free cooling ouvert par cycles (pas coupé)
+VOLET_CYCLE_OUVERT = 10.0  # min — volet ouvert… (stock sec)
+VOLET_CYCLE_TOTAL  = 30.0  # min — …sur ce cycle : 10 min ouvert / 20 min fermé
+ECART_FC       = 2.0   # °C — free cooling si T ext < T stock − 2 °C (volet ouvert en continu)
+ECART_FC_SEC   = 4.0   # °C — écart demandé quand le stock est sec (volet par cycles, refroidit moins vite)
+T_EXT_FC_MIN   = 0.5   # °C — volet tout ou rien : air soufflé ≈ T ext, jamais plus froid (gel des tubercules)
 DEGIV_VENTIL   = 1.0   # ventilation pendant le dégivrage : 0.5 = 1 ventilateur, 1.0 = 2
 # Échange air / glace ∝ débit^0,7 (convection forcée) : 2 ventilateurs ≈ 1,6× plus vite qu'un seul
 
@@ -296,15 +297,15 @@ class SimulateurStockage:
         # HR de l'air extérieur une fois réchauffé à la T du stock (avant : HR ext brute < 85 %,
         # quasi jamais vrai l'hiver dans le 62 alors que cet air froid sèche le stock)
         hr_ramene = hr_air_ext_a_t_stock(meteo, t)
-        # Écart mini T stock − T ext : 2 °C registre plein ouvert, 4 °C si le stock est sec
-        # (registre réduit → il faut un air plus froid pour refroidir autant)
+        # Écart mini T stock − T ext : 2 °C volet ouvert en continu, 4 °C si le stock est sec
+        # (volet par cycles → il faut un air plus froid pour refroidir autant)
         ecart_fc = ECART_FC_SEC if hr < HR_FC_MIN else ECART_FC
         fc_ok = (meteo.t_ext < t - ecart_fc) and \
                 (t_rosee < t - 0.5) and \
-                (self._ouverture_gel(meteo.t_ext) >= OUV_VOLET_MIN) and \
+                (meteo.t_ext > T_EXT_FC_MIN) and \
                 (hr_ramene < self.csg_hr + self.hyst_hr) and \
                 not (hr < HR_FC_MIN - 3 and hr_ramene < hr)
-        # Stock déjà sec : on ne coupe pas le free cooling, on ferme le registre de mélange (voir _ouverture_volet)
+        # Stock déjà sec : on ne coupe pas le free cooling, le volet s'ouvre par cycles (voir _ouverture_volet)
 
         # Dégivrage — batterie givréee
         # Dégivrage : déclenché par le givre accumulé, dure jusqu'à la fonte complète
@@ -376,19 +377,13 @@ class SimulateurStockage:
         return False
 
     def _ouverture_volet(self, meteo):
-        """Registre de mélange air neuf / air recyclé (0 à 1).
-        Plein ouvert si le stock est assez humide. Sous HR_FC_MIN + 2 %, on ferme
-        progressivement jusqu'à 30 % : moins d'air sec entre, le free cooling continue."""
-        if hr_air_ext_a_t_stock(meteo, self.t_stock) >= self.hr_stock:
-            return self._ouverture_gel(meteo.t_ext)   # l'air neuf n'assèche pas
-        x = (self.hr_stock - HR_FC_MIN) / 2.0
-        ouv = max(OUV_VOLET_MIN, min(1.0, OUV_VOLET_MIN + (1 - OUV_VOLET_MIN) * x))
-        return min(ouv, self._ouverture_gel(meteo.t_ext))
-
-    def _ouverture_gel(self, t_ext):
-        """Ouverture max du registre pour que l'air mélangé reste au-dessus de 0,5 °C."""
-        if t_ext >= T_MELANGE_MIN: return 1.0
-        return max(0.0, (self.t_stock - T_MELANGE_MIN) / (self.t_stock - t_ext))
+        """Volet tout ou rien. Part du temps où il est ouvert pendant le free cooling (0 à 1).
+        Stock assez humide : ouvert en continu (1).
+        Stock sec (HR < HR_FC_MIN) et air neuf plus sec : ouvert par cycles, VOLET_CYCLE_OUVERT min
+        sur VOLET_CYCLE_TOTAL min. Le simulateur applique la moyenne (pas de calcul parfois > 30 min)."""
+        if self.hr_stock < HR_FC_MIN and hr_air_ext_a_t_stock(meteo, self.t_stock) < self.hr_stock:
+            return VOLET_CYCLE_OUVERT / VOLET_CYCLE_TOTAL
+        return 1.0
 
     def _volet_co2(self):
         """Volet CO2 — indépendant météo, basé uniquement sur co2_ppm.
@@ -513,7 +508,7 @@ class SimulateurStockage:
 
         Q10 = math.pow(2.0, (self.t_stock - 5.0) / 10.0)
         P_resp = P_RESP_5C_KW * Q10
-        u_eff  = UA_ENV_KW + ouv * (UA_VOLET_KW - UA_ENV_KW)
+        u_eff  = UA_ENV_KW + ouv * (UA_VOLET_KW - UA_ENV_KW)   # ouv = part du temps volet ouvert
         P_env  = u_eff * (meteo.t_ext - self.t_stock)
         duty   = 0.25 if "CYCL" in mode else 1.0
         P_fans = P_FAN_KW * (2 * ventil) * duty       # 0.5 = 1 ventilateur, 1.0 = 2
