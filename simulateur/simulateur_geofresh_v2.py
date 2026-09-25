@@ -38,6 +38,8 @@ GIVRE_SEUIL    = 0.8   # givre (0-1) qui déclenche le dégivrage
 GIVRE_PERTE    = 0.5   # perte de puissance froid à givre = 1 (ailettes bouchées)
 DEGIV_MIN_REF  = 20.0  # min — dégivrage par l'air du stock à 6 °C (PAC arrêtée, 1 ventilateur)
 DEGIV_MAX_MIN  = 60.0  # min — au-delà : alarme « dégivrage inefficace »
+DEGIV_VENTIL   = 1.0   # ventilation pendant le dégivrage : 0.5 = 1 ventilateur, 1.0 = 2
+# Échange air / glace ∝ débit^0,7 (convection forcée) : 2 ventilateurs ≈ 1,6× plus vite qu'un seul
 
 # ===========================================================
 #  IMPORTS & INSTALL
@@ -352,8 +354,8 @@ class SimulateurStockage:
         """Retourne 0.0 / 0.5 / 1.0 — puissance ventilation."""
         m = mode.upper()
         # Arrêt ventil
-        # Dégivrage par l'air du stock : 1 ventilateur souffle l'air à ~6 °C sur la batterie
-        if "DEGIV" in m: return 0.5
+        # Dégivrage par l'air du stock : les ventilateurs soufflent l'air à ~6 °C sur la batterie
+        if "DEGIV" in m: return DEGIV_VENTIL
         if any(x in m for x in ["ANTI", "ALARM", "SECURIT"]): return 0.0
         # Mi-vitesse : 1 fan
         if "CYCL" in m: return 0.5
@@ -500,8 +502,11 @@ class SimulateurStockage:
             self.t_batt = rapproche(self.t_stock + 2.0, TAU_REM)
             self.cumul_pac_h += dt_h
         elif self._degivrage:
-            # Fonte : plus l'air du stock est chaud, plus c'est rapide (20 min à 6 °C)
-            vitesse_fonte = max(0.1, self.t_stock / 6.0) / DEGIV_MIN_REF   # fraction / min
+            # Fonte : plus l'air du stock est chaud et plus il circule, plus c'est rapide
+            # (20 min à 6 °C avec 1 ventilateur ; ~12 min avec 2)
+            debit = self._ventil(mode) / 0.5                 # 1 = 1 ventilateur
+            f_air = max(0.15, debit) ** 0.7                  # 0 ventilateur ≈ convection naturelle
+            vitesse_fonte = max(0.1, self.t_stock / 6.0) * f_air / DEGIV_MIN_REF   # fraction / min
             self.givre = max(0.0, self.givre - vitesse_fonte * GIVRE_SEUIL * dt_min)
             self.duree_degivrage_min += dt_min
             self.t_batt = rapproche(0.0 if self.givre > 0 else self.t_stock, 5.0)
