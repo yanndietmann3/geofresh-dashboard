@@ -294,7 +294,8 @@ class SimulateurStockage:
         fc_ok = (meteo.t_ext < t - 2.0) and \
                 (t_rosee < t - 0.5) and \
                 (meteo.t_ext > 0.5) and \
-                (hr_ramene < self.csg_hr + self.hyst_hr)
+                (hr_ramene < self.csg_hr + self.hyst_hr) and \
+                not (hr < self.csg_hr - self.hyst_hr and hr_ramene < hr)   # stock déjà sec : pas d'air encore plus sec
 
         # Dégivrage — batterie givréee
         # Dégivrage : déclenché par le givre accumulé, dure jusqu'à la fonte complète
