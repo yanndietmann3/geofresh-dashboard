@@ -141,6 +141,18 @@ for(const avecMaison of [true, false]) {
   verifier(`Consigne : pas d'erreur JS`, !erreurs.length, erreurs.join(' | '));
   await ctx.close(); }
 
+// Ancien commun.js en cache (sans GF.confirmer) : la confirmation du navigateur prend le relais
+{ const {ctx, p, erreurs} = await ouvrir('index.html', 'client', true);
+  const envois = [];
+  p.on('request', r => { if(r.method() === 'PATCH' && r.url().includes('consignes')) envois.push(r.url()); });
+  let message = '';
+  p.on('dialog', d => { message = d.message(); d.accept(); });
+  await p.evaluate(() => { delete GF.confirmer; openModal('sto', 'hr'); });
+  await p.fill('#mf-shr', '88'); await p.click('#m-save'); await p.waitForTimeout(500);
+  verifier(`Consigne sans GF.confirmer : confirmation de secours puis envoi`, message.includes('→ 88 %') && envois.length === 1, message);
+  verifier(`Consigne sans GF.confirmer : pas d'erreur JS`, !erreurs.length, erreurs.join(' | '));
+  await ctx.close(); }
+
 { const {ctx, p, erreurs} = await ouvrir('operateur.html', 'super_admin', true);
   const envois = [];
   p.on('request', r => { if(r.method() === 'PATCH' && r.url().includes('consignes')) envois.push(r.postData()); });

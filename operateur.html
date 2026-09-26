@@ -6,8 +6,8 @@
 <title>GeoFresh — Panneau Opérateur</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥔</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/geofresh.css"/>
-<link rel="stylesheet" href="css/vue-operateur.css"/>
+<link rel="stylesheet" href="css/geofresh.css?v=2.4.1"/>
+<link rel="stylesheet" href="css/vue-operateur.css?v=2.4.1"/>
 </head>
 <body>
 <div class="shell" id="shell" style="visibility:hidden;">
@@ -375,8 +375,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
-<script src="js/commun.js"></script>
+<script src="config.js?v=2.4.1"></script>
+<script src="js/commun.js?v=2.4.1"></script>
+<script>window.gfConfirmer = (titre, lignes = [], note = '') => window.GF && GF.confirmer ? GF.confirmer(titre, lignes, note)
+  : Promise.resolve(confirm(titre + '\n\n' + lignes.filter(l => String(l[1]) !== String(l[2])).map(l => l[0] + ' : ' + l[1] + ' → ' + l[2]).join('\n')));</script>
 <script>
 // ── CONFIG ────────────────────────────────────────────────
 // Config depuis config.js
@@ -597,7 +599,7 @@ const ouiNon = b => b ? 'ACTIF' : 'INACTIF';
 async function chooseVitesse(v) {
   const avant = CSG_DB.stockage?.vitesse_sim ?? CMD.vitesse_sim;
   if(parseInt(avant) === v) return;
-  if(!(await GF.confirmer('Changer la vitesse de simulation ?', [['Vitesse', '×' + avant, '×' + v]]))) {
+  if(!(await gfConfirmer('Changer la vitesse de simulation ?', [['Vitesse', '×' + avant, '×' + v]]))) {
     setVitesse(parseInt(avant)); return;
   }
   setVitesse(v);
@@ -637,7 +639,7 @@ async function applyCmd(side) {
     : [['Consigne Z1', db.csg_z1 + ' °C', CMD.csg_z1 + ' °C'], ['Consigne Z2', db.csg_z2 + ' °C', CMD.csg_z2 + ' °C'],
        ['Consigne ECS', db.csg_ecs + ' °C', CMD.csg_ecs + ' °C'], ['STANDBY', ouiNon(db.mode_standby_hab), ouiNon(CMD.standby_hab)]];
   const titre = 'Appliquer — ' + gfBriqueLabel(side==='sto' ? 'stockage_pdt' : 'habitation', false) + ' ?';
-  if(!(await GF.confirmer(titre, lignes, 'Le simulateur prend la nouvelle valeur au prochain cycle.'))) return;
+  if(!(await gfConfirmer(titre, lignes, 'Le simulateur prend la nouvelle valeur au prochain cycle.'))) return;
   if(side==='sto') {
     // La vitesse n'est PAS renvoyée ici (avant : une valeur périmée remettait la simulation à ×1)
     body = { csg_t: CMD.csg_t, csg_hr: CMD.csg_hr,

@@ -6,14 +6,16 @@
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 
-<script src="config.js"></script>
-<script src="js/commun.js"></script>
+<script src="config.js?v=2.4.1"></script>
+<script src="js/commun.js?v=2.4.1"></script>
+<script>window.gfConfirmer = (titre, lignes = [], note = '') => window.GF && GF.confirmer ? GF.confirmer(titre, lignes, note)
+  : Promise.resolve(confirm(titre + '\n\n' + lignes.filter(l => String(l[1]) !== String(l[2])).map(l => l[0] + ' : ' + l[1] + ' → ' + l[2]).join('\n')));</script>
 <script>const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</script>
 <title>GeoFresh — Jumeau Numerique</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥔</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/geofresh.css"/>
-<link rel="stylesheet" href="css/vue-client.css"/>
+<link rel="stylesheet" href="css/geofresh.css?v=2.4.1"/>
+<link rel="stylesheet" href="css/vue-client.css?v=2.4.1"/>
 </head>
 <body>
 <div class="shell">
@@ -511,7 +513,7 @@ function syncSpeed(v) {
 async function toggleSpeed() {
   if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
   const suivant = (_speedIdx + 1) % SPEEDS.length;
-  if(!(await GF.confirmer('Changer la vitesse de simulation ?',
+  if(!(await gfConfirmer('Changer la vitesse de simulation ?',
        [['Vitesse', '×' + SPEEDS[_speedIdx].vitesse, '×' + SPEEDS[suivant].vitesse]]))) return;
   _speedIdx = suivant;
   const s = SPEEDS[_speedIdx];
@@ -717,7 +719,7 @@ async function saveModal() {
     'sto-all':  [['Consigne T stock', f(CSG.sto.t,'°C'), f(gv('sta'),'°C')], ['Hystérésis T', f(CSG.sto.hyst_t,'°C'), f(gv('stb'),'°C')],
                  ['Consigne HR', f(CSG.sto.hr,'%'), f(gv('src'),'%')], ['Hystérésis HR', f(CSG.sto.hyst_hr,'%'), f(gv('srd'),'%')]],
   }[k] || [];
-  if(!(await GF.confirmer('Modifier la consigne ?', L, "L'installation applique la nouvelle valeur au prochain cycle."))) return;
+  if(!(await gfConfirmer('Modifier la consigne ?', L, "L'installation applique la nouvelle valeur au prochain cycle."))) return;
   if(k==='hab-z1')   { CSG.hab.z1=gv('hz1')??CSG.hab.z1; }
   if(k==='hab-z2')   { CSG.hab.z2=gv('hz2')??CSG.hab.z2; }
   if(k==='hab-ecs')  { CSG.hab.ecs=gv('hecs')??CSG.hab.ecs; CSG.hab.hyst_ecs=gv('hhyst')??CSG.hab.hyst_ecs; }
@@ -1280,7 +1282,7 @@ async function toggleModeStockage(mode) {
   if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
   const NOMS = { auto:'AUTO', standby:'STANDBY', descente:'DESCENTE −1 °C/jour', pr:'POST-RÉCOLTE' };
   if(mode === _modeStockage) return;
-  if(!(await GF.confirmer('Changer le mode du stockage ?', [['Mode', NOMS[_modeStockage] || _modeStockage, NOMS[mode]]]))) return;
+  if(!(await gfConfirmer('Changer le mode du stockage ?', [['Mode', NOMS[_modeStockage] || _modeStockage, NOMS[mode]]]))) return;
   _modeStockage = mode;
   // Boutons
   document.getElementById('btn-standby').className = 'mode-btn' + (mode==='standby'?' active-standby':'');
