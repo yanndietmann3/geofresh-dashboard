@@ -1105,7 +1105,7 @@ def main():
         data_hab["exploitation_id"] = EXPLOIT_ID
         if saison_id:
             meteo_dict["saison_id"] = data_sto["saison_id"] = data_hab["saison_id"] = saison_id
-        data_sto["heure_simulee"] = (debut_sim + timedelta(hours=meteo._heure)).isoformat()
+        data_sto["heure_simulee"] = data_hab["heure_simulee"] = (debut_sim + timedelta(hours=meteo._heure)).isoformat()
 
         try:
             ext_row = sb.table("conditions_externes").insert(meteo_dict).execute()
