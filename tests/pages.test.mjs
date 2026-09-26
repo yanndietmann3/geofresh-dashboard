@@ -31,7 +31,7 @@ window.supabase={createClient:()=>({
 window.WebSocket=class{send(){}};`;
 
 const mesures = {
-  stockage_readings:   [{t_stock:5.2, pac_on:true, pac1_on:true, pac2_on:false, pac_kw:15, mode_actif:'FROID MECANIQUE',
+  stockage_readings:   [{t_stock:5.2, pac_on:true, pac1_on:true, pac2_on:false, pac_kw:15, cop_boucle:3.0, vitesse_ventil:0.5, ventil_duty:1, mode_actif:'FROID MECANIQUE',
                          duree_fonct_pac_h:123.4, cumul_fc_h:45.6, heure_simulee:'2026-11-14T08:30:00+00:00'}],
   habitation_readings: [{t_int_z1:20.4, t_int_z2:18.9, t_ecs:52, pac_on:true, pac_kw:9, mode_actif:'CHAUFFAGE'}],
   conditions_externes: [{t_ext:12.5, hr_ext:78, t_rosee:8}],
@@ -44,7 +44,7 @@ const debutHist = Date.parse('2026-11-07T08:30:00Z');
 const historique = { debut:'2026-11-07T08:30:00+00:00', fin:'2026-11-14T08:30:00+00:00', simule:true,
   points: Array.from({length:50}, (_, i) => ({ t:new Date(debutHist + i*3.4*3600e3).toISOString(),
     v1:6 + Math.sin(i/5), v2:89, v3:900, pac:i%2, mode:'FROID MECANIQUE', alarme:null })),
-  stats: { n:50, t_moy:6.1, alarmes:1, cumul_pac_h:40.2, froid_h:40.2, froid_2pac_h:12.5, fc_h:3.3, mode_dominant:'FROID MECANIQUE' },
+  stats: { n:50, t_moy:6.1, alarmes:1, cumul_pac_h:40.2, froid_h:40.2, froid_2pac_h:12.5, fc_h:3.3, e_pac_kwh:1234, e_vent_kwh:567, mode_dominant:'FROID MECANIQUE' },
   evenements: [{ t:'2026-11-13T10:00:00+00:00', mode:'FREE COOLING', v1:6.4, v2:88, v3:900, pac:false, alarme:null }] };
 
 const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
@@ -117,6 +117,11 @@ for(const avecMaison of [true, false]) {
   verifier(`Stockage : froid mécanique saison = historique (même calcul)`,
     (await p.textContent('#s-cumul-h')) === '40.2 h' && (await p.textContent('#s-cumul-2pac')).includes('12.5') && (await p.textContent('#s-cumul-fc')) === '3.3 h',
     `${await p.textContent('#s-cumul-h')} / ${await p.textContent('#s-cumul-fc')}`);
+  verifier(`Stockage : conso PAC + ventilateurs (maintenant et saison)`,
+    (await p.textContent('#c-pac-kw')) === '5,0 kW' && (await p.textContent('#c-vent-kw')) === '2,2 kW' && (await p.textContent('#c-tot-kw')) === '7,2 kW'
+    && (await p.textContent('#c-tot-kwh')).replace(/\s/g, '') === '1801kWh',
+    `${await p.textContent('#c-tot-kw')} / ${await p.textContent('#c-tot-kwh')}`);
+  verifier(`Stockage : encart Conditions extérieures retiré`, (await p.$('#s-text')) === null);
   verifier(`Stockage : une seule durée PAC affichée`, (await p.$$('#s-cumul-h2, #s-dpac')).length === 0);
   const avant = { cumul: await p.textContent('#s-cumul-h'), fc: await p.textContent('#s-cumul-fc') };
   await p.goto(`${ROOT}portail.html`); await p.waitForTimeout(1000);
@@ -175,8 +180,8 @@ for(const avecMaison of [true, false]) {
 // En-tête client : seulement le nom de l'exploitation ; historique en direct
 { const {ctx, p, erreurs, visible} = await ouvrir('index.html', 'client', false);
   verifier(`En-tête client : nom de l'exploitation`, (await p.textContent('#exploit-nom-hdr')).includes('Site Pilote'));
-  verifier(`En-tête client : horloge, météo, email cachés`,
-    !(await visible('.sim-clock')) && !(await visible('.ext-strip')) && !(await visible('#user-email')) && !(await visible('#clk')));
+  verifier(`En-tête client : météo visible, horloge et email cachés`,
+    !(await visible('.sim-clock')) && (await visible('.ext-strip')) && !(await visible('#user-email')) && !(await visible('#clk')));
   let appels = 0;
   p.on('request', r => { if(r.url().includes('rpc/historique')) appels++; });
   await p.click('#tbx'); await p.waitForTimeout(600);
