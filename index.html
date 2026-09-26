@@ -6,16 +6,16 @@
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 
-<script src="config.js?v=2.4.5"></script>
-<script src="js/commun.js?v=2.4.5"></script>
+<script src="config.js?v=2.4.6"></script>
+<script src="js/commun.js?v=2.4.6"></script>
 <script>window.gfConfirmer = (titre, lignes = [], note = '') => window.GF && GF.confirmer ? GF.confirmer(titre, lignes, note)
   : Promise.resolve(confirm(titre + '\n\n' + lignes.filter(l => String(l[1]) !== String(l[2])).map(l => l[0] + ' : ' + l[1] + ' → ' + l[2]).join('\n')));</script>
 <script>const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</script>
 <title>GeoFresh — Jumeau Numerique</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥔</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/geofresh.css?v=2.4.5"/>
-<link rel="stylesheet" href="css/vue-client.css?v=2.4.5"/>
+<link rel="stylesheet" href="css/geofresh.css?v=2.4.6"/>
+<link rel="stylesheet" href="css/vue-client.css?v=2.4.6"/>
 </head>
 <body>
 <div class="shell">
@@ -1446,7 +1446,7 @@ function rafraichirHistorique() {
   if(!document.getElementById('phistory')?.classList.contains('active') || !histEnDirect()) return;
   const attente = Math.max(0, 10000 - (Date.now() - _histDernier));
   clearTimeout(_histTimer);
-  _histTimer = setTimeout(() => { if(document.getElementById('hist-tip')?.hidden !== false) loadHistory(); }, attente);
+  _histTimer = setTimeout(loadHistory, attente);   // même souris sur la courbe (avant : bloqué tant qu'on survolait)
 }
 
 async function loadHistory(){
@@ -1524,6 +1524,7 @@ function afficherHist(h, bat) {
       <td>${r.alarme ? '<span style="color:#B07A1E">'+r.alarme+'</span>' : '<span style="color:var(--muted)">—</span>'}</td>
     </tr>`).join('');
   drawHistChart();
+  window.majInfobulle?.();
 }
 
 // Graduation de l'axe des dates : pas « rond » donnant au plus ~6 repères
@@ -1592,9 +1593,10 @@ function drawHistChart(){
 (function(){
   const c = document.getElementById('hist-canvas'), tip = document.getElementById('hist-tip');
   if(!c || !tip) return;
-  c.addEventListener('mousemove', e => {
+  let dernierX = null;
+  const montrer = x => {
     if(!_hist?.X) { tip.hidden = true; return; }
-    const x = e.offsetX, t = _hist.t0 + (x - _hist.L)/(c.offsetWidth - _hist.L - _hist.R)*_hist.span;
+    const t = _hist.t0 + (x - _hist.L)/(c.offsetWidth - _hist.L - _hist.R)*_hist.span;
     let best = null, d = Infinity;
     _hist.pts.forEach(p => { const dt = Math.abs(new Date(p.t).getTime() - t); if(dt < d) { d = dt; best = p; } });
     if(!best) return;
@@ -1605,8 +1607,11 @@ function drawHistChart(){
       `<br>${best.mode || ''} · PAC ${Math.round((best.pac || 0)*100)} %`;
     tip.hidden = false;
     tip.style.left = Math.min(x + 12, c.offsetWidth - tip.offsetWidth - 4) + 'px';
-  });
-  c.addEventListener('mouseleave', () => { tip.hidden = true; });
+  };
+  c.addEventListener('mousemove', e => { dernierX = e.offsetX; montrer(dernierX); });
+  c.addEventListener('mouseleave', () => { dernierX = null; tip.hidden = true; });
+  // Après un rechargement en direct, l'infobulle suit les nouvelles valeurs
+  window.majInfobulle = () => { if(dernierX != null) montrer(dernierX); };
 })();
 window.addEventListener('resize', () => { if(document.getElementById('phistory')?.classList.contains('active')) drawHistChart(); });
 
