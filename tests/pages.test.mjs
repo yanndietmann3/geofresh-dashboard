@@ -35,6 +35,7 @@ const mesures = {
                          duree_fonct_pac_h:123.4, cumul_fc_h:45.6, heure_simulee:'2026-11-14T08:30:00+00:00'}],
   habitation_readings: [{t_int_z1:20.4, t_int_z2:18.9, t_ecs:52, pac_on:true, pac_kw:9, mode_actif:'CHAUFFAGE'}],
   conditions_externes: [{t_ext:12.5, hr_ext:78, t_rosee:8}],
+  exploitations: [{nom:'Site Pilote'}],
   consignes: [{id:'stockage', csg_t:6, hyst_t:1, csg_hr:90, hyst_hr:3, vitesse_sim:500},
               {id:'habitation', csg_z1:20, csg_z2:19, csg_ecs:55, hyst_ecs:3, csg_clim_z1:26, csg_clim_z2:26}],
 };
@@ -163,6 +164,24 @@ for(const avecMaison of [true, false]) {
   await p.click('.gf-confirm-oui'); await p.waitForTimeout(500);
   verifier(`Opérateur : Appliquer ne renvoie plus la vitesse`, envois.length === 1 && !envois[0].includes('vitesse_sim'), envois.join(' | '));
   verifier(`Opérateur : pas d'erreur JS`, !erreurs.length, erreurs.join(' | '));
+  await ctx.close(); }
+
+// En-tête client : seulement le nom de l'exploitation ; historique en direct
+{ const {ctx, p, erreurs, visible} = await ouvrir('index.html', 'client', false);
+  verifier(`En-tête client : nom de l'exploitation`, (await p.textContent('#exploit-nom-hdr')).includes('Site Pilote'));
+  verifier(`En-tête client : horloge, météo, email cachés`,
+    !(await visible('.sim-clock')) && !(await visible('.ext-strip')) && !(await visible('#user-email')) && !(await visible('#clk')));
+  let appels = 0;
+  p.on('request', r => { if(r.url().includes('rpc/historique')) appels++; });
+  await p.click('#tbx'); await p.waitForTimeout(600);
+  const avant = appels;
+  await p.evaluate(() => { _histDernier = 0; rafraichirHistorique(); }); await p.waitForTimeout(600);
+  verifier(`Historique : se recharge tout seul à une nouvelle mesure`, appels > avant, `${avant} → ${appels}`);
+  verifier(`Historique : indicateur « En direct »`, await visible('#hist-direct'));
+  verifier(`En-tête / direct : pas d'erreur JS`, !erreurs.length, erreurs.join(' | '));
+  await ctx.close(); }
+{ const {ctx, visible} = await ouvrir('index.html', 'super_admin', false);
+  verifier(`En-tête staff : horloge simulée visible`, await visible('.sim-clock'));
   await ctx.close(); }
 
 // Portail

@@ -377,3 +377,8 @@ canvas.hc{height:220px!important;}
 .hist-tip{position:absolute;top:6px;pointer-events:none;background:var(--panel);border:1px solid var(--bdr);
   border-radius:8px;padding:6px 9px;font-size:10px;line-height:1.5;color:var(--cream);box-shadow:0 2px 8px rgba(45,32,23,0.12);white-space:nowrap;}
 .hist-dates[hidden],.hist-tip[hidden]{display:none;}
+/* En-tête : nom de l'exploitation */
+.exploit-nom{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;color:var(--cream);letter-spacing:-.2px;}
+/* Historique en direct */
+.hist-direct{display:inline-flex;align-items:center;gap:6px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--sa);}
+.hist-direct[hidden]{display:none;}
