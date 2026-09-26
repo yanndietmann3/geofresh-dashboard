@@ -30,15 +30,15 @@ begin
   if sim is null then return jsonb_build_object('points', '[]'::jsonb); end if;
 
   create temp table if not exists _h (t timestamptz, v1 numeric, v2 numeric, v3 numeric,
-                                      pac boolean, mode text, alarme text, saison_id text) on commit drop;
+                                      pac boolean, pac2 boolean, mode text, alarme text, saison_id text) on commit drop;
   truncate _h;
   if bat = 'sto' then
     insert into _h select case when sim then heure_simulee else ts end, t_stock, hr_stock, co2_ppm,
-                          pac_on, mode_actif, alarme_active, saison_id
+                          pac_on, coalesce(pac2_on, false), mode_actif, alarme_active, saison_id
       from stockage_readings where exploitation_id = eid and (not sim or heure_simulee is not null);
   else
     insert into _h select case when sim then heure_simulee else ts end, t_int_z1, t_int_z2, t_ecs,
-                          pac_on, mode_actif, alarme_active, saison_id
+                          pac_on, false, mode_actif, alarme_active, saison_id
       from habitation_readings where exploitation_id = eid and (not sim or heure_simulee is not null);
   end if;
 
@@ -77,7 +77,13 @@ begin
         'mode_dominant', mode() within group (order by mode),
         'alarmes', count(*) filter (where alarme is not null and alarme is distinct from alarme_prec),
         'cumul_pac_h', round(coalesce(sum(extract(epoch from least(t_suiv - t, interval '6 hours')))
-                                        filter (where pac and t_suiv is not null), 0) / 3600.0, 1))
+                                        filter (where pac and t_suiv is not null), 0) / 3600.0, 1),
+        -- Durée de froid mécanique = temps où AU MOINS une PAC refroidit (hors anti-gel, où elle chauffe),
+        -- quel que soit le nombre de PAC ; « dont 2 PAC » = temps où les deux tournent
+        'froid_h', round(coalesce(sum(extract(epoch from least(t_suiv - t, interval '6 hours')))
+                                   filter (where pac and t_suiv is not null and coalesce(mode, '') not like 'ANTI-GEL%'), 0) / 3600.0, 1),
+        'froid_2pac_h', round(coalesce(sum(extract(epoch from least(t_suiv - t, interval '6 hours')))
+                                   filter (where pac2 and t_suiv is not null and coalesce(mode, '') not like 'ANTI-GEL%'), 0) / 3600.0, 1))
       from p),
     'evenements', coalesce((select jsonb_agg(e order by e->>'t' desc) from (
         select jsonb_build_object('t', t, 'mode', mode, 'v1', v1, 'v2', v2, 'v3', v3, 'pac', pac, 'alarme', alarme) e

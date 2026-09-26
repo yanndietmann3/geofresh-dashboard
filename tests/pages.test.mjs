@@ -44,7 +44,7 @@ const debutHist = Date.parse('2026-11-07T08:30:00Z');
 const historique = { debut:'2026-11-07T08:30:00+00:00', fin:'2026-11-14T08:30:00+00:00', simule:true,
   points: Array.from({length:50}, (_, i) => ({ t:new Date(debutHist + i*3.4*3600e3).toISOString(),
     v1:6 + Math.sin(i/5), v2:89, v3:900, pac:i%2, mode:'FROID MECANIQUE', alarme:null })),
-  stats: { n:50, t_moy:6.1, alarmes:1, cumul_pac_h:40.2, mode_dominant:'FROID MECANIQUE' },
+  stats: { n:50, t_moy:6.1, alarmes:1, cumul_pac_h:40.2, froid_h:40.2, froid_2pac_h:12.5, mode_dominant:'FROID MECANIQUE' },
   evenements: [{ t:'2026-11-13T10:00:00+00:00', mode:'FREE COOLING', v1:6.4, v2:88, v3:900, pac:false, alarme:null }] };
 
 const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
@@ -110,7 +110,8 @@ for(const avecMaison of [true, false]) {
   const periode = await p.textContent('#hist-periode');
   verifier(`Historique : période datée`, periode.includes('07/11/2026') && periode.includes('14/11/2026'), periode);
   verifier(`Historique : date dans le tableau`, (await p.textContent('#hist-tbody')).includes('13/11/2026'));
-  verifier(`Historique : cumul PAC de la période`, (await p.textContent('#hs-cumul')).startsWith('40.2'));
+  verifier(`Historique : durée de froid mécanique, dont 2 PAC`, (await p.textContent('#hs-cumul')).startsWith('40.2')
+           && (await p.textContent('#hs-cumul-s')).includes('12.5') && (await p.textContent('#hs-cumul-l')).includes('Froid'));
   await p.selectOption('#hist-range', 'dates'); await p.waitForTimeout(500);
   verifier(`Historique : dates proposées`, await p.inputValue('#hist-du') === '2026-11-07' && await p.inputValue('#hist-au') === '2026-11-14');
   const avant = { cumul: await p.textContent('#s-cumul-h'), fc: await p.textContent('#s-cumul-fc') };

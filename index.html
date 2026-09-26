@@ -6,16 +6,16 @@
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 
-<script src="config.js?v=2.4.3"></script>
-<script src="js/commun.js?v=2.4.3"></script>
+<script src="config.js?v=2.4.4"></script>
+<script src="js/commun.js?v=2.4.4"></script>
 <script>window.gfConfirmer = (titre, lignes = [], note = '') => window.GF && GF.confirmer ? GF.confirmer(titre, lignes, note)
   : Promise.resolve(confirm(titre + '\n\n' + lignes.filter(l => String(l[1]) !== String(l[2])).map(l => l[0] + ' : ' + l[1] + ' → ' + l[2]).join('\n')));</script>
 <script>const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</script>
 <title>GeoFresh — Jumeau Numerique</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥔</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/geofresh.css?v=2.4.3"/>
-<link rel="stylesheet" href="css/vue-client.css?v=2.4.3"/>
+<link rel="stylesheet" href="css/geofresh.css?v=2.4.4"/>
+<link rel="stylesheet" href="css/vue-client.css?v=2.4.4"/>
 </head>
 <body>
 <div class="shell">
@@ -302,7 +302,7 @@
 
   <!-- Stats globales -->
   <div class="hist-stats-grid" id="hist-stats">
-    <div class="hstat"><div class="hstat-v" id="hs-cumul" style="color:var(--sa)">0 h</div><div class="hstat-l">Cumul PAC periode</div></div>
+    <div class="hstat"><div class="hstat-v" id="hs-cumul" style="color:var(--sa)">0 h</div><div class="hstat-l" id="hs-cumul-l">Froid mecanique periode</div><div class="hstat-s" id="hs-cumul-s"></div></div>
     <div class="hstat"><div class="hstat-v" id="hs-tmoy" style="color:var(--cream)">-- °C</div><div class="hstat-l">T moy periode</div></div>
     <div class="hstat"><div class="hstat-v" id="hs-alarmes" style="color:var(--samb)">0</div><div class="hstat-l">Alarmes declenchees</div></div>
     <div class="hstat"><div class="hstat-v" id="hs-modes" style="color:var(--sice);font-size:15px;line-height:29px">--</div><div class="hstat-l">Mode dominant</div></div>
@@ -1489,10 +1489,16 @@ function afficherHist(h, bat) {
     document.getElementById('hist-empty').style.display = 'block';
     document.getElementById('hist-table').style.display = 'none';
     ['hs-cumul','hs-tmoy','hs-alarmes','hs-modes'].forEach(id => set(id, '--'));
+    set('hs-cumul-s', '');
     set('hist-periode', '');
     drawHistChart(); return;
   }
-  set('hs-cumul',   (st.cumul_pac_h ?? 0).toFixed(1) + ' h');
+  // Stockage : durée de froid mécanique (au moins une PAC en froid, qu'il y en ait 1 ou 2), dont 2 PAC
+  // Habitation : durée de marche de la PAC3
+  const hab = bat === 'hab';
+  set('hs-cumul',   (hab ? (st.cumul_pac_h ?? 0) : (st.froid_h ?? st.cumul_pac_h ?? 0)).toFixed(1) + ' h');
+  set('hs-cumul-l', hab ? 'PAC3 en marche periode' : 'Froid mecanique periode');
+  set('hs-cumul-s', !hab && st.froid_2pac_h != null ? `dont 2 PAC : ${Number(st.froid_2pac_h).toFixed(1)} h` : '');
   set('hs-tmoy',    st.t_moy != null ? Number(st.t_moy).toFixed(1) + ' °C' : '--');
   set('hs-alarmes', st.alarmes ?? 0);
   set('hs-modes',   st.mode_dominant || '--');
