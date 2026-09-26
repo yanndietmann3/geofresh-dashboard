@@ -6,16 +6,16 @@
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 
-<script src="config.js?v=2.4.6"></script>
-<script src="js/commun.js?v=2.4.6"></script>
+<script src="config.js?v=2.4.7"></script>
+<script src="js/commun.js?v=2.4.7"></script>
 <script>window.gfConfirmer = (titre, lignes = [], note = '') => window.GF && GF.confirmer ? GF.confirmer(titre, lignes, note)
   : Promise.resolve(confirm(titre + '\n\n' + lignes.filter(l => String(l[1]) !== String(l[2])).map(l => l[0] + ' : ' + l[1] + ' → ' + l[2]).join('\n')));</script>
 <script>const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</script>
 <title>GeoFresh — Jumeau Numerique</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥔</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/geofresh.css?v=2.4.6"/>
-<link rel="stylesheet" href="css/vue-client.css?v=2.4.6"/>
+<link rel="stylesheet" href="css/geofresh.css?v=2.4.7"/>
+<link rel="stylesheet" href="css/vue-client.css?v=2.4.7"/>
 </head>
 <body>
 <div class="shell">
@@ -92,7 +92,7 @@
     <button class="csgbtn" onclick="openModal('sto','t')" id="s-csgt-btn">Csg : -- °C <span class="ei">✎</span></button>
     <div class="sg">
       <div class="si"><div class="sl">T batterie evap.</div><div class="sv" id="s-batt">-- °C</div></div>
-      <div class="si"><div class="sl">Duree PAC</div><div class="sv" id="s-dpac">-- h</div></div>
+      <div class="si"><div class="sl">PAC en marche</div><div class="sv" id="s-pacs">--</div></div>
     </div>
     <!-- Sonde batterie -->
     <div style="margin-top:8px;">
@@ -102,11 +102,12 @@
     <!-- Cumul PAC saison -->
     <div class="cumul-strip">
       <div class="cumul-it">
-        <div class="cumul-v" id="s-cumul-h" style="color:var(--sa)">0 h</div>
-        <div class="cumul-l">Cumul PAC saison</div>
+        <div class="cumul-v" id="s-cumul-h" style="color:var(--sa)">-- h</div>
+        <div class="cumul-l">Froid mecanique saison</div>
+        <div class="cumul-s" id="s-cumul-2pac"></div>
       </div>
       <div class="cumul-it">
-        <div class="cumul-v" id="s-cumul-fc" style="color:var(--sice)">0 h</div>
+        <div class="cumul-v" id="s-cumul-fc" style="color:var(--sice)">-- h</div>
         <div class="cumul-l">Free cooling</div>
       </div>
     </div>
@@ -251,12 +252,6 @@
       <div class="si"><div class="sl">Degivrage</div><div class="sv" id="s-deg">0 min</div></div>
       <div class="si"><div class="sl">Anti-cycle</div><div class="sv" id="s-acc">-- min</div></div>
       <div class="si"><div class="sl">Hyst T</div><div class="sv" id="s-hyst">±-- °C</div></div>
-    </div>
-    <div class="cumul-strip" style="margin-top:10px;">
-      <div class="cumul-it">
-        <div class="cumul-v" id="s-cumul-h2" style="color:var(--sa)">0 h</div>
-        <div class="cumul-l">Cumul PAC saison</div>
-      </div>
     </div>
   </div>
 
@@ -1041,7 +1036,7 @@ function updateSto(d){
 
   const batt=parseFloat(d.t_batterie||10);
   document.getElementById('s-batt').textContent=batt.toFixed(1)+' °C';
-  document.getElementById('s-dpac').textContent=parseFloat(d.duree_fonct_pac_h||0).toFixed(1)+' h';
+  document.getElementById('s-pacs').textContent = d.pac1_on && d.pac2_on ? 'PAC1 + PAC2' : d.pac1_on ? 'PAC1' : d.pac2_on ? 'PAC2' : 'Aucune';
   document.getElementById('s-batt-fill').style.width=Math.max(0,Math.min(100,((batt+5)/25)*100))+'%';
   // Couleur sonde batterie : rouge si proche gel (<2°C), orange si bas, vert si OK
   document.getElementById('s-batt').style.color = batt<2?'var(--serr)':batt<5?'var(--samb)':'var(--sa)';
@@ -1057,9 +1052,7 @@ function updateSto(d){
   else if(mode.includes('FREE')) CUMUL.sto.fc += CYCLE_S/3600;
   // Heure simulée : relue dans la mesure → l'horloge ne repart plus de zéro
   if(d.heure_simulee) recalerHorloge(d.heure_simulee);
-  document.getElementById('s-cumul-h').textContent=CUMUL.sto.h.toFixed(1)+' h';
-  document.getElementById('s-cumul-fc').textContent=CUMUL.sto.fc.toFixed(1)+' h';
-  document.getElementById('s-cumul-h2').textContent=CUMUL.sto.h.toFixed(1)+' h';
+  majCumulsSaison();   // mêmes chiffres que l'historique « Saison complète »
 
   const isManu=MANU.sto.on;
   const mb=document.getElementById('s-mode'); mb.textContent=isManu?'MANU — '+mode:mode; mb.className='mbdg';
@@ -1635,6 +1628,24 @@ function refreshHDRS(){
 // Constantes physiques depuis config.js
 const CFG_PHYS = window.GEOFRESH_CONFIG?.physique || {};
 let lastExt={};
+
+// Cumuls de la saison (onglet Stockage) : calculés par la base comme l'historique
+// « Saison complète » → toujours les mêmes chiffres. Au plus une fois par minute.
+let _cumulsTs = 0;
+async function majCumulsSaison(force) {
+  if(SUPABASE_KEY === 'VOTRE_ANON_KEY' || (!force && Date.now() - _cumulsTs < 60000)) return;
+  _cumulsTs = Date.now();
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/historique`, { method:'POST', headers:HDRS,
+      body: JSON.stringify({ eid: EXPLOIT_ID, bat: 'sto', periode: 'saison', points: 10 }) });
+    const st = r.ok ? (await r.json())?.stats : null;
+    if(!st) return;
+    const h = v => (v == null ? '--' : Number(v).toFixed(1)) + ' h';
+    document.getElementById('s-cumul-h').textContent  = h(st.froid_h);
+    document.getElementById('s-cumul-fc').textContent = h(st.fc_h);
+    document.getElementById('s-cumul-2pac').textContent = st.froid_2pac_h != null ? `dont 2 PAC : ${h(st.froid_2pac_h)}` : '';
+  } catch(e) { console.warn('majCumulsSaison:', e); }
+}
 
 // Lance une mise à jour d'affichage sans laisser une erreur bloquer les suivantes
 function sansPanne(f, d) { try { f(d); } catch(e) { console.warn('[affichage] ' + f.name + ' :', e); } }

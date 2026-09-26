@@ -564,7 +564,7 @@ class SimulateurStockage:
 
         if "ANTI-GEL" in mode.upper():
             self.t_batt = rapproche(self.t_stock + 2.0, TAU_REM)
-            self.cumul_pac_h += dt_h
+            # (le temps PAC est compté une seule fois, plus bas — avant : compté deux fois en anti-gel)
         elif self._degivrage:
             # Fonte : plus l'air du stock est chaud et plus il circule, plus c'est rapide
             # (20 min à 6 °C avec 1 ventilateur ; ~12 min avec 2)
