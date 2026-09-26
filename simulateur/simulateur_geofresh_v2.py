@@ -40,17 +40,23 @@ GIVRE_SEUIL    = 0.8   # givre (0-1) qui déclenche le dégivrage
 GIVRE_PERTE    = 0.5   # perte de puissance froid à givre = 1 (ailettes bouchées)
 DEGIV_MIN_REF  = 20.0  # min — dégivrage par l'air du stock à 6 °C (PAC arrêtée, 1 ventilateur)
 DEGIV_MAX_MIN  = 60.0  # min — au-delà : alarme « dégivrage inefficace » + STANDBY sécurité (V2)
-T_BATT_DEGIV   = 0.5   # °C — V2 : dégivrage si T batterie ≤ 0,5 °C et PAC en marche (sonde batterie)
-RENFORT_MIN    = 60.0  # min — V2 : PAC1 seule depuis 60 min…
-RENFORT_PROGRES = 0.3  # °C  — …sans que la T baisse d'au moins 0,3 °C → PAC2 en renfort
-T_AILETTE_1PAC = 1.0   # °C — surface batterie avec 1 PAC (demi-charge) : au-dessus de 0 → pas de givre
-T_AILETTE_2PAC = -2.0  # °C — surface batterie avec 2 PAC (pleine charge, glycolée -4/+2 °C) → givre
+T_BATT_DEGIV   = 0.5   # °C — sécurité : batterie ≤ 0,5 °C…
+DEGIV_DUREE_MIN = 120.0 # min — …pendant 2 h de PAC d'affilée → dégivrage. Normalement jamais :
+                       #       seulement en canicule, quand les 2 PAC tournent longtemps
+RENFORT_MIN    = 60.0  # min — PAC1 seule depuis 60 min…
+RENFORT_PROGRES = 0.0  # °C  — …et la T n'a pas baissé du tout → PAC2 en renfort
+                       #       (V2 disait 0,3 °C : impossible avec 500 t, PAC1 seule fait ~0,01 °C/h,
+                       #        la PAC2 partait donc à chaque cycle → batterie sous 0 °C → givre)
+T_AILETTE_1PAC = 2.0   # °C — surface batterie avec 1 PAC : au-dessus de 0 → pas de givre
+T_AILETTE_2PAC = 1.0   # °C — 2 PAC : toujours au-dessus de 0 (installation dimensionnée sans givre).
+                       #       Descend sous 0,5 °C seulement si le stock chauffe (> 8,5 °C) : canicule
 HR_PAC_ARRET   = 94.0  # % — équilibre transpiration des tubercules (PAC à l'arrêt)
 HR_PAC_MARCHE  = 87.0  # % — équilibre avec condensation sur la batterie (PAC en marche)
 # ── Free cooling (logigramme V2) — volet tout ou rien, pas de cyclage
 HR_FC_MIN      = 85.0  # % — sous ce HR stock, il faut un air plus froid (écart ECART_FC_SEC)
-HR_EXT_FC_MAX  = 85.0  # % — HR extérieure maxi : l'air ne doit pas humidifier le stock
-HR_FC_GARDE    = 82.0  # % — stock sous 82 % et air dehors plus sec : volet fermé (perte de poids)
+HR_RAMENEE_MAX = 93.0  # % — HR de l'air dehors une fois à la T du stock : ne pas humidifier le stock
+                       #     (pas « HR ext < 85 % » : l'air froid dehors à 90 % entre sec, ~68 % à 6 °C)
+HR_FC_GARDE    = 85.0  # % — stock sous 85 % et air dehors plus sec : volet fermé (perte de poids)
 ECART_FC       = 2.0   # °C — free cooling si T ext < T stock − 2 °C (volet ouvert en continu)
 ECART_FC_SEC   = 4.0   # °C — écart demandé quand le stock est sec (HR < HR_FC_MIN)
 T_EXT_FC_MIN   = 0.5   # °C — volet tout ou rien : air soufflé ≈ T ext, jamais plus froid (gel des tubercules)
@@ -285,6 +291,8 @@ class SimulateurStockage:
         self._securite_degiv    = False   # V2 : dégivrage > 60 min → STANDBY jusqu'à action opérateur
         self.alarme_a_journaliser = None  # message à inscrire dans alarmes_log (lu par main)
         self._pr_fini           = False   # post-récolte terminé (consigne atteinte)
+        self._batt_froide_min   = 0.0     # durée batterie ≤ 0,5 °C, PAC en marche
+        self._dt_min            = 0.5
         self._desc_fini         = False   # descente terminée (consigne atteinte)
 
     # ─── SÉLECTION DU MODE ────────────────────────────────
@@ -307,12 +315,17 @@ class SimulateurStockage:
         fc_ok = (meteo.t_ext < t - ecart_fc) and \
                 (meteo.t_ext > T_EXT_FC_MIN) and \
                 (t_rosee < t - 0.5) and \
-                (meteo.hr_ext < HR_EXT_FC_MAX) and \
+                (hr_ramene < HR_RAMENEE_MAX) and \
                 not (hr < HR_FC_GARDE and hr_ramene < hr)     # garde-fou perte de poids
 
-        # Dégivrage (V2) : sonde batterie ≤ 0,5 °C pendant que la PAC tourne ; dure jusqu'à la fonte
-        if self.t_batt <= T_BATT_DEGIV and self.pac_on:
+        # Dégivrage de sécurité : sonde batterie ≤ 0,5 °C pendant 2 h de PAC d'affilée (canicule)
+        if self.pac_on and self.t_batt <= T_BATT_DEGIV:
+            self._batt_froide_min += self._dt_min
+        else:
+            self._batt_froide_min = 0.0
+        if self._batt_froide_min >= DEGIV_DUREE_MIN:
             self._degivrage = True
+            self._batt_froide_min = 0.0
         degiv = self._degivrage
 
         # Anti court-cycle — si besoin froid mais PAC pas encore disponible → mode ATTENTE (pas CYCL)
@@ -409,7 +422,7 @@ class SimulateurStockage:
         Cycle de froid : démarre quand T > csg + hyst (ex. 7 °C), s'arrête quand T < csg - hyst (5 °C).
           PAC1 : démarre en premier.
           PAC2 : s'ajoute si T > csg + 1.5×hyst (7,5 °C), OU en renfort si la PAC1 tourne seule
-                 depuis 60 min sans que la T baisse de 0,3 °C, OU en mode descente.
+                 depuis 60 min sans que la T baisse, OU en mode descente.
           Après un dégivrage, le cycle reprend (avant : abandonné vers 6,7 °C).
         Anti court-cycle : 30 min minimum d'arrêt par unité.
         """
@@ -440,12 +453,12 @@ class SimulateurStockage:
             elif not self._cycle_froid:
                 self.pac1_on = False
 
-            # Renfort (V2) : PAC1 seule depuis 60 min sans que la T baisse d'au moins 0,3 °C
+            # Renfort : PAC1 seule depuis 60 min et la T ne baisse pas (journées chaudes)
             renfort = False
             if self.pac1_on and not self.pac2_on:
                 self._p1_seule_min += dt_min
                 if self._p1_seule_min >= RENFORT_MIN:
-                    renfort = (self._t_ref_renfort - self.t_stock) < RENFORT_PROGRES and delta > 0
+                    renfort = (self._t_ref_renfort - self.t_stock) <= RENFORT_PROGRES and delta > 0
                     self._p1_seule_min  = 0.0
                     self._t_ref_renfort = self.t_stock
             else:
@@ -476,6 +489,7 @@ class SimulateurStockage:
     def step(self, meteo, dt_s=30, vitesse=1):
         dt_h   = dt_s / 3600.0
         dt_min = dt_s / 60.0
+        self._dt_min = dt_min
         mode   = self._mode(meteo)
 
         # Allumage séquentiel PAC1/PAC2

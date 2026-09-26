@@ -16,7 +16,7 @@ js/briques/          Un fichier par bâtiment optionnel
 css/                 geofresh.css (commun) + un fichier par page
 img/                 Logo
 simulateur/          Simulateur Python (à lancer sur le PC)
-supabase/            Fonction d'alertes + migrations SQL (déjà appliquées)
+supabase/            Fonction d'alertes + migrations SQL (toutes appliquées)
 tests/               Tests automatiques des pages
 ```
 
