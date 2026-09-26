@@ -6,16 +6,16 @@
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 
-<script src="config.js?v=2.4.7"></script>
-<script src="js/commun.js?v=2.4.7"></script>
+<script src="config.js?v=2.4.8"></script>
+<script src="js/commun.js?v=2.4.8"></script>
 <script>window.gfConfirmer = (titre, lignes = [], note = '') => window.GF && GF.confirmer ? GF.confirmer(titre, lignes, note)
   : Promise.resolve(confirm(titre + '\n\n' + lignes.filter(l => String(l[1]) !== String(l[2])).map(l => l[0] + ' : ' + l[1] + ' → ' + l[2]).join('\n')));</script>
 <script>const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</script>
 <title>GeoFresh — Jumeau Numerique</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥔</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/geofresh.css?v=2.4.7"/>
-<link rel="stylesheet" href="css/vue-client.css?v=2.4.7"/>
+<link rel="stylesheet" href="css/geofresh.css?v=2.4.8"/>
+<link rel="stylesheet" href="css/vue-client.css?v=2.4.8"/>
 </head>
 <body>
 <div class="shell">
@@ -224,35 +224,18 @@
     </div>
   </div>
 
-  <!-- Conditions ext + consignes -->
+  <!-- Consommation électrique -->
   <div class="card">
-    <div class="ct">Conditions exterieures</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:3px;">
-      <div><div class="sl">T ext</div><div style="font-family:'Syne';font-size:26px;font-weight:800;" id="s-text">--</div><div style="font-size:8px;color:var(--muted)">°C</div></div>
-      <div><div class="sl">T sol</div><div style="font-family:'Syne';font-size:26px;font-weight:800;color:var(--sa);" id="s-tsol">--</div><div style="font-size:8px;color:var(--muted)">°C</div></div>
-      <div><div class="sl">HR ext</div><div style="font-family:'Syne';font-size:18px;font-weight:700;" id="s-hr2">-- %</div></div>
-      <div><div class="sl">T rosee</div><div style="font-family:'Syne';font-size:18px;font-weight:700;color:var(--sice);" id="s-tros2">-- °C</div></div>
-    </div>
-    <div style="margin-top:10px;">
-      <button class="csgbtn" style="width:100%;justify-content:center;" onclick="openModal('sto','all')">
-        ⚙ Toutes les consignes <span class="ei">✎</span>
-      </button>
-    </div>
-    <div class="sg" style="margin-top:8px;">
-      <div class="si"><div class="sl">T consigne</div><div class="sv" id="s-cv">-- °C</div></div>
-      <div class="si"><div class="sl">HR consigne</div><div class="sv" id="s-hrv">-- %</div></div>
-    </div>
-  </div>
-
-  <!-- Post-recolte + compteurs -->
-  <div class="card">
-    <div class="ct">Post-recolte & Compteurs</div>
-    <div class="sg">
-      <div class="si"><div class="sl">Post-recolte</div><div class="sv" id="s-pr">Inactif</div></div>
-      <div class="si"><div class="sl">Degivrage</div><div class="sv" id="s-deg">0 min</div></div>
-      <div class="si"><div class="sl">Anti-cycle</div><div class="sv" id="s-acc">-- min</div></div>
-      <div class="si"><div class="sl">Hyst T</div><div class="sv" id="s-hyst">±-- °C</div></div>
-    </div>
+    <div class="ct">Consommation electrique</div>
+    <table class="conso-tab">
+      <thead><tr><th></th><th>Maintenant</th><th>Saison</th></tr></thead>
+      <tbody>
+        <tr><td>PAC</td><td id="c-pac-kw">-- kW</td><td id="c-pac-kwh">-- kWh</td></tr>
+        <tr><td>Ventilateurs</td><td id="c-vent-kw">-- kW</td><td id="c-vent-kwh">-- kWh</td></tr>
+        <tr class="conso-tot"><td>Total</td><td id="c-tot-kw">-- kW</td><td id="c-tot-kwh">-- kWh</td></tr>
+      </tbody>
+    </table>
+    <div class="conso-note">PAC : froid produit ÷ COP · ventilateur : 2,2 kW chacun</div>
   </div>
 
   <!-- Alarmes -->
@@ -932,9 +915,6 @@ function refreshCsg() {
   safe('h-csgz2-v',  `${CSG.hab.z2.toFixed(1)} °C`);
   safe('s-csgt-btn', `Csg : ${CSG.sto.t.toFixed(1)} °C ✎`);
   safe('s-csghr-btn',`Csg : ${CSG.sto.hr.toFixed(0)}% ✎`);
-  safe('s-cv',       `${CSG.sto.t.toFixed(1)} °C`);
-  safe('s-hrv',      `${CSG.sto.hr.toFixed(0)} %`);
-  safe('s-hyst',     `±${CSG.sto.hyst_t.toFixed(1)} °C`);
 }
 
 // ════════════════════════════════════════
@@ -1136,13 +1116,9 @@ function updateSto(d){
   }
   setVentil(ventFull, ventHalf);
 
-  // Conditions ext
+  // Conditions ext (encart volet)
   document.getElementById('s-rosee').textContent=t_rosee.toFixed(1)+' °C';
   document.getElementById('s-hrext').textContent=parseFloat(d.hr_ext||0).toFixed(0)+' %';
-  document.getElementById('s-text').textContent=t_ext.toFixed(1);
-  document.getElementById('s-tsol').textContent=parseFloat(d.t_sol||10).toFixed(1);
-  document.getElementById('s-hr2').textContent=parseFloat(d.hr_ext||0).toFixed(0)+' %';
-  document.getElementById('s-tros2').textContent=t_rosee.toFixed(1)+' °C';
 
   // Panneau explicatif état volet
   const condEl=document.getElementById('s-volet-cond'), rsEl=document.getElementById('s-volet-reason');
@@ -1191,11 +1167,13 @@ function updateSto(d){
     if(swManu&&swManu.checked){swManu.checked=false;toggleManu('sto');}
   }
 
-  // Post-recolte
-  const pr=parseInt(d.pr_phase||0);
-  document.getElementById('s-pr').textContent=pr===0?'Inactif':pr===1?'Ph.1 Cicatris.':'Ph.2 Descente';
-  document.getElementById('s-deg').textContent=parseFloat(d.duree_degivrage_min||0).toFixed(0)+' min';
-  document.getElementById('s-acc').textContent='60+ min';
+  // Consommation électrique instantanée (même calcul que la fonction historique)
+  const kw = v => v.toFixed(1).replace('.', ',') + ' kW';
+  const pPac  = d.pac_on ? parseFloat(d.pac_kw || 0) / Math.max(parseFloat(d.cop_boucle || 3.5), 1) : 0;
+  const pVent = 2.2 * 2 * parseFloat(d.vitesse_ventil || 0) * parseFloat(d.ventil_duty ?? (d.ventil_on ? 1 : 0));
+  document.getElementById('c-pac-kw').textContent  = kw(pPac);
+  document.getElementById('c-vent-kw').textContent = kw(pVent);
+  document.getElementById('c-tot-kw').textContent  = kw(pPac + pVent);
 
   const ap=document.getElementById('s-ap'),am=document.getElementById('s-am');
   // ── CO2 affichage ─────────────────────────────────────────
@@ -1644,6 +1622,10 @@ async function majCumulsSaison(force) {
     document.getElementById('s-cumul-h').textContent  = h(st.froid_h);
     document.getElementById('s-cumul-fc').textContent = h(st.fc_h);
     document.getElementById('s-cumul-2pac').textContent = st.froid_2pac_h != null ? `dont 2 PAC : ${h(st.froid_2pac_h)}` : '';
+    const kwh = v => (v == null ? '--' : Math.round(v).toLocaleString('fr-FR')) + ' kWh';
+    document.getElementById('c-pac-kwh').textContent  = kwh(st.e_pac_kwh);
+    document.getElementById('c-vent-kwh').textContent = kwh(st.e_vent_kwh);
+    document.getElementById('c-tot-kwh').textContent  = kwh(st.e_pac_kwh == null ? null : st.e_pac_kwh + (st.e_vent_kwh || 0));
   } catch(e) { console.warn('majCumulsSaison:', e); }
 }
 

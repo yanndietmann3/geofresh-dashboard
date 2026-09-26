@@ -30,15 +30,21 @@ begin
   if sim is null then return jsonb_build_object('points', '[]'::jsonb); end if;
 
   create temp table if not exists _h (t timestamptz, v1 numeric, v2 numeric, v3 numeric,
-                                      pac boolean, pac2 boolean, mode text, alarme text, saison_id text) on commit drop;
+                                      pac boolean, pac2 boolean, mode text, alarme text, saison_id text,
+                                      p_pac numeric, p_vent numeric) on commit drop;
   truncate _h;
   if bat = 'sto' then
     insert into _h select case when sim then heure_simulee else ts end, t_stock, hr_stock, co2_ppm,
-                          pac_on, coalesce(pac2_on, false), mode_actif, alarme_active, saison_id
+                          pac_on, coalesce(pac2_on, false), mode_actif, alarme_active, saison_id,
+                          -- puissance électrique (kW) : PAC = froid produit / COP ; ventilateurs = 2,2 kW
+                          -- par ventilateur (vitesse 0,5 = 1 ventilateur, 1 = 2) × part du temps en marche
+                          case when pac_on then coalesce(pac_kw, 0) / greatest(coalesce(cop_boucle, 3.5), 1) else 0 end,
+                          2.2 * 2 * coalesce(vitesse_ventil, 0) * coalesce(ventil_duty, case when ventil_on then 1 else 0 end)
       from stockage_readings where exploitation_id = eid and (not sim or heure_simulee is not null);
   else
     insert into _h select case when sim then heure_simulee else ts end, t_int_z1, t_int_z2, t_ecs,
-                          pac_on, false, mode_actif, alarme_active, saison_id
+                          pac_on, false, mode_actif, alarme_active, saison_id,
+                          case when pac_on then coalesce(pac_kw, 0) / greatest(coalesce(cop_boucle, 4), 1) else 0 end, 0
       from habitation_readings where exploitation_id = eid and (not sim or heure_simulee is not null);
   end if;
 
@@ -84,6 +90,10 @@ begin
                                    filter (where pac and t_suiv is not null and coalesce(mode, '') not like 'ANTI-GEL%'), 0) / 3600.0, 1),
         'fc_h', round(coalesce(sum(extract(epoch from least(t_suiv - t, interval '6 hours')))
                                    filter (where t_suiv is not null and coalesce(mode, '') like 'FREE%'), 0) / 3600.0, 1),
+        'e_pac_kwh', round(coalesce(sum(p_pac * extract(epoch from least(t_suiv - t, interval '6 hours')))
+                                     filter (where t_suiv is not null), 0) / 3600.0, 0),
+        'e_vent_kwh', round(coalesce(sum(p_vent * extract(epoch from least(t_suiv - t, interval '6 hours')))
+                                     filter (where t_suiv is not null), 0) / 3600.0, 0),
         'froid_2pac_h', round(coalesce(sum(extract(epoch from least(t_suiv - t, interval '6 hours')))
                                    filter (where pac2 and t_suiv is not null and coalesce(mode, '') not like 'ANTI-GEL%'), 0) / 3600.0, 1))
       from p),

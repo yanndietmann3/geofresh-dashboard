@@ -385,3 +385,10 @@ canvas.hc{height:220px!important;}
 .hstat-s{font-size:9px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums;}
 .hist-maj{letter-spacing:0;text-transform:none;color:var(--muted);font-size:10px;}
 .cumul-s{font-size:9px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums;}
+/* Consommation électrique */
+.conso-tab{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;margin-top:4px;}
+.conso-tab th{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-align:right;font-weight:500;padding:4px 6px;}
+.conso-tab td{padding:7px 6px;border-bottom:1px solid var(--bdr);text-align:right;color:var(--cream);}
+.conso-tab td:first-child{text-align:left;color:var(--muted);}
+.conso-tot td{font-weight:700;border-bottom:none;color:var(--sa);}
+.conso-note{font-size:9px;color:var(--muted);margin-top:8px;}
