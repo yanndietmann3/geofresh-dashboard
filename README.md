@@ -40,6 +40,9 @@ Le site contient maintenant des dossiers (`css/`, `js/`, `img/`) : l'ancien scri
 `DEPLOY_ALL.ps1` (4 fichiers) ne suffit plus. Mettre en ligne = fusionner la branche
 dans `main` sur GitHub : GitHub Pages publie tout le dépôt.
 
+À chaque mise en ligne, changer le numéro de version (`version` dans `config.js` et les `?v=`
+des pages HTML, même valeur) : sinon les navigateurs peuvent garder d'anciens fichiers en cache.
+
 ## Tests
 
 ```bash

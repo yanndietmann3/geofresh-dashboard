@@ -36,7 +36,8 @@ GF.fichiersBriques = {
 
 GF.chargerScript = src => new Promise((ok, ko) => {
   const s = document.createElement('script');
-  s.src = src; s.onload = ok; s.onerror = () => ko(new Error('Chargement impossible : ' + src));
+  // ?v= : version du site → le navigateur ne garde pas un ancien fichier en cache
+  s.src = src + (src.includes('?') ? '' : '?v=' + (window.GEOFRESH_CONFIG?.dashboard?.version || '')); s.onload = ok; s.onerror = () => ko(new Error('Chargement impossible : ' + src));
   document.head.appendChild(s);
 });
 
