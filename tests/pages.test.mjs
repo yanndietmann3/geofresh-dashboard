@@ -193,9 +193,12 @@ for(const maison of [false, true]) {
   p.on('console', c => { if(/\[affichage\]|fetchLatest:/.test(c.text())) pannes.push(c.text()); });
   let n = 0; p.on('request', r => { if(r.url().includes('rpc/historique')) n++; });
   await p.click('#tbx'); await p.waitForTimeout(800); const n0 = n;
+  // souris posée sur la courbe (avant : le rechargement attendait qu'on la retire)
+  const box = await (await p.$('#hist-canvas')).boundingBox();
+  await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await p.waitForTimeout(12000);
   verifier(`Affichage ${maison ? 'avec' : 'sans'} maison : aucune mise à jour en erreur`, !pannes.length, pannes.slice(0,2).join(' | '));
-  verifier(`Historique ${maison ? 'avec' : 'sans'} maison : rechargé tout seul (10 s)`, n > n0, `${n - n0} rechargement(s)`);
+  verifier(`Historique ${maison ? 'avec' : 'sans'} maison : rechargé tout seul (10 s), souris sur la courbe`, n > n0, `${n - n0} rechargement(s)`);
   await ctx.close();
 }
 
