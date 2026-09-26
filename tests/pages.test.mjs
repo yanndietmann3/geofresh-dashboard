@@ -35,6 +35,8 @@ const mesures = {
                          duree_fonct_pac_h:123.4, cumul_fc_h:45.6, heure_simulee:'2026-11-14T08:30:00+00:00'}],
   habitation_readings: [{t_int_z1:20.4, t_int_z2:18.9, t_ecs:52, pac_on:true, pac_kw:9, mode_actif:'CHAUFFAGE'}],
   conditions_externes: [{t_ext:12.5, hr_ext:78, t_rosee:8}],
+  consignes: [{id:'stockage', csg_t:6, hyst_t:1, csg_hr:90, hyst_hr:3, vitesse_sim:500},
+              {id:'habitation', csg_z1:20, csg_z2:19, csg_ecs:55, hyst_ecs:3, csg_clim_z1:26, csg_clim_z2:26}],
 };
 // Historique agrégé renvoyé par la fonction historique() : 7 jours simulés
 const debutHist = Date.parse('2026-11-07T08:30:00Z');
@@ -119,6 +121,36 @@ for(const avecMaison of [true, false]) {
            && await p.textContent('#s-cumul-fc') === avant.fc, `${avant.cumul} / ${avant.fc}`);
   verifier(`Retour : date simulée conservée`, (await p.textContent('#sim-date')) === '14/11/2026', await p.textContent('#sim-date'));
   verifier(`Historique / retour : pas d'erreur JS`, !erreurs.length, erreurs.join(' | '));
+  await ctx.close(); }
+
+// Changer une consigne : confirmation, et rien d'autre n'est envoyé (ni vitesse, ni l'autre bâtiment)
+{ const {ctx, p, erreurs} = await ouvrir('index.html', 'client', true);
+  const envois = [];
+  p.on('request', r => { if(r.method() === 'PATCH' && r.url().includes('consignes')) envois.push({url: r.url(), body: r.postData()}); });
+  await p.evaluate(() => openModal('sto', 't'));
+  await p.fill('#mf-st', '5');
+  await p.click('#m-save');
+  await p.waitForSelector('.gf-confirm');
+  const texte = await p.textContent('.gf-confirm');
+  verifier(`Consigne : confirmation affichée (ancienne → nouvelle)`, texte.includes('Consigne T stock') && texte.includes('→ 5 °C'), texte.replace(/\s+/g, ' '));
+  await p.click('.gf-confirm-non'); await p.waitForTimeout(300);
+  verifier(`Consigne : Annuler n'envoie rien`, envois.length === 0);
+  await p.click('#m-save'); await p.click('.gf-confirm-oui'); await p.waitForTimeout(500);
+  verifier(`Consigne : Confirmer envoie seulement le stockage, sans vitesse`,
+    envois.length === 1 && envois[0].url.includes('id=eq.stockage') && !envois[0].body.includes('vitesse_sim'), JSON.stringify(envois));
+  verifier(`Consigne : pas d'erreur JS`, !erreurs.length, erreurs.join(' | '));
+  await ctx.close(); }
+
+{ const {ctx, p, erreurs} = await ouvrir('operateur.html', 'super_admin', true);
+  const envois = [];
+  p.on('request', r => { if(r.method() === 'PATCH' && r.url().includes('consignes')) envois.push(r.postData()); });
+  await p.evaluate(() => { CSG_DB.stockage = {csg_t: 6, csg_hr: 90, vitesse_sim: 500, mode_standby: false, mode_descente: false};
+                           CMD.csg_t = 6; CMD.csg_hr = 90; CMD.vitesse_sim = 1; adj('csg_t', -0.5); applyCmd('sto'); });
+  await p.waitForSelector('.gf-confirm');
+  verifier(`Opérateur : confirmation avant d'appliquer`, (await p.textContent('.gf-confirm')).includes('→ 5.5 °C'));
+  await p.click('.gf-confirm-oui'); await p.waitForTimeout(500);
+  verifier(`Opérateur : Appliquer ne renvoie plus la vitesse`, envois.length === 1 && !envois[0].includes('vitesse_sim'), envois.join(' | '));
+  verifier(`Opérateur : pas d'erreur JS`, !erreurs.length, erreurs.join(' | '));
   await ctx.close(); }
 
 // Portail

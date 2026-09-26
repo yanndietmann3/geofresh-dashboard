@@ -12,3 +12,18 @@
 /* Rôles : le client modifie ses consignes, le pilotage reste au staff */
 body:not([data-role="super_admin"]):not([data-role="operator"]) .staff-only{display:none !important;}
 body:not([data-role="super_admin"]) .sa-only{display:none !important;}
+
+/* ── Confirmation avant changement de paramètre ── */
+.gf-confirm-ov{position:fixed;inset:0;z-index:2000;background:rgba(45,32,23,0.35);display:flex;align-items:center;justify-content:center;padding:16px;}
+.gf-confirm{background:var(--gf-card,#fff);border:1px solid var(--gf-border,#E2D9CC);border-radius:12px;padding:20px 22px;max-width:420px;width:100%;box-shadow:0 10px 30px rgba(45,32,23,0.18);color:var(--gf-text,#2D2017);}
+.gf-confirm-t{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:12px;}
+.gf-confirm-tab{width:100%;border-collapse:collapse;font-size:13px;}
+.gf-confirm-tab td{padding:6px 4px;border-bottom:1px solid var(--gf-border,#E2D9CC);font-variant-numeric:tabular-nums;}
+.gf-confirm-tab td:first-child{color:var(--gf-text2,#7A6352);}
+.gf-confirm-new{font-weight:700;color:var(--gf-vert,#6AAF35);}
+.gf-confirm-note{font-size:11px;color:var(--gf-text2,#7A6352);margin-top:10px;}
+.gf-confirm-note:empty{display:none;}
+.gf-confirm-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+.gf-confirm-btns button{border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;border:1px solid var(--gf-border,#E2D9CC);background:transparent;color:var(--gf-text,#2D2017);}
+.gf-confirm-btns .gf-confirm-oui{background:var(--gf-vert,#6AAF35);border-color:var(--gf-vert,#6AAF35);color:#fff;font-weight:600;}
+.gf-confirm-btns button:focus-visible{outline:2px solid var(--gf-brun,#A0724A);outline-offset:2px;}

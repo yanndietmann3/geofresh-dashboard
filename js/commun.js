@@ -68,3 +68,44 @@ GF.appeler = function(type, vue, fn, ...args) {
   const f = GF.briques[type]?.[vue]?.[fn];
   return f ? f(...args) : undefined;
 };
+
+// ── CONFIRMATION AVANT DE CHANGER UN PARAMÈTRE ─────────────────
+// GF.confirmer('Titre', [['Consigne T', '6 °C', '5 °C'], …]) → Promise<boolean>
+// Chaque ligne : [libellé, valeur actuelle, nouvelle valeur]. Les lignes identiques sont masquées.
+GF.confirmer = function(titre, lignes = [], note = '') {
+  return new Promise(ok => {
+    const chg = lignes.filter(l => String(l[1]) !== String(l[2]));
+    const ov = document.createElement('div');
+    ov.className = 'gf-confirm-ov';
+    ov.innerHTML = `
+      <div class="gf-confirm" role="dialog" aria-modal="true" aria-labelledby="gf-confirm-t">
+        <div class="gf-confirm-t" id="gf-confirm-t"></div>
+        <table class="gf-confirm-tab"><tbody></tbody></table>
+        <div class="gf-confirm-note"></div>
+        <div class="gf-confirm-btns">
+          <button type="button" class="gf-confirm-non">Annuler</button>
+          <button type="button" class="gf-confirm-oui">Confirmer</button>
+        </div>
+      </div>`;
+    ov.querySelector('.gf-confirm-t').textContent = titre;
+    const tb = ov.querySelector('tbody');
+    (chg.length ? chg : [['Aucun changement', '', '']]).forEach(([lib, avant, apres]) => {
+      const tr = document.createElement('tr');
+      [lib, avant, apres ? '→ ' + apres : ''].forEach((v, i) => {
+        const td = document.createElement('td'); td.textContent = v;
+        if(i === 2) td.className = 'gf-confirm-new';
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+    ov.querySelector('.gf-confirm-note').textContent = note;
+    const fin = rep => { document.removeEventListener('keydown', clavier); ov.remove(); ok(rep); };
+    const clavier = e => { if(e.key === 'Escape') fin(false); };
+    ov.querySelector('.gf-confirm-non').onclick = () => fin(false);
+    ov.querySelector('.gf-confirm-oui').onclick = () => fin(true);
+    ov.addEventListener('click', e => { if(e.target === ov) fin(false); });
+    document.addEventListener('keydown', clavier);
+    document.body.appendChild(ov);
+    ov.querySelector('.gf-confirm-oui').focus();
+  });
+};

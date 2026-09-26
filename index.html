@@ -508,9 +508,12 @@ function syncSpeed(v) {
   if(_pollInterval) { clearInterval(_pollInterval); _pollInterval = setInterval(fetchLatest, Math.min(s.ms, 10000)); }
 }
 
-function toggleSpeed() {
+async function toggleSpeed() {
   if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
-  _speedIdx = (_speedIdx + 1) % SPEEDS.length;
+  const suivant = (_speedIdx + 1) % SPEEDS.length;
+  if(!(await GF.confirmer('Changer la vitesse de simulation ?',
+       [['Vitesse', '×' + SPEEDS[_speedIdx].vitesse, '×' + SPEEDS[suivant].vitesse]]))) return;
+  _speedIdx = suivant;
   const s = SPEEDS[_speedIdx];
   const btn = document.getElementById('speed-btn');
   btn.className = 'speed-btn staff-only ' + s.cls;
@@ -666,6 +669,7 @@ async function pushManuCmd(side) {
 //  MODALE CONSIGNES
 // ════════════════════════════════════════
 let mCtx={};
+const CSG_CHARGEES = { sto:false, hab:false };   // consignes lues dans Supabase ?
 function mf(id,lbl,val,mn,mx,step=0.5){
   return `<div class="mfield"><label>${lbl}</label><input type="number" id="mf-${id}" value="${val}" min="${mn}" max="${mx}" step="${step}"></div>`;
 }
@@ -694,8 +698,26 @@ function closeModal(){ document.getElementById('modal-ov').classList.remove('ope
 function closeModalOut(e){ if(e.target===document.getElementById('modal-ov')) closeModal(); }
 function gv(id){ const el=document.getElementById('mf-'+id); return el?parseFloat(el.value):null; }
 
-function saveModal() {
+async function saveModal() {
   const {src,key,k}=mCtx;
+  // Sans les consignes actuelles, on écraserait les autres réglages par des valeurs par défaut
+  if(SUPABASE_KEY!=='VOTRE_ANON_KEY' && !CSG_CHARGEES[k.startsWith('sto') ? 'sto' : 'hab']) {
+    alert('Consignes pas encore chargées : réessayer dans quelques secondes.'); loadConsignes(); return;
+  }
+  // Confirmation : ancienne → nouvelle valeur
+  const f = (v, u) => (v == null || isNaN(v)) ? '--' : (+v).toFixed(1).replace(/\.0$/, '') + ' ' + u;
+  const L = {
+    'hab-z1':   [['Consigne Z1', f(CSG.hab.z1,'°C'), f(gv('hz1'),'°C')]],
+    'hab-z2':   [['Consigne Z2', f(CSG.hab.z2,'°C'), f(gv('hz2'),'°C')]],
+    'hab-ecs':  [['Consigne ECS', f(CSG.hab.ecs,'°C'), f(gv('hecs'),'°C')], ['Hystérésis ECS', f(CSG.hab.hyst_ecs,'°C'), f(gv('hhyst'),'°C')]],
+    'hab-clim1':[['Clim Z1', f(CSG.hab.clim1,'°C'), f(gv('hc1'),'°C')]],
+    'hab-clim2':[['Clim Z2', f(CSG.hab.clim2,'°C'), f(gv('hc2'),'°C')]],
+    'sto-t':    [['Consigne T stock', f(CSG.sto.t,'°C'), f(gv('st'),'°C')], ['Hystérésis T', f(CSG.sto.hyst_t,'°C'), f(gv('shyst'),'°C')]],
+    'sto-hr':   [['Consigne HR', f(CSG.sto.hr,'%'), f(gv('shr'),'%')], ['Hystérésis HR', f(CSG.sto.hyst_hr,'%'), f(gv('shrh'),'%')]],
+    'sto-all':  [['Consigne T stock', f(CSG.sto.t,'°C'), f(gv('sta'),'°C')], ['Hystérésis T', f(CSG.sto.hyst_t,'°C'), f(gv('stb'),'°C')],
+                 ['Consigne HR', f(CSG.sto.hr,'%'), f(gv('src'),'%')], ['Hystérésis HR', f(CSG.sto.hyst_hr,'%'), f(gv('srd'),'%')]],
+  }[k] || [];
+  if(!(await GF.confirmer('Modifier la consigne ?', L, "L'installation applique la nouvelle valeur au prochain cycle."))) return;
   if(k==='hab-z1')   { CSG.hab.z1=gv('hz1')??CSG.hab.z1; }
   if(k==='hab-z2')   { CSG.hab.z2=gv('hz2')??CSG.hab.z2; }
   if(k==='hab-ecs')  { CSG.hab.ecs=gv('hecs')??CSG.hab.ecs; CSG.hab.hyst_ecs=gv('hhyst')??CSG.hab.hyst_ecs; }
@@ -706,16 +728,16 @@ function saveModal() {
   if(k==='sto-all')  { CSG.sto.t=gv('sta')??CSG.sto.t; CSG.sto.hyst_t=gv('stb')??CSG.sto.hyst_t;
                        CSG.sto.hr=gv('src')??CSG.sto.hr; CSG.sto.hyst_hr=gv('srd')??CSG.sto.hyst_hr; }
   refreshCsg();
-  pushConsignes();   // ← envoie vers Supabase → simulateur les lit
+  pushConsignes(k.startsWith('sto') ? 'sto' : 'hab');   // ← seulement le bâtiment modifié
   closeModal();
 }
 
 // ── Push consignes vers Supabase ─────────────────────────────
-async function pushConsignes() {
+async function pushConsignes(side) {
   if(SUPABASE_KEY==='VOTRE_ANON_KEY') return;
   try {
     // Stockage
-    await fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`, {
+    if(side !== 'hab') await fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`, {
       method: 'PATCH',
       headers: { ...HDRS, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
       body: JSON.stringify({
@@ -727,7 +749,7 @@ async function pushConsignes() {
       })
     });
     // Habitation
-    await fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.habitation`, {
+    if(side !== 'sto') await fetch(`${SUPABASE_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.habitation`, {
       method: 'PATCH',
       headers: { ...HDRS, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
       body: JSON.stringify({
@@ -829,6 +851,7 @@ async function loadConsignes() {
     const rows = await r.json();
     for(const row of rows) {
       if(row.id === 'stockage') {
+        CSG_CHARGEES.sto = true;
         if(row.vitesse_sim != null) syncSpeed(row.vitesse_sim);
         CSG.sto.t      = parseFloat(row.csg_t   || CSG.sto.t);
         CSG.sto.hyst_t = parseFloat(row.hyst_t  || CSG.sto.hyst_t);
@@ -837,6 +860,7 @@ async function loadConsignes() {
         // Cumuls PAC : relus dans la dernière mesure (fetchInitial), plus dans consignes (valeurs figées)
       }
       if(row.id === 'habitation') {
+        CSG_CHARGEES.hab = true;
         CSG.hab.z1    = parseFloat(row.csg_z1      || CSG.hab.z1);
         CSG.hab.z2    = parseFloat(row.csg_z2      || CSG.hab.z2);
         CSG.hab.ecs   = parseFloat(row.csg_ecs     || CSG.hab.ecs);
@@ -1254,6 +1278,9 @@ let _modeStockage = 'auto';  // 'auto' | 'standby' | 'descente'
 
 async function toggleModeStockage(mode) {
   if(!gfIsStaff(USER_ROLE)) return;  // vue client : lecture seule
+  const NOMS = { auto:'AUTO', standby:'STANDBY', descente:'DESCENTE −1 °C/jour', pr:'POST-RÉCOLTE' };
+  if(mode === _modeStockage) return;
+  if(!(await GF.confirmer('Changer le mode du stockage ?', [['Mode', NOMS[_modeStockage] || _modeStockage, NOMS[mode]]]))) return;
   _modeStockage = mode;
   // Boutons
   document.getElementById('btn-standby').className = 'mode-btn' + (mode==='standby'?' active-standby':'');
