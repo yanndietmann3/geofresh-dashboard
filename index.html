@@ -1590,7 +1590,8 @@ function connectRealtime(){
   ws.onopen=()=>{
     ['habitation_readings','stockage_readings','conditions_externes','alarmes_log','consignes'].forEach((tbl,i)=>
       ws.send(JSON.stringify({topic:`realtime:public:${tbl}`,event:'phx_join',
-        payload:{config:{broadcast:{self:true},presence:{key:''},
+        payload:{access_token:AUTH_TOKEN||undefined,   // mesures lisibles seulement par un compte de l'exploitation
+          config:{broadcast:{self:true},presence:{key:''},
           postgres_changes:[{event:'INSERT',schema:'public',table:tbl},{event:'UPDATE',schema:'public',table:tbl}]}},ref:String(i+1)})));
     setInterval(()=>ws.readyState===1&&ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:null})),25000);
   };
@@ -1906,6 +1907,10 @@ async function doLogout(){
   document.getElementById('login-screen').style.display='flex';
   const lb=document.getElementById('logout-btn'); if(lb) lb.style.display='none';
 }
+
+// Jeton de connexion renouvelé automatiquement (il expire au bout d'une heure) :
+// sans ça, la page arrêterait de se mettre à jour après 1 h
+_supa.auth.onAuthStateChange((_evt, s) => { if(s?.access_token){ AUTH_TOKEN = s.access_token; refreshHDRS(); } });
 
 async function checkSession(){
   const {data} = await _supa.auth.getSession();
