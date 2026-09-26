@@ -220,17 +220,23 @@ function majClient(d){
   document.getElementById('h-pacd').textContent=isManu?'⚙ Mode Manuel':(pOn?'Sol→eau | OK':'Standby');
 
   document.getElementById('h-acc').textContent=parseFloat(d.temps_depuis_arret_pac_min||0).toFixed(0)+' min';
-  document.getElementById('h-eau-ret').textContent=parseFloat(d.t_eau_ret||35).toFixed(1)+' °C';
-  document.getElementById('h-ret-f').style.width=Math.max(0,Math.min(100,(parseFloat(d.t_eau_ret||35)-5)/50*100))+'%';
+  // Eau de retour : encart facultatif (absent de la page → on ne plante pas)
+  const ret = document.getElementById('h-eau-ret'), retF = document.getElementById('h-ret-f');
+  if(ret)  ret.textContent = parseFloat(d.t_eau_ret||35).toFixed(1)+' °C';
+  if(retF) retF.style.width = Math.max(0,Math.min(100,(parseFloat(d.t_eau_ret||35)-5)/50*100))+'%';
 
   setPm('h-ps','h-ps-s', pOn);
   setPm('h-pc','h-pc-s', pOn || !!d.pompe_circuit_on);
   setPm('h-p1','h-p1-s', vc1m); setPm('h-p2','h-p2-s', vc2m); setPm('h-pe','h-pe-s',von);
 
+  // Encart alarme facultatif (retiré de la page : avant, son absence faisait tout planter)
   const ap=document.getElementById('h-ap'),am=document.getElementById('h-am');
-  ap.className='apa';
-  if(!d.alarme_active){ap.classList.add('aok');am.textContent='✓ Systeme nominal';}
-  else{const niv=parseInt(d.niveau_alarme||0);ap.classList.add(niv>=3?'acrit':'awrn');am.textContent=(niv>=3?'🚨 ':'⚠ ')+d.alarme_active;addLog(logsH,'h-log',d.alarme_active,niv);setBadge('badge-h',niv);}
+  if(ap && am) {
+    ap.className='apa';
+    if(!d.alarme_active){ap.classList.add('aok');am.textContent='✓ Systeme nominal';}
+    else{ap.classList.add(parseInt(d.niveau_alarme||0)>=3?'acrit':'awrn');am.textContent=(parseInt(d.niveau_alarme||0)>=3?'🚨 ':'⚠ ')+d.alarme_active;}
+  }
+  if(d.alarme_active){const niv=parseInt(d.niveau_alarme||0);addLog(logsH,'h-log',d.alarme_active,niv);setBadge('badge-h',niv);}
   if(!d.alarme_active)setBadge('badge-h',0);
 
   const tEcs=parseFloat(d.t_ecs||0);

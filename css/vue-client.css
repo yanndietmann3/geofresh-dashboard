@@ -383,3 +383,4 @@ canvas.hc{height:220px!important;}
 .hist-direct{display:inline-flex;align-items:center;gap:6px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--sa);}
 .hist-direct[hidden]{display:none;}
 .hstat-s{font-size:9px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums;}
+.hist-maj{letter-spacing:0;text-transform:none;color:var(--muted);font-size:10px;}

@@ -6,8 +6,8 @@
 <title>GeoFresh — Panneau Opérateur</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥔</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/geofresh.css?v=2.4.4"/>
-<link rel="stylesheet" href="css/vue-operateur.css?v=2.4.4"/>
+<link rel="stylesheet" href="css/geofresh.css?v=2.4.5"/>
+<link rel="stylesheet" href="css/vue-operateur.css?v=2.4.5"/>
 </head>
 <body>
 <div class="shell" id="shell" style="visibility:hidden;">
@@ -375,8 +375,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=2.4.4"></script>
-<script src="js/commun.js?v=2.4.4"></script>
+<script src="config.js?v=2.4.5"></script>
+<script src="js/commun.js?v=2.4.5"></script>
 <script>window.gfConfirmer = (titre, lignes = [], note = '') => window.GF && GF.confirmer ? GF.confirmer(titre, lignes, note)
   : Promise.resolve(confirm(titre + '\n\n' + lignes.filter(l => String(l[1]) !== String(l[2])).map(l => l[0] + ' : ' + l[1] + ' → ' + l[2]).join('\n')));</script>
 <script>

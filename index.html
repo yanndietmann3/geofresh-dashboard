@@ -6,16 +6,16 @@
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 
-<script src="config.js?v=2.4.4"></script>
-<script src="js/commun.js?v=2.4.4"></script>
+<script src="config.js?v=2.4.5"></script>
+<script src="js/commun.js?v=2.4.5"></script>
 <script>window.gfConfirmer = (titre, lignes = [], note = '') => window.GF && GF.confirmer ? GF.confirmer(titre, lignes, note)
   : Promise.resolve(confirm(titre + '\n\n' + lignes.filter(l => String(l[1]) !== String(l[2])).map(l => l[0] + ' : ' + l[1] + ' → ' + l[2]).join('\n')));</script>
 <script>const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</script>
 <title>GeoFresh — Jumeau Numerique</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥔</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/geofresh.css?v=2.4.4"/>
-<link rel="stylesheet" href="css/vue-client.css?v=2.4.4"/>
+<link rel="stylesheet" href="css/geofresh.css?v=2.4.5"/>
+<link rel="stylesheet" href="css/vue-client.css?v=2.4.5"/>
 </head>
 <body>
 <div class="shell">
@@ -297,7 +297,7 @@
       <label for="hist-du">Du</label><input type="date" class="hist-select" id="hist-du" onchange="loadHistory()">
       <label for="hist-au">au</label><input type="date" class="hist-select" id="hist-au" onchange="loadHistory()">
     </span>
-    <span class="hist-direct" id="hist-direct" title="La courbe se met à jour toute seule"><span class="ldot"></span>En direct</span>
+    <span class="hist-direct" id="hist-direct" title="La courbe se met à jour toute seule"><span class="ldot"></span>En direct<span class="hist-maj" id="hist-maj"></span></span>
   </div>
 
   <!-- Stats globales -->
@@ -551,9 +551,9 @@ async function fetchLatest() {
     const [hD,sD,eD] = await Promise.all([hR.json(),sR.json(),eR.json()]);
     const cD = await cR.json().catch(()=>[]);
     if(cD?.[0]?.vitesse_sim != null) syncSpeed(cD[0].vitesse_sim);
-    if(eD?.[0]){lastExt=eD[0];updateExt(lastExt);}
-    if(hD?.[0]) updateHab({...hD[0],...lastExt});
-    if(sD?.[0]) updateSto({...sD[0],...lastExt});
+    if(eD?.[0]){lastExt=eD[0];sansPanne(updateExt, lastExt);}
+    if(hD?.[0]) sansPanne(updateHab, {...hD[0],...lastExt});
+    if(sD?.[0]) sansPanne(updateSto, {...sD[0],...lastExt});
     rafraichirHistorique();
   } catch(e){ console.warn('fetchLatest:', e); }
   finally { _fetchBusy = false; }
@@ -1223,9 +1223,13 @@ function updateSto(d){
     co2B.textContent=lbl; co2B.style.cssText=`background:${bbg};color:${bco}`;
     document.getElementById('s-co2-action').textContent=txt;
   }
-  ap.className='apa';
-  if(!d.alarme_active){ap.classList.add('as-ok');am.textContent='✓ Systeme nominal';}
-  else{const niv=parseInt(d.niveau_alarme||0);ap.classList.add(niv>=3?'as-crit':'as-wrn');am.textContent=(niv>=3?'🚨 ':'⚠ ')+d.alarme_active;addLog(logsS,'s-log',d.alarme_active,niv);setBadge('badge-s',niv);}
+  // Encart alarme (retiré de la page : avant, son absence faisait planter toute la mise à jour)
+  if(ap && am) {
+    ap.className='apa';
+    if(!d.alarme_active){ap.classList.add('as-ok');am.textContent='✓ Systeme nominal';}
+    else{ap.classList.add(parseInt(d.niveau_alarme||0)>=3?'as-crit':'as-wrn');am.textContent=(parseInt(d.niveau_alarme||0)>=3?'🚨 ':'⚠ ')+d.alarme_active;}
+  }
+  if(d.alarme_active){const niv=parseInt(d.niveau_alarme||0);addLog(logsS,'s-log',d.alarme_active,niv);setBadge('badge-s',niv);}
   if(!d.alarme_active)setBadge('badge-s',0);
 
   const gelEl=document.getElementById('s-gel'); gelEl.textContent=ts<2?'⚠ '+ts.toFixed(1)+'°C':'OK'; gelEl.style.color=ts<2?'var(--serr)':'var(--sa)';
@@ -1477,6 +1481,10 @@ async function loadHistory(){
     auEl.value = h.fin.slice(0,10); duEl.value = (h.debut || h.fin).slice(0,10);
   }
   afficherHist(h, bat);
+  // Heure de la dernière mise à jour : montre que la courbe se recharge toute seule
+  const maj = document.getElementById('hist-maj');
+  if(maj && h?.points?.length) maj.textContent = ' · mis à jour à ' + new Date().toLocaleTimeString('fr-FR')
+    + ' · dernière mesure ' + fmtDate(h.fin, !!h.simule);
 }
 
 function afficherHist(h, bat) {
@@ -1623,6 +1631,9 @@ function refreshHDRS(){
 const CFG_PHYS = window.GEOFRESH_CONFIG?.physique || {};
 let lastExt={};
 
+// Lance une mise à jour d'affichage sans laisser une erreur bloquer les suivantes
+function sansPanne(f, d) { try { f(d); } catch(e) { console.warn('[affichage] ' + f.name + ' :', e); } }
+
 async function fetchInitial(){
   try{
     const EQ=`exploitation_id=eq.${EXPLOIT_ID}&`;
@@ -1632,9 +1643,9 @@ async function fetchInitial(){
       fetch(`${SUPABASE_URL}/rest/v1/conditions_externes?${EQ}order=ts.desc&limit=1`,{headers:HDRS}),
     ]);
     const [hD,sD,eD]=await Promise.all([hR.json(),sR.json(),eR.json()]);
-    if(eD?.[0]){lastExt=eD[0];updateExt(lastExt);}
-    if(hD?.[0]){histData.hab.push({...hD[0],...lastExt});updateHab({...hD[0],...lastExt});}
-    if(sD?.[0]){histData.sto.push({...sD[0],...lastExt});updateSto({...sD[0],...lastExt});}
+    if(eD?.[0]){lastExt=eD[0];sansPanne(updateExt, lastExt);}
+    if(hD?.[0]){histData.hab.push({...hD[0],...lastExt});sansPanne(updateHab, {...hD[0],...lastExt});}
+    if(sD?.[0]){histData.sto.push({...sD[0],...lastExt});sansPanne(updateSto, {...sD[0],...lastExt});}
   }catch(e){console.warn('[Init]',e);}
 }
 
@@ -1654,12 +1665,12 @@ function connectRealtime(){
       if(!rec)return;
       const tbl=msg?.payload?.data?.table;
       if(rec.exploitation_id && rec.exploitation_id !== EXPLOIT_ID) return;   // autre exploitation
-      if(tbl==='conditions_externes'){lastExt=rec;updateExt(rec);}
-      else if(tbl==='habitation_readings'){histData.hab.push({...rec,...lastExt});if(histData.hab.length>500)histData.hab.shift();updateHab({...rec,...lastExt});}
+      if(tbl==='conditions_externes'){lastExt=rec;sansPanne(updateExt, rec);}
+      else if(tbl==='habitation_readings'){histData.hab.push({...rec,...lastExt});if(histData.hab.length>500)histData.hab.shift();sansPanne(updateHab, {...rec,...lastExt});}
       else if(tbl==='stockage_readings'){
         histData.sto.push({...rec,...lastExt});
         if(histData.sto.length>500)histData.sto.shift();
-        updateSto({...rec,...lastExt});  // données directes du Realtime, pas de fetch
+        sansPanne(updateSto, {...rec,...lastExt});  // données directes du Realtime, pas de fetch
         rafraichirHistorique();
         const pe=document.getElementById('pe'); if(pe&&pe.classList.contains('active')) loadEnergie();
       }
