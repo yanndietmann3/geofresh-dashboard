@@ -185,6 +185,20 @@ for(const avecMaison of [true, false]) {
   verifier(`En-tête staff : horloge simulée visible`, await visible('.sim-clock'));
   await ctx.close(); }
 
+// Mises à jour d'affichage sans erreur (avant : un encart retiré faisait tout planter,
+// l'historique ne se rechargeait plus), et rechargement réel par le rafraîchissement 10 s
+for(const maison of [false, true]) {
+  const {ctx, p} = await ouvrir('index.html', 'client', maison);
+  const pannes = [];
+  p.on('console', c => { if(/\[affichage\]|fetchLatest:/.test(c.text())) pannes.push(c.text()); });
+  let n = 0; p.on('request', r => { if(r.url().includes('rpc/historique')) n++; });
+  await p.click('#tbx'); await p.waitForTimeout(800); const n0 = n;
+  await p.waitForTimeout(12000);
+  verifier(`Affichage ${maison ? 'avec' : 'sans'} maison : aucune mise à jour en erreur`, !pannes.length, pannes.slice(0,2).join(' | '));
+  verifier(`Historique ${maison ? 'avec' : 'sans'} maison : rechargé tout seul (10 s)`, n > n0, `${n - n0} rechargement(s)`);
+  await ctx.close();
+}
+
 // Portail
 { const {ctx, erreurs, visible} = await ouvrir('portail.html', 'client', true);
   verifier(`Portail / client : pas d'erreur JS`, !erreurs.length, erreurs.join(' | '));
