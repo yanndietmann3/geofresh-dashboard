@@ -547,6 +547,7 @@ function updateUI(sto, hab, ext, csgs) {
   // ── CONSIGNES DEPUIS SUPABASE ─────────────────────────
   // Ne pas écraser une modification en cours (non appliquée) par le rafraîchissement
   csgs.forEach(row => {
+    if(row.id === 'stockage' || row.id === 'habitation') CSG_DB[row.id] = row;
     if(row.id === 'stockage' && row.vitesse_sim != null) setVitesse(parseInt(row.vitesse_sim));
     if(row.id === 'stockage' && !DIRTY.sto) {
       CMD.csg_t   = parseFloat(row.csg_t   ?? CMD.csg_t);
@@ -588,9 +589,17 @@ function setVitesse(v) {
 
 // Modifications locales pas encore appliquées
 const DIRTY = { sto:false, hab:false };
+// Consignes telles qu'enregistrées dans Supabase (null tant qu'elles ne sont pas chargées)
+const CSG_DB = { stockage:null, habitation:null };
+const ouiNon = b => b ? 'ACTIF' : 'INACTIF';
 
 // Vitesse de simulation : appliquée tout de suite (pas besoin d'« Appliquer »)
 async function chooseVitesse(v) {
+  const avant = CSG_DB.stockage?.vitesse_sim ?? CMD.vitesse_sim;
+  if(parseInt(avant) === v) return;
+  if(!(await GF.confirmer('Changer la vitesse de simulation ?', [['Vitesse', '×' + avant, '×' + v]]))) {
+    setVitesse(parseInt(avant)); return;
+  }
   setVitesse(v);
   try {
     await fetch(`${SB_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`, {
@@ -619,8 +628,19 @@ function toggleMode(side, mode) {
 
 async function applyCmd(side) {
   let body, url;
+  // Sans les consignes actuelles, on enverrait des valeurs par défaut : on bloque
+  const db = CSG_DB[side==='sto' ? 'stockage' : 'habitation'];
+  if(!db) { showToast('✗ Consignes pas encore chargées, réessayer dans quelques secondes'); return; }
+  const lignes = side==='sto'
+    ? [['Consigne T stock', db.csg_t + ' °C', CMD.csg_t + ' °C'], ['Consigne HR', db.csg_hr + ' %', CMD.csg_hr + ' %'],
+       ['STANDBY', ouiNon(db.mode_standby), ouiNon(CMD.standby_sto)], ['Descente −1 °C/jour', ouiNon(db.mode_descente), ouiNon(CMD.descente)]]
+    : [['Consigne Z1', db.csg_z1 + ' °C', CMD.csg_z1 + ' °C'], ['Consigne Z2', db.csg_z2 + ' °C', CMD.csg_z2 + ' °C'],
+       ['Consigne ECS', db.csg_ecs + ' °C', CMD.csg_ecs + ' °C'], ['STANDBY', ouiNon(db.mode_standby_hab), ouiNon(CMD.standby_hab)]];
+  const titre = 'Appliquer — ' + gfBriqueLabel(side==='sto' ? 'stockage_pdt' : 'habitation', false) + ' ?';
+  if(!(await GF.confirmer(titre, lignes, 'Le simulateur prend la nouvelle valeur au prochain cycle.'))) return;
   if(side==='sto') {
-    body = { csg_t: CMD.csg_t, csg_hr: CMD.csg_hr, vitesse_sim: CMD.vitesse_sim,
+    // La vitesse n'est PAS renvoyée ici (avant : une valeur périmée remettait la simulation à ×1)
+    body = { csg_t: CMD.csg_t, csg_hr: CMD.csg_hr,
              mode_standby: CMD.standby_sto, mode_descente: CMD.descente,
              updated_at: new Date().toISOString() };
     url = `${SB_URL}/rest/v1/consignes?exploitation_id=eq.${EXPLOIT_ID}&id=eq.stockage`;
