@@ -180,8 +180,8 @@ for(const avecMaison of [true, false]) {
 // En-tête client : seulement le nom de l'exploitation ; historique en direct
 { const {ctx, p, erreurs, visible} = await ouvrir('index.html', 'client', false);
   verifier(`En-tête client : nom de l'exploitation`, (await p.textContent('#exploit-nom-hdr')).includes('Site Pilote'));
-  verifier(`En-tête client : horloge, météo, email cachés`,
-    !(await visible('.sim-clock')) && !(await visible('.ext-strip')) && !(await visible('#user-email')) && !(await visible('#clk')));
+  verifier(`En-tête client : météo visible, horloge et email cachés`,
+    !(await visible('.sim-clock')) && (await visible('.ext-strip')) && !(await visible('#user-email')) && !(await visible('#clk')));
   let appels = 0;
   p.on('request', r => { if(r.url().includes('rpc/historique')) appels++; });
   await p.click('#tbx'); await p.waitForTimeout(600);

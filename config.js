@@ -44,6 +44,9 @@ window.GEOFRESH_CONFIG = {
     prix_kwh:          0.18,
   },
 
+  // Alertes email : calculées dans Supabase (fonction geofresh-alertes) à partir de la
+  // consigne de chaque exploitation : T hors (consigne ± hystérésis) + 1 °C, HR > consigne + hyst + 2 %.
+  // Les valeurs ci-dessous ne servent qu'à l'affichage local.
   alertes: {
     t_stock_max:    8.0,
     t_stock_min:    2.0,
@@ -57,7 +60,7 @@ window.GEOFRESH_CONFIG = {
   dashboard: {
     refresh_ms:    5000,
     hist_points:    500,
-    version:       '2.4.8',   // à changer à chaque mise en ligne (même valeur que les ?v= des pages)
+    version:       '2.4.9',   // à changer à chaque mise en ligne (même valeur que les ?v= des pages)
   },
 
   // ── BRIQUES ──────────────────────────────────────────────────

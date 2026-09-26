@@ -15,15 +15,19 @@ const RESEND_KEY   = Deno.env.get('RESEND_API_KEY')
 const ALERT_FROM   = Deno.env.get('ALERT_FROM') || 'GeoFresh <onboarding@resend.dev>'
 const DASHBOARD    = 'https://yanndietmann3.github.io/geofresh-dashboard'
 
-// Mêmes valeurs que config.js → alertes (surchargeables par exploitations.config.seuils)
+// Seuils (surchargeables par exploitations.config.seuils).
+// T et HR suivent la consigne de l'exploitation : alerte quand on sort de la plage
+// de régulation (consigne ± hystérésis) d'une marge en plus.
 const SEUILS_DEFAUT = {
-  t_stock_max:  8.0,   // °C
-  t_stock_min:  2.0,   // °C — risque de gel
+  marge_t:      1.0,   // °C au-delà de consigne ± hystérésis
+  marge_hr:     2.0,   // %  au-delà de consigne + hystérésis
+  t_gel:        2.0,   // °C — risque de gel (absolu, 🚨)
   co2_warn:  3500,     // ppm
   co2_alarm: 5000,     // ppm
-  hr_max:      95,     // %
   simu_timeout: 10,    // min sans donnée
 }
+// Consigne par défaut si l'exploitation n'en a pas encore
+const CSG_DEFAUT = { csg_t: 6, hyst_t: 1, csg_hr: 90, hyst_hr: 3 }
 const COOLDOWN_MIN = 30  // pas de nouvel email pour la même alerte avant 30 min
 
 const BRIQUES: Record<string, string> = {
@@ -49,7 +53,7 @@ function minutesDepuis(ts: string) {
   return (Date.now() - new Date(ts).getTime()) / 60000
 }
 
-function reglesStockage(r: any, s: typeof SEUILS_DEFAUT): Alerte[] {
+function reglesStockage(r: any, s: typeof SEUILS_DEFAUT, c: typeof CSG_DEFAUT): Alerte[] {
   const b = 'stockage_pdt'
   if (!r) return [{ code: 'sto_no_data', niveau: 2, brique: b, message: 'Aucune donnée reçue du stockage' }]
   const out: Alerte[] = []
@@ -57,16 +61,24 @@ function reglesStockage(r: any, s: typeof SEUILS_DEFAUT): Alerte[] {
   if (age > s.simu_timeout)
     out.push({ code: 'sto_no_data', niveau: 2, brique: b, message: `Pas de donnée depuis ${Math.round(age)} min` })
   const t = Number(r.t_stock), co2 = Number(r.co2_ppm), hr = Number(r.hr_stock)
-  if (t > s.t_stock_max)
-    out.push({ code: 'sto_t_max', niveau: 2, brique: b, message: `T stock élevée : ${t.toFixed(1)} °C (max ${s.t_stock_max} °C)` })
-  if (t < s.t_stock_min)
-    out.push({ code: 'sto_t_min', niveau: 3, brique: b, message: `Risque de gel : T stock ${t.toFixed(1)} °C (min ${s.t_stock_min} °C)` })
+  const n = (v: number) => String(+v.toFixed(1)).replace('.', ',')
+  const plage = `consigne ${n(c.csg_t)} ± ${n(c.hyst_t)} °C`
+  const tMax = c.csg_t + c.hyst_t + s.marge_t, tMin = c.csg_t - c.hyst_t - s.marge_t
+  // Descente / post-récolte : le stock est volontairement au-dessus de la consigne
+  const descente = !!r.mode_descente || /^(DESCENTE|POST-R)/.test(String(r.mode_actif || ''))
+  if (t > tMax && !descente)
+    out.push({ code: 'sto_t_max', niveau: 2, brique: b, message: `T stock élevée : ${n(t)} °C (${plage}, alerte au-dessus de ${n(tMax)} °C)` })
+  if (t < s.t_gel)
+    out.push({ code: 'sto_t_min', niveau: 3, brique: b, message: `Risque de gel : T stock ${n(t)} °C (sous ${n(s.t_gel)} °C)` })
+  else if (t < tMin)
+    out.push({ code: 'sto_t_bas', niveau: 2, brique: b, message: `T stock basse : ${n(t)} °C (${plage}, alerte en dessous de ${n(tMin)} °C)` })
   if (co2 > s.co2_alarm)
     out.push({ code: 'sto_co2', niveau: 3, brique: b, message: `CO₂ critique : ${Math.round(co2)} ppm` })
   else if (co2 > s.co2_warn)
     out.push({ code: 'sto_co2', niveau: 2, brique: b, message: `CO₂ élevé : ${Math.round(co2)} ppm` })
-  if (hr > s.hr_max)
-    out.push({ code: 'sto_hr', niveau: 2, brique: b, message: `HR élevée : ${hr.toFixed(0)} % (max ${s.hr_max} %)` })
+  const hrMax = c.csg_hr + c.hyst_hr + s.marge_hr
+  if (hr > hrMax)
+    out.push({ code: 'sto_hr', niveau: 2, brique: b, message: `HR élevée : ${hr.toFixed(0)} % (consigne ${n(c.csg_hr)} + ${n(c.hyst_hr)} %, alerte au-dessus de ${n(hrMax)} %)` })
   if (r.alarme_active && Number(r.niveau_alarme) >= 2)
     out.push({ code: 'sto_ctrl', niveau: Number(r.niveau_alarme), brique: b, message: `Automate : ${r.alarme_active}` })
   return out
@@ -147,8 +159,15 @@ async function verifierExploitation(sb: SupabaseClient, exploit: any) {
     return data?.[0] ?? null
   }
 
+  // Consigne du stockage de cette exploitation (les seuils T / HR en découlent)
+  const { data: csgRow } = await sb.from('consignes').select('csg_t, hyst_t, csg_hr, hyst_hr')
+    .eq('exploitation_id', exploit.id).eq('id', 'stockage').maybeSingle()
+  const csg = { ...CSG_DEFAUT }
+  for (const k of Object.keys(CSG_DEFAUT) as (keyof typeof CSG_DEFAUT)[])
+    if (csgRow?.[k] != null && !isNaN(Number(csgRow[k]))) csg[k] = Number(csgRow[k])
+
   const alertes: Alerte[] = []
-  if (actives.has('stockage_pdt')) alertes.push(...reglesStockage(await derniere('stockage_readings'), seuils))
+  if (actives.has('stockage_pdt')) alertes.push(...reglesStockage(await derniere('stockage_readings'), seuils, csg))
   if (actives.has('habitation'))   alertes.push(...reglesHabitation(await derniere('habitation_readings'), seuils))
 
   // Alertes automatiques déjà connues pour cette exploitation
