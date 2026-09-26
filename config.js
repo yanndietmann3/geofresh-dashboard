@@ -57,7 +57,7 @@ window.GEOFRESH_CONFIG = {
   dashboard: {
     refresh_ms:    5000,
     hist_points:    500,
-    version:       '2.4.3',   // à changer à chaque mise en ligne (même valeur que les ?v= des pages)
+    version:       '2.4.4',   // à changer à chaque mise en ligne (même valeur que les ?v= des pages)
   },
 
   // ── BRIQUES ──────────────────────────────────────────────────
