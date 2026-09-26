@@ -117,7 +117,7 @@ function emailHtml(exploit: any, alertes: Alerte[], test = false) {
         ${test
           ? '<p style="font-size:14px;">Les alertes email fonctionnent pour cette exploitation. ✅</p>'
           : `<table style="border-collapse:collapse;width:100%;font-size:13px;">${rows}</table>`}
-        <p style="margin-top:20px;"><a href="${DASHBOARD}/portail.html" style="background:#6AAF35;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">Ouvrir le portail</a></p>
+        <p style="margin-top:20px;"><a href="${DASHBOARD}/index.html?exploitation_id=${exploit.id}" style="background:#6AAF35;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">Accéder au dashboard</a></p>
         <p style="font-size:11px;color:#B8A898;margin-top:16px;">${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}</p>
       </div>
     </div>

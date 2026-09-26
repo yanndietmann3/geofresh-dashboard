@@ -6,16 +6,16 @@
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 
-<script src="config.js?v=2.4.1"></script>
-<script src="js/commun.js?v=2.4.1"></script>
+<script src="config.js?v=2.4.2"></script>
+<script src="js/commun.js?v=2.4.2"></script>
 <script>window.gfConfirmer = (titre, lignes = [], note = '') => window.GF && GF.confirmer ? GF.confirmer(titre, lignes, note)
   : Promise.resolve(confirm(titre + '\n\n' + lignes.filter(l => String(l[1]) !== String(l[2])).map(l => l[0] + ' : ' + l[1] + ' → ' + l[2]).join('\n')));</script>
 <script>const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);</script>
 <title>GeoFresh — Jumeau Numerique</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥔</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/geofresh.css?v=2.4.1"/>
-<link rel="stylesheet" href="css/vue-client.css?v=2.4.1"/>
+<link rel="stylesheet" href="css/geofresh.css?v=2.4.2"/>
+<link rel="stylesheet" href="css/vue-client.css?v=2.4.2"/>
 </head>
 <body>
 <div class="shell">
@@ -25,11 +25,12 @@
   <div class="brand">
     <img class="logo-img" src="img/logo-geofresh.png" alt="GeoFresh" style="height:40px;width:auto;display:block;"/>
     <div class="brand-txt">
-      <div class="sub">Jumeau Numerique · Installation Complete</div>
+      <div class="exploit-nom" id="exploit-nom-hdr"></div>
+      <div class="sub staff-only">Jumeau Numerique · Installation Complete</div>
     </div>
   </div>
 
-  <div class="ext-strip">
+  <div class="ext-strip staff-only">
     <div class="ex"><div class="exv" id="hdr-text">--°C</div><div class="exl">T ext</div></div>
     <div class="sep"></div>
     <div class="ex"><div class="exv" id="hdr-hr">--%</div><div class="exl">HR ext</div></div>
@@ -42,26 +43,25 @@
     <a href="portail.html" style="display:flex;align-items:center;gap:6px;padding:5px 13px;border-radius:14px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border:1px solid rgba(106,175,53,0.4);background:rgba(106,175,53,0.08);color:#6AAF35;text-decoration:none;font-family:'DM Mono',monospace;">← Portail</a>
     <a class="staff-only" id="lnk-operateur" href="operateur.html" style="display:flex;align-items:center;gap:6px;padding:5px 13px;border-radius:14px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border:1px solid rgba(91,138,154,0.55);background:rgba(91,138,154,0.14);color:#5B8A9A;text-decoration:none;font-family:'DM Mono',monospace;font-weight:600;" title="Panneau opérateur">⚙ Opérateur</a>
     <div class="role-chip" id="logout-btn" style="display:none;">
-      <span id="exploit-name-idx"></span>
-      <span><b id="user-email">—</b> · <span id="role-lbl">Client</span></span>
+      <span class="staff-only"><b id="user-email">—</b> · <span id="role-lbl">Client</span></span>
       <button onclick="doLogout()" title="Déconnexion">⏻</button>
     </div>
-    <div class="live"><div class="ldot"></div>Temps reel</div>
+    <div class="live staff-only"><div class="ldot"></div>Temps reel</div>
     <button class="speed-btn normal staff-only" id="speed-btn" onclick="toggleSpeed()" title="Accélérer le rafraîchissement">
       ▶ Temps réel
     </button>
-    <div class="sim-clock">
+    <div class="sim-clock staff-only">
       <div>
         <div class="sim-time" id="sim-time">--:--</div>
         <div class="sim-date" id="sim-date">--/--/----</div>
       </div>
       <div class="sim-speed-lbl" id="sim-speed-lbl">×1</div>
     </div>
-    <div id="clk">--:--:--</div>
+    <div id="clk" class="staff-only">--:--:--</div>
     <button class="beta-btn beta-off staff-only" id="beta-btn" onclick="toggleBeta()" title="Basculer mode ESP32 reel / Simulateur">
       <div class="beta-dot"></div><span id="beta-label">NUMERIQUE</span>
     </button>
-    <div class="esp32-status" id="esp32-status">Simulateur actif</div>
+    <div class="esp32-status staff-only" id="esp32-status">Simulateur actif</div>
   </div>
 </header>
 
@@ -297,7 +297,7 @@
       <label for="hist-du">Du</label><input type="date" class="hist-select" id="hist-du" onchange="loadHistory()">
       <label for="hist-au">au</label><input type="date" class="hist-select" id="hist-au" onchange="loadHistory()">
     </span>
-    <button class="csgbtn" style="border-style:solid;color:var(--sa);border-color:rgba(90,158,47,0.4);" onclick="loadHistory()">↻ Actualiser</button>
+    <span class="hist-direct" id="hist-direct" title="La courbe se met à jour toute seule"><span class="ldot"></span>En direct</span>
   </div>
 
   <!-- Stats globales -->
@@ -557,6 +557,7 @@ async function fetchLatest() {
     if(eD?.[0]){lastExt=eD[0];updateExt(lastExt);}
     if(hD?.[0]) updateHab({...hD[0],...lastExt});
     if(sD?.[0]) updateSto({...sD[0],...lastExt});
+    rafraichirHistorique();
   } catch(e){ console.warn('fetchLatest:', e); }
   finally { _fetchBusy = false; }
 }
@@ -1429,11 +1430,31 @@ function memoHist(lire) {
   } catch(_) {}
 }
 
+// Historique en direct : rechargé à chaque nouvelle mesure, au plus toutes les 10 s,
+// seulement si l'onglet est ouvert et que la période se termine maintenant
+let _histDernier = 0, _histTimer = null;
+function histEnDirect() {
+  const r = document.getElementById('hist-range')?.value;
+  if(r !== 'dates') return true;
+  const au = document.getElementById('hist-au')?.value;
+  let auj = '';
+  try { auj = _simNow.toISOString().slice(0,10); } catch(_) {}   // date simulée du jour
+  return !au || au >= auj;
+}
+function rafraichirHistorique() {
+  if(!document.getElementById('phistory')?.classList.contains('active') || !histEnDirect()) return;
+  const attente = Math.max(0, 10000 - (Date.now() - _histDernier));
+  clearTimeout(_histTimer);
+  _histTimer = setTimeout(() => { if(document.getElementById('hist-tip')?.hidden !== false) loadHistory(); }, attente);
+}
+
 async function loadHistory(){
+  _histDernier = Date.now();
   const bat   = document.getElementById('hist-bat').value;
   const range = document.getElementById('hist-range').value;
   const duEl = document.getElementById('hist-du'), auEl = document.getElementById('hist-au');
   document.getElementById('hist-dates').hidden = range !== 'dates';
+  document.getElementById('hist-direct').hidden = !histEnDirect();
   memoHist(false);
 
   const lbl = gfBriqueLabel(bat==='hab'?'habitation':'stockage_pdt', false);
@@ -1636,6 +1657,7 @@ function connectRealtime(){
         histData.sto.push({...rec,...lastExt});
         if(histData.sto.length>500)histData.sto.shift();
         updateSto({...rec,...lastExt});  // données directes du Realtime, pas de fetch
+        rafraichirHistorique();
         const pe=document.getElementById('pe'); if(pe&&pe.classList.contains('active')) loadEnergie();
       }
       else if(tbl==='consignes'){ applyConsignesRow(rec); }
@@ -1926,7 +1948,7 @@ async function doLogin() {
   loadConsignes(); fetchModuleConfig(); fetchInitial(); connectRealtime(); startPolling();
     // Nom exploitation depuis URL
     fetch(`${SUPABASE_URL}/rest/v1/exploitations?id=eq.${EXPLOIT_ID}&select=nom`,{headers:HDRS})
-      .then(r=>r.json()).then(d=>{if(d?.[0]){const el=document.getElementById('exploit-name-idx');if(el)el.textContent=d[0].nom;document.title='GeoFresh — '+d[0].nom;}}).catch(()=>{});
+      .then(r=>r.json()).then(d=>{if(d?.[0]){const el=document.getElementById('exploit-nom-hdr');if(el)el.textContent=d[0].nom;document.title='GeoFresh — '+d[0].nom;}}).catch(()=>{});
 }
 
 async function doLogout(){
@@ -1952,7 +1974,7 @@ async function checkSession(){
     loadConsignes(); fetchModuleConfig(); fetchInitial(); connectRealtime(); startPolling();
     // Nom exploitation depuis URL
     fetch(`${SUPABASE_URL}/rest/v1/exploitations?id=eq.${EXPLOIT_ID}&select=nom`,{headers:HDRS})
-      .then(r=>r.json()).then(d=>{if(d?.[0]){const el=document.getElementById('exploit-name-idx');if(el)el.textContent=d[0].nom;document.title='GeoFresh — '+d[0].nom;}}).catch(()=>{});
+      .then(r=>r.json()).then(d=>{if(d?.[0]){const el=document.getElementById('exploit-nom-hdr');if(el)el.textContent=d[0].nom;document.title='GeoFresh — '+d[0].nom;}}).catch(()=>{});
   }
   // Sinon login-screen reste visible
 }
