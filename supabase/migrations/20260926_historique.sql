@@ -82,6 +82,8 @@ begin
         -- quel que soit le nombre de PAC ; « dont 2 PAC » = temps où les deux tournent
         'froid_h', round(coalesce(sum(extract(epoch from least(t_suiv - t, interval '6 hours')))
                                    filter (where pac and t_suiv is not null and coalesce(mode, '') not like 'ANTI-GEL%'), 0) / 3600.0, 1),
+        'fc_h', round(coalesce(sum(extract(epoch from least(t_suiv - t, interval '6 hours')))
+                                   filter (where t_suiv is not null and coalesce(mode, '') like 'FREE%'), 0) / 3600.0, 1),
         'froid_2pac_h', round(coalesce(sum(extract(epoch from least(t_suiv - t, interval '6 hours')))
                                    filter (where pac2 and t_suiv is not null and coalesce(mode, '') not like 'ANTI-GEL%'), 0) / 3600.0, 1))
       from p),

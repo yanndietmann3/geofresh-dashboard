@@ -44,7 +44,7 @@ const debutHist = Date.parse('2026-11-07T08:30:00Z');
 const historique = { debut:'2026-11-07T08:30:00+00:00', fin:'2026-11-14T08:30:00+00:00', simule:true,
   points: Array.from({length:50}, (_, i) => ({ t:new Date(debutHist + i*3.4*3600e3).toISOString(),
     v1:6 + Math.sin(i/5), v2:89, v3:900, pac:i%2, mode:'FROID MECANIQUE', alarme:null })),
-  stats: { n:50, t_moy:6.1, alarmes:1, cumul_pac_h:40.2, froid_h:40.2, froid_2pac_h:12.5, mode_dominant:'FROID MECANIQUE' },
+  stats: { n:50, t_moy:6.1, alarmes:1, cumul_pac_h:40.2, froid_h:40.2, froid_2pac_h:12.5, fc_h:3.3, mode_dominant:'FROID MECANIQUE' },
   evenements: [{ t:'2026-11-13T10:00:00+00:00', mode:'FREE COOLING', v1:6.4, v2:88, v3:900, pac:false, alarme:null }] };
 
 const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
@@ -114,12 +114,17 @@ for(const avecMaison of [true, false]) {
            && (await p.textContent('#hs-cumul-s')).includes('12.5') && (await p.textContent('#hs-cumul-l')).includes('Froid'));
   await p.selectOption('#hist-range', 'dates'); await p.waitForTimeout(500);
   verifier(`Historique : dates proposées`, await p.inputValue('#hist-du') === '2026-11-07' && await p.inputValue('#hist-au') === '2026-11-14');
+  verifier(`Stockage : froid mécanique saison = historique (même calcul)`,
+    (await p.textContent('#s-cumul-h')) === '40.2 h' && (await p.textContent('#s-cumul-2pac')).includes('12.5') && (await p.textContent('#s-cumul-fc')) === '3.3 h',
+    `${await p.textContent('#s-cumul-h')} / ${await p.textContent('#s-cumul-fc')}`);
+  verifier(`Stockage : une seule durée PAC affichée`, (await p.$$('#s-cumul-h2, #s-dpac')).length === 0);
   const avant = { cumul: await p.textContent('#s-cumul-h'), fc: await p.textContent('#s-cumul-fc') };
   await p.goto(`${ROOT}portail.html`); await p.waitForTimeout(1000);
   await p.goto(`${ROOT}index.html?exploitation_id=${EID}`); await p.waitForTimeout(2500);
   verifier(`Retour : onglet Historique rouvert`, await p.evaluate(() => document.getElementById('phistory').classList.contains('active')));
   verifier(`Retour : période conservée`, await p.inputValue('#hist-range') === 'dates' && await p.inputValue('#hist-du') === '2026-11-07');
-  verifier(`Retour : cumuls conservés`, await p.textContent('#s-cumul-h') === avant.cumul && avant.cumul.startsWith('123.4')
+  await p.waitForTimeout(500);
+  verifier(`Retour : cumuls conservés`, await p.textContent('#s-cumul-h') === avant.cumul && avant.cumul.startsWith('40.2')
            && await p.textContent('#s-cumul-fc') === avant.fc, `${avant.cumul} / ${avant.fc}`);
   verifier(`Retour : date simulée conservée`, (await p.textContent('#sim-date')) === '14/11/2026', await p.textContent('#sim-date'));
   verifier(`Historique / retour : pas d'erreur JS`, !erreurs.length, erreurs.join(' | '));
