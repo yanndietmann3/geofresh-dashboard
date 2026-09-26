@@ -369,3 +369,11 @@ canvas.hc{width:100%!important;height:180px!important;}
 
 /* Badges d'onglet : affichés seulement en cas d'alerte (pas de « OK » permanent) */
 .tbdg.tok{display:none;}
+/* Historique daté */
+.hist-dates{display:inline-flex;align-items:center;gap:8px;font-size:10px;color:var(--muted);}
+.hist-periode{font-size:10px;color:var(--muted);margin-top:-4px;}
+.hist-chart{height:220px;}
+canvas.hc{height:220px!important;}
+.hist-tip{position:absolute;top:6px;pointer-events:none;background:var(--panel);border:1px solid var(--bdr);
+  border-radius:8px;padding:6px 9px;font-size:10px;line-height:1.5;color:var(--cream);box-shadow:0 2px 8px rgba(45,32,23,0.12);white-space:nowrap;}
+.hist-dates[hidden],.hist-tip[hidden]{display:none;}

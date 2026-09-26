@@ -718,6 +718,7 @@ function connectRealtimeOpe() {
         topic: `realtime:public:${tbl}`,
         event: 'phx_join',
         payload: {
+          access_token: AUTH_TOKEN_OPE || undefined,   // mesures lisibles seulement par un compte autorisé
           config: {
             broadcast: {self: false},
             presence: {key: ''},

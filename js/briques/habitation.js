@@ -191,13 +191,10 @@ function majClient(d){
   // Cumul
   // Cumul habitation : MAX local vs Supabase pour survivre aux redémarrages
   const newHabH = parseFloat(d.cumul_pac_h || 0);
-  if(newHabH > CUMUL.hab.h) {
-    CUMUL.hab.h   = newHabH;
-    CUMUL.hab.ecs = parseFloat(d.cumul_ecs_h || 0);
-  } else if(!!d.pac_on) {
-    CUMUL.hab.h   += CYCLE_S/3600;
-    if(von) CUMUL.hab.ecs += CYCLE_S/3600;
-  }
+  if(newHabH > CUMUL.hab.h) CUMUL.hab.h = newHabH;
+  else if(!!d.pac_on) CUMUL.hab.h += CYCLE_S/3600;
+  if(d.cumul_ecs_h != null) CUMUL.hab.ecs = Math.max(CUMUL.hab.ecs, parseFloat(d.cumul_ecs_h));   // relu à chaque mesure
+  else if(!!d.pac_on && von) CUMUL.hab.ecs += CYCLE_S/3600;
   document.getElementById('h-cumul-h').textContent=CUMUL.hab.h.toFixed(1)+' h';
   document.getElementById('h-cumul-ecs').textContent=CUMUL.hab.ecs.toFixed(1)+' h';
 
