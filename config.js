@@ -45,8 +45,9 @@ window.GEOFRESH_CONFIG = {
   },
 
   // Alertes email : calculées dans Supabase (fonction geofresh-alertes) à partir de la
-  // consigne de chaque exploitation : T hors (consigne ± hystérésis) + 1 °C, HR > consigne + hyst + 2 %.
-  // Les valeurs ci-dessous ne servent qu'à l'affichage local.
+  // consigne de chaque exploitation : T > consigne + 2 °C tenu 1 h (⚠️) ou + 4 °C (🚨),
+  // T < consigne − 2 °C tenu 1 h (⚠️), gel < 0 °C (🚨), HR > consigne + 5 % tenu 2 h,
+  // HR < consigne − 5 % tenu 6 h. Les valeurs ci-dessous ne servent qu'à l'affichage local.
   alertes: {
     t_stock_max:    8.0,
     t_stock_min:    2.0,

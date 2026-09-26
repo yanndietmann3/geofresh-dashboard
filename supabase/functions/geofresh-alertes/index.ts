@@ -16,15 +16,22 @@ const ALERT_FROM   = Deno.env.get('ALERT_FROM') || 'GeoFresh <onboarding@resend.
 const DASHBOARD    = 'https://yanndietmann3.github.io/geofresh-dashboard'
 
 // Seuils (surchargeables par exploitations.config.seuils).
-// T et HR suivent la consigne de l'exploitation : alerte quand on sort de la plage
-// de régulation (consigne ± hystérésis) d'une marge en plus.
+// T et HR : écarts fixes par rapport à la consigne (indépendants de l'hystérésis).
+// « Tenu » = la condition doit durer sans interruption (temps de la mesure : heure simulée
+// si le simulateur l'envoie, sinon heure réelle) : un pic court ne déclenche rien.
 const SEUILS_DEFAUT = {
-  marge_t:      1.0,   // °C au-delà de consigne ± hystérésis
-  marge_hr:     2.0,   // %  au-delà de consigne + hystérésis
-  t_gel:        2.0,   // °C — risque de gel (absolu, 🚨)
+  ecart_t_haut:   2,   // °C au-dessus de la consigne, tenu duree_t_min      → ⚠️
+  ecart_t_crit:   4,   // °C au-dessus de la consigne, immédiat               → 🚨
+  ecart_t_bas:    2,   // °C en dessous de la consigne, tenu duree_t_min      → ⚠️
+  t_gel:          0,   // °C — risque de gel, fixe pour tous, immédiat         → 🚨
+  duree_t_min:   60,
+  ecart_hr_haut:  5,   // % au-dessus de la consigne HR, tenu duree_hr_haut_min → ⚠️ (condensation)
+  duree_hr_haut_min: 120,
+  ecart_hr_bas:   5,   // % en dessous de la consigne HR, tenu duree_hr_bas_min → ⚠️ (perte de poids)
+  duree_hr_bas_min:  360,
   co2_warn:  3500,     // ppm
   co2_alarm: 5000,     // ppm
-  simu_timeout: 10,    // min sans donnée
+  simu_timeout: 10,    // min (heure réelle) sans donnée
 }
 // Consigne par défaut si l'exploitation n'en a pas encore
 const CSG_DEFAUT = { csg_t: 6, hyst_t: 1, csg_hr: 90, hyst_hr: 3 }
@@ -53,35 +60,73 @@ function minutesDepuis(ts: string) {
   return (Date.now() - new Date(ts).getTime()) / 60000
 }
 
-function reglesStockage(r: any, s: typeof SEUILS_DEFAUT, c: typeof CSG_DEFAUT): Alerte[] {
+// Temps de la mesure : heure simulée si présente, sinon heure réelle
+const tMesure = (r: any) => new Date(r.heure_simulee || r.ts).getTime()
+
+// La condition est-elle vraie sur TOUTES les mesures des `minutes` dernières, et ces mesures
+// couvrent-elles bien la durée (sinon pas assez de recul : on ne déclenche pas) ?
+function tenu(hist: any[], minutes: number, cond: (r: any) => boolean) {
+  if (!hist.length) return false
+  const fin = tMesure(hist[0]), debut = fin - minutes * 60000
+  const fenetre = hist.filter(r => tMesure(r) >= debut)
+  const recul = fin - tMesure(fenetre[fenetre.length - 1])
+  return recul >= minutes * 60000 * 0.9 && fenetre.every(cond)
+}
+
+// hist : mesures récentes, la plus récente en premier
+function reglesStockage(hist: any[], s: typeof SEUILS_DEFAUT, c: typeof CSG_DEFAUT): Alerte[] {
   const b = 'stockage_pdt'
+  const r = hist[0]
   if (!r) return [{ code: 'sto_no_data', niveau: 2, brique: b, message: 'Aucune donnée reçue du stockage' }]
   const out: Alerte[] = []
   const age = minutesDepuis(r.ts)
   if (age > s.simu_timeout)
     out.push({ code: 'sto_no_data', niveau: 2, brique: b, message: `Pas de donnée depuis ${Math.round(age)} min` })
   const t = Number(r.t_stock), co2 = Number(r.co2_ppm), hr = Number(r.hr_stock)
-  const n = (v: number) => String(+v.toFixed(1)).replace('.', ',')
-  const plage = `consigne ${n(c.csg_t)} ± ${n(c.hyst_t)} °C`
-  const tMax = c.csg_t + c.hyst_t + s.marge_t, tMin = c.csg_t - c.hyst_t - s.marge_t
+  const n = (v: number) => String(+Number(v).toFixed(1)).replace('.', ',')
+  const duree = (m: number) => m >= 60 ? `${n(m / 60)} h` : `${m} min`
+  const csgT = `consigne ${n(c.csg_t)} °C`
+
   // Descente / post-récolte : le stock est volontairement au-dessus de la consigne
   const descente = !!r.mode_descente || /^(DESCENTE|POST-R)/.test(String(r.mode_actif || ''))
-  if (t > tMax && !descente)
-    out.push({ code: 'sto_t_max', niveau: 2, brique: b, message: `T stock élevée : ${n(t)} °C (${plage}, alerte au-dessus de ${n(tMax)} °C)` })
+  const tCrit = c.csg_t + s.ecart_t_crit, tHaut = c.csg_t + s.ecart_t_haut, tBas = c.csg_t - s.ecart_t_bas
+  if (!descente && t > tCrit)
+    out.push({ code: 'sto_t_crit', niveau: 3, brique: b, message: `T stock critique : ${n(t)} °C (${csgT}, seuil ${n(tCrit)} °C)` })
+  else if (!descente && tenu(hist, s.duree_t_min, x => Number(x.t_stock) > tHaut))
+    out.push({ code: 'sto_t_max', niveau: 2, brique: b, message: `T stock élevée : ${n(t)} °C, au-dessus de ${n(tHaut)} °C depuis plus de ${duree(s.duree_t_min)} (${csgT})` })
   if (t < s.t_gel)
     out.push({ code: 'sto_t_min', niveau: 3, brique: b, message: `Risque de gel : T stock ${n(t)} °C (sous ${n(s.t_gel)} °C)` })
-  else if (t < tMin)
-    out.push({ code: 'sto_t_bas', niveau: 2, brique: b, message: `T stock basse : ${n(t)} °C (${plage}, alerte en dessous de ${n(tMin)} °C)` })
+  else if (tenu(hist, s.duree_t_min, x => Number(x.t_stock) < tBas))
+    out.push({ code: 'sto_t_bas', niveau: 2, brique: b, message: `T stock basse : ${n(t)} °C, en dessous de ${n(tBas)} °C depuis plus de ${duree(s.duree_t_min)} (${csgT})` })
+
   if (co2 > s.co2_alarm)
     out.push({ code: 'sto_co2', niveau: 3, brique: b, message: `CO₂ critique : ${Math.round(co2)} ppm` })
   else if (co2 > s.co2_warn)
     out.push({ code: 'sto_co2', niveau: 2, brique: b, message: `CO₂ élevé : ${Math.round(co2)} ppm` })
-  const hrMax = c.csg_hr + c.hyst_hr + s.marge_hr
-  if (hr > hrMax)
-    out.push({ code: 'sto_hr', niveau: 2, brique: b, message: `HR élevée : ${hr.toFixed(0)} % (consigne ${n(c.csg_hr)} + ${n(c.hyst_hr)} %, alerte au-dessus de ${n(hrMax)} %)` })
+
+  const hrHaut = c.csg_hr + s.ecart_hr_haut, hrBas = c.csg_hr - s.ecart_hr_bas
+  if (tenu(hist, s.duree_hr_haut_min, x => Number(x.hr_stock) > hrHaut))
+    out.push({ code: 'sto_hr', niveau: 2, brique: b, message: `HR élevée : ${hr.toFixed(0)} %, au-dessus de ${n(hrHaut)} % depuis plus de ${duree(s.duree_hr_haut_min)} (consigne ${n(c.csg_hr)} %)` })
+  if (tenu(hist, s.duree_hr_bas_min, x => Number(x.hr_stock) < hrBas))
+    out.push({ code: 'sto_hr_bas', niveau: 2, brique: b, message: `HR basse : ${hr.toFixed(0)} %, en dessous de ${n(hrBas)} % depuis plus de ${duree(s.duree_hr_bas_min)} (consigne ${n(c.csg_hr)} %)` })
+
   if (r.alarme_active && Number(r.niveau_alarme) >= 2)
     out.push({ code: 'sto_ctrl', niveau: Number(r.niveau_alarme), brique: b, message: `Automate : ${r.alarme_active}` })
   return out
+}
+
+// Mesures du stockage sur la plus longue durée utile (la plus récente en premier)
+async function historiqueStockage(sb: SupabaseClient, eid: string, s: typeof SEUILS_DEFAUT) {
+  const { data: der } = await sb.from('stockage_readings').select('ts, heure_simulee')
+    .eq('exploitation_id', eid).order('ts', { ascending: false }).limit(1)
+  if (!der?.length) return []
+  const minutes = Math.max(s.duree_t_min, s.duree_hr_haut_min, s.duree_hr_bas_min) * 1.05
+  const col = der[0].heure_simulee ? 'heure_simulee' : 'ts'
+  const depuis = new Date(new Date(der[0][col]).getTime() - minutes * 60000).toISOString()
+  const { data } = await sb.from('stockage_readings')
+    .select('ts, heure_simulee, t_stock, hr_stock, co2_ppm, mode_actif, mode_descente, alarme_active, niveau_alarme')
+    .eq('exploitation_id', eid).gte(col, depuis).order(col, { ascending: false }).limit(5000)
+  return data || []
 }
 
 function reglesHabitation(r: any, s: typeof SEUILS_DEFAUT): Alerte[] {
@@ -167,7 +212,7 @@ async function verifierExploitation(sb: SupabaseClient, exploit: any) {
     if (csgRow?.[k] != null && !isNaN(Number(csgRow[k]))) csg[k] = Number(csgRow[k])
 
   const alertes: Alerte[] = []
-  if (actives.has('stockage_pdt')) alertes.push(...reglesStockage(await derniere('stockage_readings'), seuils, csg))
+  if (actives.has('stockage_pdt')) alertes.push(...reglesStockage(await historiqueStockage(sb, exploit.id, seuils), seuils, csg))
   if (actives.has('habitation'))   alertes.push(...reglesHabitation(await derniere('habitation_readings'), seuils))
 
   // Alertes automatiques déjà connues pour cette exploitation
